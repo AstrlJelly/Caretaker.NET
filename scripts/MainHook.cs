@@ -2,27 +2,29 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 // using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
 using Caretaker.Commands;
+using System.Diagnostics;
 
 namespace Caretaker
 {
-    public class Program
+    public class MainHook
     {
-        // Program entry point
-        static Task Main(string[] args) => new Program().MainAsync();
+        // gets called when program is ran; starts async loop
+        public readonly static MainHook instance = new();
+        static Task Main(string[] args) => instance.MainAsync();
 
-        private readonly DiscordSocketClient _client;
+        public DiscordSocketClient _client;
 
         // private readonly DateTime startTime = new();
-        public CommandHandler commandHandler = new();
+        // public CommandHandler commandHandler = new();
+        public const string prefix = ">";
 
-        private Program()
+        private MainHook()
         {
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -64,22 +66,21 @@ namespace Caretaker
 
         private async Task MainAsync()
         {
+            CommandHandler.Init();
             Console.WriteLine("start!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-            // Login and connect.
+            // login and connect with token (change to config json file?)
             await _client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
             await _client.StartAsync();
 
-            // Wait infinitely so your bot actually stays connected.
+            // wait infinitely so the bot stays connected
             await Task.Delay(Timeout.Infinite);
         }
 
-        enum Time {
-            ms, sec, min, hr, day, week,
-        }
+        enum Time { ms, sec, min, hr, day, week, }
 
         // converts from seconds to minutes, hours to ms, minutes to days, etc.
-        private double ConvertTime(double time, Time typeFromTemp = Time.sec, Time typeToTemp = Time.ms) {
+        private static double ConvertTime(double time, Time typeFromTemp = Time.sec, Time typeToTemp = Time.ms) {
             if (typeToTemp == typeFromTemp) return time;
             var typeFrom = (int)typeFromTemp;
             var typeTo = (int)typeToTemp;
@@ -87,7 +88,7 @@ namespace Caretaker
             Console.WriteLine("typeTo : " + typeTo);
 
             int modifier = 1;
-            int[] converts = { 1000, 60, 60, 24, 7 };
+            int[] converts = [1000, 60, 60, 24, 7];
 
             for (var i = Math.Min(typeFrom, typeTo); i < Math.Max(typeFrom, typeTo); i++) {
                 modifier *= converts[i];
@@ -100,40 +101,28 @@ namespace Caretaker
 
         private async Task MessageReceivedAsync(SocketMessage message)
         {
-            if (message is not SocketUserMessage msg) return; // make sure the message is a user sent message, and output a new msg variable
+            // make sure the message is a user sent message, and output a new msg variable
+            // also make sure it's not a bot.
+            if (message is not SocketUserMessage msg || msg.Author.IsBot) return; 
 
-            long ms1 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            string prefix = ">";
+            var stopwatch = new Stopwatch();
+            
             if (msg.Content.StartsWith(prefix)) {
                 string content = msg.Content[prefix.Length..];
                 int firstSpace = content.IndexOf(' ');
                 string command = firstSpace == -1 ? content : content[..firstSpace];
-                string parameters = content[(firstSpace - 1)..];
+                string parameters = firstSpace == -1 ? "" : content[(firstSpace + 1)..];
                 if (string.IsNullOrEmpty(command)) return;
-                Console.WriteLine(command);
-                commandHandler.ParseCommand(msg, command, parameters);
-                
-                // switch (command)
-                // {
-                //     case "ping":
-                //         await msg.ReplyAsync("pong <:smide:1136427209041649694>");
-                //     break;
-                //     case "unixTime":
-                //         await msg.ReplyAsync(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString());
-                //     break;
-                //     case "convertTime":
-                //         var parts = msg.Content.Split(' ');
-                //         var time = ConvertTime(double.Parse(parts[1]), (Time)Enum.Parse(typeof(Time), parts[2]), (Time)Enum.Parse(typeof(Time), parts[3]));
-                //         await msg.ReplyAsync(time.ToString());
-                //     break;
-                //     default:
-                //         await msg.ReplyAsync("erm actually that's not a command");
-                //     break;
-                // }
-                Console.WriteLine(command);
+                try {
+                    var typing = msg.Channel.EnterTypingState();
+                    CommandHandler.ParseCommand(msg, command, parameters);
+                    typing.Dispose();
+                } catch (Exception error) {
+                    await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);
+                    throw;
+                }
             }
             await Task.CompletedTask; 
-            // await Task.CompletedTask; 
         }
     }
 }

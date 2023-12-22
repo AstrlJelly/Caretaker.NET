@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -16,12 +15,12 @@ namespace Caretaker.Commands
         public string genre;
         public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
         public Run func;
-        public Param[]? parameters;
-        public Param? inf;
+        public readonly Param[] parameters;
+        public readonly Param? inf;
         public string[][]? limitedTo;
         public int timeout;
         public int currentTimeout;
-        public Command(string name, string desc, string genre, Run func, Param[]? parameters = null, string[][]? limitedTo = null, int timeout = 0)
+        public Command(string name, string desc, string genre, Run func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 0)
         {
             this.name = name;
             this.desc = desc;
@@ -32,12 +31,13 @@ namespace Caretaker.Commands
             currentTimeout = 0;
 
             if (parameters != null) {
-                List<Param> tempParameters = parameters.ToList();
-                this.inf = tempParameters.Find(x => x.name == "inf");
+                this.inf = parameters.Find(x => x.name == "inf");
                 if (this.inf != null) {
-                    tempParameters.Remove(this.inf);
+                    parameters.Remove(this.inf);
                 }
-                this.parameters = parameters.ToArray();
+                this.parameters = [.. parameters];
+            } else {
+                this.parameters = [];
             }
         }
     }
@@ -47,22 +47,17 @@ namespace Caretaker.Commands
         public string name;
         public string desc;
         public dynamic preset;
-        public dynamic type;
-        public Param(string name, string desc, dynamic preset, dynamic type)
+        public string type;
+        public Param(string name, string desc, dynamic preset, string? type = null)
         {
             this.name = name;
             this.desc = desc;
             this.preset = preset;
-            this.type = type;
+            
+            type ??= preset.GetType().Name;
+            this.type = type.ToLower();
+            
+            Console.WriteLine(this.type);
         }
     }
-
-    // public class ParsedCommand
-    // {
-    //     public string name;
-    //     public ParsedCommand(string name)
-    //     {
-    //         this.name = name;
-    //     }
-    // }
 }
