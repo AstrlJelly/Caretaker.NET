@@ -2,13 +2,14 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 // using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
 using Caretaker.Commands;
-using System.Diagnostics;
+using Caretaker.Games;
 
 namespace Caretaker
 {
@@ -19,6 +20,7 @@ namespace Caretaker
         static Task Main(string[] args) => instance.MainAsync();
 
         public DiscordSocketClient _client;
+        public ConnectFour? c4;
 
         // private readonly DateTime startTime = new();
         // public CommandHandler commandHandler = new();

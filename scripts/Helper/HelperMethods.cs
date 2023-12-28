@@ -9,8 +9,8 @@ namespace Caretaker.Helper
 {
     public static class Helpers
     {
-        public static bool IsIndexValid<T>(this List<T> list, int index) => index < list.Count;
-        public static bool IsIndexValid(this Array array, int index) => index < array.Length;
+        public static bool IsIndexValid<T>(this List<T>? list, int index) => list != null && index < list.Count;
+        public static bool IsIndexValid(this Array? array, int index) => array != null && index < array.Length;
 
         public static SocketGuild GetGuild(this SocketMessage msg) {
             if (msg.Channel is not SocketGuildChannel chnl) { // pattern matching is freaky but i like it

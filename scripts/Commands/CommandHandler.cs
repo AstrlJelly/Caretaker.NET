@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Caretaker.ExternalEmojis;
+using Caretaker.Games;
 using Caretaker.Helper;
 
 
@@ -56,7 +57,10 @@ namespace Caretaker.Commands
             }, []),
 
             new("test", ":3", "bot/commands", async (msg, p) => {
-                await msg.ReplyAsync(int.Parse("25").ToString());
+                MainHook.instance.c4 = new ConnectFour();
+                MainHook.instance.c4.SetColumn(0, ConnectFour.Player.One);
+                // c4.SetColumn(1, 0);
+                await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
             }, []),
 
             new("cmd", "run more internal commands, will probably just be limited to astrl", "bot/internal", (msg, p) => {
