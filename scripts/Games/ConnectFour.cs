@@ -25,32 +25,39 @@ namespace Caretaker.Games
             One = 1,
             Two,
         }
-        public List<int>[] board; // array of a list of ints
+        private readonly List<List<int>> board; // array of a list of ints
         public const int MAXWIDTH = 7; // width of the board
         public const int MAXHEIGHT = 6; // height of the board
-        public void SetColumn(int column, Player character)
+        public void SetColumn(int column, Player player)
         {
             column = Math.Clamp(column, 0, MAXWIDTH);
-            board[column].Add((int)character);
+            board[column].Add((int)player);
             Console.WriteLine(board.IsIndexValid(column));
         }
         public string DisplayBoard()
         {
-            Console.WriteLine(board);
             List<string> joinedRows = [];
-            for (int i = 0; i < board.Length; i++) {
-                for (int j = MAXHEIGHT - 1; j >= 0; j--) {
-                    bool valid = board[i].IsIndexValid(j);
-                    joinedRows.Add(valid ? board[i][j].ToString() : "0");
+            for (int i = MAXWIDTH - 1; i >= 0; i--) {
+                List<string> joinedChars = [];
+                for (int j = 0; j < MAXHEIGHT; j++) {
+                    int player = board[j].IsIndexValid(i) ? board[j][i] : 0;
+                    joinedChars.Add((Player)player switch {
+                        Player.One => "🔴", // red circle (p1)
+                        Player.Two => "🟡", // yellow circle (p2)
+                        _ => "⬛" // black square (empty)
+                    });
                 }
-                joinedRows.Add("\n");
+                joinedRows.Add(string.Join("", joinedChars) + "\n");
             }
             return string.Join("", joinedRows);
         }
         public ConnectFour()
         {
-            board = new List<int>[MAXWIDTH];
-            Array.Fill(board, new List<int>(MAXHEIGHT)); // make sure all the lists are initialized
+            board = new List<List<int>>(MAXHEIGHT);
+            for (int i = 0; i < MAXHEIGHT; i++) { // make sure all the lists are initialized
+                board.Add([]);
+            }
+            // Array.Fill(board, new List<int>(MAXHEIGHT)); // make sure all the lists are initialized
         }
     }
 }

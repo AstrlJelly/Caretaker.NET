@@ -1,23 +1,32 @@
 ﻿using System;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 
 namespace Caretaker.Commands
 {
+    public static class Category
+    {
+        public const string bot = "bot";
+    }
+    public static class Genre 
+    {
+        public const string silly = "silly";
+        public const string gaming = "gaming";
+
+        public static string Concat(params string[] genres)
+        {
+            return string.Join('/', genres);
+        }
+    }
     public class Command
     {
-        public string name;
-        public string desc;
-        public string genre;
+        public readonly string name;
+        public readonly string desc;
+        public readonly string genre;
         public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
-        public Run func;
+        public readonly Run func;
         public readonly Param[] parameters;
         public readonly Param? inf;
-        public string[][]? limitedTo;
+        public string[][] limitedTo;
         public int timeout;
         public int currentTimeout;
         public Command(string name, string desc, string genre, Run func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 0)
@@ -26,7 +35,7 @@ namespace Caretaker.Commands
             this.desc = desc;
             this.genre = genre;
             this.func = func;
-            this.limitedTo = limitedTo;
+            this.limitedTo = limitedTo ?? [];
             this.timeout = timeout;
             currentTimeout = 0;
 

@@ -17,7 +17,7 @@ namespace Caretaker
     {
         // gets called when program is ran; starts async loop
         public readonly static MainHook instance = new();
-        static Task Main(string[] args) => instance.MainAsync();
+        static Task Main(string[] args) => instance.MainAsync(args);
 
         public DiscordSocketClient _client;
         public ConnectFour? c4;
@@ -25,51 +25,49 @@ namespace Caretaker
         // private readonly DateTime startTime = new();
         // public CommandHandler commandHandler = new();
         public const string prefix = ">";
+        public static bool DebugMode = false;
 
         private MainHook()
         {
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
-                GatewayIntents = GatewayIntents.All,
+                GatewayIntents = GatewayIntents.All, 
                 LogLevel = LogSeverity.Info,
                 MessageCacheSize = 50,
             });
 
             // Subscribe the logging handler to both the client and the CommandService.
-            _client.Log += Log;
+            _client.Log += ClientLog;
 
             _client.MessageReceived += MessageReceivedAsync;
         }
 
-        private static Task Log(LogMessage message)
+        public static void Log(string message, LogSeverity severity = LogSeverity.Info)
         {
-            switch (message.Severity)
-            {
-                case LogSeverity.Critical:
-                case LogSeverity.Error:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    break;
-                case LogSeverity.Warning:
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    break;
-                case LogSeverity.Info:
-                    Console.ForegroundColor = ConsoleColor.White;
-                    break;
-                case LogSeverity.Verbose:
-                case LogSeverity.Debug:
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    break;
-            }
-            Console.WriteLine($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}");
+            Console.ForegroundColor = severity switch {
+                LogSeverity.Critical or LogSeverity.Error => ConsoleColor.Red,
+                LogSeverity.Warning => ConsoleColor.Yellow,
+                LogSeverity.Verbose or LogSeverity.Debug => ConsoleColor.DarkGray,
+                LogSeverity.Info or _ => ConsoleColor.White,
+            };
+            Console.WriteLine(message);
             Console.ResetColor();
+        }
+
+        private static Task ClientLog(LogMessage message)
+        {
+            Log($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", message.Severity);
             
             return Task.CompletedTask;
         }
 
-        private async Task MainAsync()
+        private async Task MainAsync(string[] args)
         {
             CommandHandler.Init();
-            Console.WriteLine("start!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            foreach (var arg in args) {
+                Log(arg);
+            }
+            DebugMode = args.Contains("debug");
 
             // login and connect with token (change to config json file?)
             await _client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
@@ -77,28 +75,6 @@ namespace Caretaker
 
             // wait infinitely so the bot stays connected
             await Task.Delay(Timeout.Infinite);
-        }
-
-        enum Time { ms, sec, min, hr, day, week, }
-
-        // converts from seconds to minutes, hours to ms, minutes to days, etc.
-        private static double ConvertTime(double time, Time typeFromTemp = Time.sec, Time typeToTemp = Time.ms) {
-            if (typeToTemp == typeFromTemp) return time;
-            var typeFrom = (int)typeFromTemp;
-            var typeTo = (int)typeToTemp;
-            Console.WriteLine("typeFrom : " + typeFrom);
-            Console.WriteLine("typeTo : " + typeTo);
-
-            int modifier = 1;
-            int[] converts = [1000, 60, 60, 24, 7];
-
-            for (var i = Math.Min(typeFrom, typeTo); i < Math.Max(typeFrom, typeTo); i++) {
-                modifier *= converts[i];
-            }
-
-            Console.WriteLine(modifier);
-
-            return (typeFrom > typeTo) ? (time * modifier) : (time / modifier);
         }
 
         private async Task MessageReceivedAsync(SocketMessage message)
