@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+// using System.Windows.Threading;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
@@ -26,7 +27,7 @@ namespace CaretakerNET.Helper
             }
         }
 
-        public static (string, string) SplitByChar(this string stringToSplit, char splitChar)
+        public static (string, string) SplitByFirstChar(this string stringToSplit, char splitChar)
         {
             int index = stringToSplit.IndexOf(splitChar);
             if (index == -1) index = stringToSplit.Length;
@@ -85,18 +86,24 @@ namespace CaretakerNET.Helper
             await msg.AddReactionAsync(Emoji.Parse(emojiStr));
         }
         
-        public static IUser? ParseUser(string userToParse, IGuild? guild = null)
+        public static IUser? ParseUser(string userToParse, SocketGuild? guild = null)
         {
             IUser? user = null;
-            (userToParse, string discriminator) = userToParse.SplitByChar('#');
-            try {
-                user = MainHook.instance._client.GetUser(userToParse.ToLower(), discriminator == "" ? null : discriminator);
-            } catch (Exception) { try {
-                user = MainHook.instance._client.GetUser(ulong.Parse(userToParse));
-            } catch (Exception) { try {
-                // return MainHook.instance._client.DownloadUsersAsync();
-                user = (IUser?)guild?.SearchUsersAsync(userToParse);
-            } catch (Exception) {}}}
+            (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
+            Action[] actions = [
+                delegate { user = MainHook.instance._client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
+                delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
+                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(userToParse)); },
+                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName == userToParse); },
+            ];
+            for (int i = 0; i < actions.Length; i++) {
+                try {
+                    actions[i].Invoke();
+                    if (user != null) break;
+                } catch {
+                    continue;
+                }
+            }
             return user;
         }
         #endregion
@@ -127,8 +134,6 @@ namespace CaretakerNET.Helper
             if (typeToTemp == typeFromTemp) return time;
             var typeFrom = (int)typeFromTemp;
             var typeTo = (int)typeToTemp;
-            // Console.WriteLine("typeFrom : " + typeFrom);
-            // Console.WriteLine("typeTo : " + typeTo);
 
             int modifier = 1;
             int[] converts = [1000, 60, 60, 24, 7];
@@ -141,6 +146,21 @@ namespace CaretakerNET.Helper
         }
 
         public static long CurrentTime() => new DateTimeOffset().ToUnixTimeMilliseconds();
+        #endregion
+    
+        #region Async
+        // public void WaitFor(uint time, Time scale, Action action) {
+        //     var timer = new DispatcherTimer();
+        //     timer.Tick += delegate
+
+        //     {
+        //         action.Invoke();
+        //         timer.Stop();
+        //     };
+
+        //     timer.Interval = TimeSpan.FromMilliseconds(millisecond);
+        //     timer.Start();
+        // }
         #endregion
     }
 }

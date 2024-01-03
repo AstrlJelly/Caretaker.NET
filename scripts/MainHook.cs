@@ -20,13 +20,21 @@ namespace CaretakerNET
         public readonly static MainHook instance = new();
         static Task Main(string[] args) => instance.MainAsync(args);
 
-        public DiscordSocketClient _client;
+        public readonly DiscordSocketClient _client;
         public ConnectFour? c4;
+        public readonly Dictionary<ulong, ServerPersist> _s = [];
+        // public Dictionary<ulong, UserPersist> _u = [];
 
         private readonly long startTime;
-        // public CommandHandler commandHandler = new();
         public const string prefix = ">";
         public bool DebugMode = false;
+
+        private readonly ulong[] TrustedUsers = [
+            438296397452935169, // @astrljelly
+        ];
+        private readonly ulong[] BannedUsers = [
+            468933965110312980, // @lifinale
+        ];
 
         private MainHook()
         {
@@ -54,11 +62,14 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
+            // Load();
             CommandHandler.Init();
             foreach (var arg in args) {
                 Caretaker.Log(arg);
             }
             DebugMode = args.Contains("debug");
+
+            await _client.DownloadUsersAsync(_client.Guilds);
 
             // login and connect with token (change to config json file?)
             await _client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
@@ -74,28 +85,16 @@ namespace CaretakerNET
         {
             // make sure the message is a user sent message, and output a new msg variable
             // also make sure it's not a bot.
-            if (message is not SocketUserMessage msg || msg.Author.IsBot) return; 
+            bool banned = Array.Exists(BannedUsers, x => x == message.Author.Id);
+            if ((message is not SocketUserMessage msg) || msg.Author.IsBot && !banned) return; 
 
             var stopwatch = new Stopwatch();
             
             if (msg.Content.StartsWith(prefix)) {
-                if (msg.Author.Id == 476021507420586014) {
-                    if (lol == 0) {
-                        await msg.ReplyAsync("hahaha im judging you haha");
-                    } else if (lol == 1) {
-                        await msg.ReplyAsync("don't text me again. it's over.");
-                    } else {
-                        return;
-                    }
-                    lol++;
-                }
-                if (msg.Author.Id != 438296397452935169) return;
-                string content = msg.Content[prefix.Length..];
-                // int firstSpace = content.IndexOf(' ');
-                // if (firstSpace == -1) firstSpace = content.Length;
-                // (string command, string parameters) = firstSpace == -1 ? (content, "") : content.SplitByIndex(firstSpace);
-                (string command, string parameters) = content.SplitByChar(' ');
+                
+                (string command, string parameters) = msg.Content[prefix.Length..].SplitByFirstChar(' ');
                 if (string.IsNullOrEmpty(command)) return;
+
                 try {
                     var typing = msg.Channel.EnterTypingState();
                     await CommandHandler.ParseCommand(msg, command, parameters);

@@ -52,8 +52,6 @@ namespace CaretakerNET.Commands
             
             type ??= preset.GetType().Name;
             this.type = type.ToLower();
-            
-            Console.WriteLine(this.type);
         }
     }
 }

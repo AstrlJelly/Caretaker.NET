@@ -34,12 +34,17 @@ namespace CaretakerNET.Games
             board[column].Add((int)player);
             Console.WriteLine(board.IsIndexValid(column));
         }
+        public void SetColumn(int column, int player) => SetColumn(column, (Player)player);
+        public int GetElement(int x, int y)
+        {
+            return board[y].IsIndexValid(x) ? board[y][x] : 0;
+        }
         public string DisplayBoard()
         {
             List<string> joinedRows = [];
-            for (int i = MAXWIDTH - 1; i >= 0; i--) {
+            for (int i = MAXHEIGHT - 1; i >= 0; i--) {
                 List<string> joinedChars = [];
-                for (int j = 0; j < MAXHEIGHT; j++) {
+                for (int j = 0; j < MAXWIDTH; j++) {
                     int player = board[j].IsIndexValid(i) ? board[j][i] : 0;
                     joinedChars.Add((Player)player switch {
                         Player.One => "🔴", // red circle (p1)
