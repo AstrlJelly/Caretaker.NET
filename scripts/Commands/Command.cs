@@ -1,35 +1,22 @@
 ﻿using System;
 using Discord.WebSocket;
 
-namespace Caretaker.Commands
+namespace CaretakerNET.Commands
 {
-    public static class Category
-    {
-        public const string bot = "bot";
-    }
-    public static class Genre 
-    {
-        public const string silly = "silly";
-        public const string gaming = "gaming";
-
-        public static string Concat(params string[] genres)
-        {
-            return string.Join('/', genres);
-        }
-    }
     public class Command
     {
         public readonly string name;
         public readonly string desc;
         public readonly string genre;
-        public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
-        public readonly Run func;
+        public delegate Task RunAsync(SocketUserMessage msg, Dictionary<string, dynamic> p);
+        // public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
+        public readonly RunAsync func;
         public readonly Param[] parameters;
         public readonly Param? inf;
         public string[][] limitedTo;
         public int timeout;
         public int currentTimeout;
-        public Command(string name, string desc, string genre, Run func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 0)
+        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 0)
         {
             this.name = name;
             this.desc = desc;

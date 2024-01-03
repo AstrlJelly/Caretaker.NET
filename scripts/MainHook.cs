@@ -8,10 +8,11 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
-using Caretaker.Commands;
-using Caretaker.Games;
+using CaretakerNET.Helper;
+using CaretakerNET.Commands;
+using CaretakerNET.Games;
 
-namespace Caretaker
+namespace CaretakerNET
 {
     public class MainHook
     {
@@ -22,10 +23,10 @@ namespace Caretaker
         public DiscordSocketClient _client;
         public ConnectFour? c4;
 
-        // private readonly DateTime startTime = new();
+        private readonly long startTime;
         // public CommandHandler commandHandler = new();
         public const string prefix = ">";
-        public static bool DebugMode = false;
+        public bool DebugMode = false;
 
         private MainHook()
         {
@@ -40,23 +41,13 @@ namespace Caretaker
             _client.Log += ClientLog;
 
             _client.MessageReceived += MessageReceivedAsync;
-        }
 
-        public static void Log(string message, LogSeverity severity = LogSeverity.Info)
-        {
-            Console.ForegroundColor = severity switch {
-                LogSeverity.Critical or LogSeverity.Error => ConsoleColor.Red,
-                LogSeverity.Warning => ConsoleColor.Yellow,
-                LogSeverity.Verbose or LogSeverity.Debug => ConsoleColor.DarkGray,
-                LogSeverity.Info or _ => ConsoleColor.White,
-            };
-            Console.WriteLine(message);
-            Console.ResetColor();
+            startTime = new DateTimeOffset().ToUnixTimeMilliseconds();
         }
 
         private static Task ClientLog(LogMessage message)
         {
-            Log($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", message.Severity);
+            Caretaker.Log($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", message.Severity);
             
             return Task.CompletedTask;
         }
@@ -65,7 +56,7 @@ namespace Caretaker
         {
             CommandHandler.Init();
             foreach (var arg in args) {
-                Log(arg);
+                Caretaker.Log(arg);
             }
             DebugMode = args.Contains("debug");
 
@@ -77,6 +68,8 @@ namespace Caretaker
             await Task.Delay(Timeout.Infinite);
         }
 
+        int lol = 0;
+
         private async Task MessageReceivedAsync(SocketMessage message)
         {
             // make sure the message is a user sent message, and output a new msg variable
@@ -86,14 +79,26 @@ namespace Caretaker
             var stopwatch = new Stopwatch();
             
             if (msg.Content.StartsWith(prefix)) {
+                if (msg.Author.Id == 476021507420586014) {
+                    if (lol == 0) {
+                        await msg.ReplyAsync("hahaha im judging you haha");
+                    } else if (lol == 1) {
+                        await msg.ReplyAsync("don't text me again. it's over.");
+                    } else {
+                        return;
+                    }
+                    lol++;
+                }
+                if (msg.Author.Id != 438296397452935169) return;
                 string content = msg.Content[prefix.Length..];
-                int firstSpace = content.IndexOf(' ');
-                string command = firstSpace == -1 ? content : content[..firstSpace];
-                string parameters = firstSpace == -1 ? "" : content[(firstSpace + 1)..];
+                // int firstSpace = content.IndexOf(' ');
+                // if (firstSpace == -1) firstSpace = content.Length;
+                // (string command, string parameters) = firstSpace == -1 ? (content, "") : content.SplitByIndex(firstSpace);
+                (string command, string parameters) = content.SplitByChar(' ');
                 if (string.IsNullOrEmpty(command)) return;
                 try {
                     var typing = msg.Channel.EnterTypingState();
-                    CommandHandler.ParseCommand(msg, command, parameters);
+                    await CommandHandler.ParseCommand(msg, command, parameters);
                     typing.Dispose();
                 } catch (Exception error) {
                     await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);

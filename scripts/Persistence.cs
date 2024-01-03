@@ -7,7 +7,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 
-namespace Caretaker.Persistence
+namespace CaretakerNET.Persistence
 {
     // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
     // public struct Chain

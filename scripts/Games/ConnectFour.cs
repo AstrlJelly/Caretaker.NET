@@ -3,10 +3,10 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Caretaker.Helper;
+using CaretakerNET.Helper;
 using Discord.WebSocket;
 
-namespace Caretaker.Games
+namespace CaretakerNET.Games
 {
     /*// VISUAL GUIDE
     {0, 0, 0, 0, 0, 0}
@@ -30,7 +30,7 @@ namespace Caretaker.Games
         public const int MAXHEIGHT = 6; // height of the board
         public void SetColumn(int column, Player player)
         {
-            column = Math.Clamp(column, 0, MAXWIDTH);
+            column = Math.Clamp(column, 0, MAXWIDTH - 1);
             board[column].Add((int)player);
             Console.WriteLine(board.IsIndexValid(column));
         }
@@ -53,8 +53,8 @@ namespace Caretaker.Games
         }
         public ConnectFour()
         {
-            board = new List<List<int>>(MAXHEIGHT);
-            for (int i = 0; i < MAXHEIGHT; i++) { // make sure all the lists are initialized
+            board = new List<List<int>>(MAXWIDTH);
+            for (int i = 0; i < MAXWIDTH; i++) { // make sure all the lists are initialized
                 board.Add([]);
             }
             // Array.Fill(board, new List<int>(MAXHEIGHT)); // make sure all the lists are initialized

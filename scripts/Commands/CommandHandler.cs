@@ -3,28 +3,34 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Caretaker.ExternalEmojis;
-using Caretaker.Games;
-using Caretaker.Helper;
+using CaretakerNET.ExternalEmojis;
+using CaretakerNET.Games;
+using CaretakerNET.Helper;
 
 
 // using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.WebSocket;
 
-namespace Caretaker.Commands
+namespace CaretakerNET.Commands
 {
     public class CommandHandler
     {
-        public static readonly Command[] commands = {
+        public static readonly Command[] commands = [
             new("help", "list all normal commands", "bot/commands", async (msg, p) => {
                 // await msg.ReplyAsync((string)p["command"]);
                 string reply = ListCommands(p["command"]);
                 await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
             }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
 
-            new("echo", "list all normal commands", Genre.silly, (msg, p) => {
-                Console.WriteLine(p["reply"]);
+            new("echo", "list all normal commands", "silly", async (msg, p) => {
+                if ((string)p["reply"] is not "@everyone" and not "@here" and not "") {
+                    if (p["wait"] > 0) await Task.Delay(p["wait"]);
+                    await msg.ReplyAsync((string)p["reply"]);
+                } else {
+                    string[] replies = [ "stop that!!!", "hey you can't do that :(", "explode", "why...", Emojis.Sab ];
+                    await msg.ReplyAsync(p["reply"] != "" ? replies.GetRandom() : Emojis.Sab);
+                }
                 // if (p["wait"] > 0) await Task.Delay(p["wait"]);
                 // await msg.ReplyAsync((string)p["reply"], allowedMentions: AllowedMentions.None);
             }, [
@@ -32,7 +38,7 @@ namespace Caretaker.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
-            new("true", Emojis.True, Genre.silly, async (msg, p) => {
+            new("true", Emojis.True, "silly", async (msg, p) => {
                 if (!Emoji.TryParse(Emojis.True, out Emoji emoji)) return;
                 SocketMessage? reactMessage = (msg.ReferencedMessage as SocketMessage) ?? msg.Channel.CachedMessages.LastOrDefault();
                 // Console.WriteLine(msg.ReferencedMessage);
@@ -49,7 +55,7 @@ namespace Caretaker.Commands
                 
             }, [new Param("amount", "the amount you agree with this message", 20)]),
 
-            new("challenge", "challenge another user to a game", Genre.gaming, async (msg, p) => {
+            new("challenge", "challenge another user to a game", "silly", async (msg, p) => {
                 SocketUser? victim;
                 if (p["username"] == "") {
                     victim = msg.ReferencedMessage.Author as SocketUser;
@@ -73,53 +79,53 @@ namespace Caretaker.Commands
                 }
             }, [
                 new Param("game", "which game would you like to challenge with?", ""),
-                new Param("user", "the username/display name of the person you'd like to challenge", "")
+                new Param("user", "the username/display name of the person you'd like to challenge", "", "user")
             ]),
 
-            new("hello", "say hi to a user", "bot/commands", async (msg, p) => {
+            new("hello", "say hi to a user", "silly", async (msg, p) => {
                 // await msg.ReplyAsync("hi");
                 // string reply = ListCommands(p["command"]);
                 // await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
-                var user = MainHook.instance._client.GetUser(((string)p["username"]).ToLower());
+                IUser user = p["user"];
                 if (user != null) {
+                    await msg.EmojiReact("✅");
                     await user.SendMessageAsync($"{msg.Author.GlobalName} from {msg.GetGuild().Name} says hi!");
                 } else {
-                    await msg.ReplyAsync($"i can't reach {p["username"]} right now :( maybe just send them a normal hello");
+                    await msg.ReplyAsync($"i can't reach that person right now :( maybe just send them a normal hello");
                 }
-                
-            }, [new Param("name", "the username of the person you'd like to say hi to", "astrljelly")]),
+            }, [new Param("user", "the username of the person you'd like to say hi to", "astrljelly", "user")]),
 
-            new("c41", ":3", "hidden", async (msg, p) => {
+            new("c41", "these only exist because parsing parameters is hard :(", "hidden", async (msg, p) => {
                 if (MainHook.instance.c4 == null) return;
                 MainHook.instance.c4.SetColumn(ConnectFour.MAXWIDTH, ConnectFour.Player.One);
                 await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
                 // await msg.ReplyAsync(((new int[1])[0]).ToString());
             }, []),
 
-            new("c42", ":3", "hidden", async (msg, p) => {
+            new("c42", "refer to the above one", "hidden", async (msg, p) => {
                 if (MainHook.instance.c4 == null) return;
                 MainHook.instance.c4.SetColumn(2, ConnectFour.Player.Two);
                 await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
                 // await msg.ReplyAsync(((new int[1])[0]).ToString());
             }, []),
 
-            new("test", ":3", "bot/commands", async (msg, p) => {
+            new("test", ":3", "testing", async (msg, p) => {
                 MainHook.instance.c4 = new ConnectFour();
                 MainHook.instance.c4.SetColumn(1, ConnectFour.Player.Two);
                 await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
                 // await msg.ReplyAsync(((new int[1])[0]).ToString());
             }, []),
 
-            new("cmd", "run more internal commands, will probably just be limited to astrl", "bot/internal", (msg, p) => {
+            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (msg, p) => {
 
             }),
 
-            new("help", "list all cmd commands", "cmd", async (msg, p) => {
+            new("help", "list all cmd commands", "comands", async (msg, p) => {
                 string reply = ListCommands(p["command"]);
                 await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
             }, [new Param("command", "the command to get help for (if empty, just lists all)", "help")]),
 
-            new("params", "list all cmd commands", "cmd", async (msg, p) => {
+            new("params", "list all cmd commands", "testing", async (msg, p) => {
                 var keys = p.Keys;
                 foreach (var value in p.Values) {
                     await msg.ReplyAsync((string)value);
@@ -143,10 +149,10 @@ namespace Caretaker.Commands
                 // await msg.ReplyAsync(p);
             }, [ new Param("test", "", "") ]),
 
-            new("test", "testing code out", "cmd", (msg, p) => {
+            new("test", "testing code out", "cmd", async (msg, p) => {
 
             })
-        };
+        ];
 
         private static readonly Dictionary<string, Command> Commands = [];
         private static readonly Dictionary<string, Command> CmdCommands = [];
@@ -154,7 +160,7 @@ namespace Caretaker.Commands
         // public static CommandHandler instance = new();
 
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
-        public static void ParseCommand(SocketUserMessage msg, string command, string parameters = "")
+        public async static Task<bool> ParseCommand(SocketUserMessage msg, string command, string parameters = "")
         {
             var whichComms = Commands;
             if (command == "cmd") {
@@ -174,7 +180,7 @@ namespace Caretaker.Commands
             Console.WriteLine($"-{command}-");
             Console.WriteLine($"-{parameters}-");
 
-            if (!whichComms.TryGetValue(command, out Command? com) || com == null) return;
+            if (!whichComms.TryGetValue(command, out Command? com) || com == null) return false;
             Dictionary<string, dynamic> paramDict = [];
             if (com.parameters != null && com.parameters.Length > 0) {
                 string[] tempParameters = [];
@@ -185,9 +191,11 @@ namespace Caretaker.Commands
 
                         for (var i = 1; i < quoteSplit.Length; i += 2) { 
                             // Console.WriteLine(quoteSplit[i]);
-                            // check every other section (they will always be "in" double quotes) and check if it actually has spaces needed to be replaced
+                            // check every other section (they will always be "in" double quotes) 
+                            // and check if it actually has spaces needed to be replaced
                             if (quoteSplit[i].Contains(' ')) {
-                                quoteSplit[i] = string.Join(space, quoteSplit[i].Split(' ')); // why is this the best way to do it
+                                // quoteSplit[i] = string.Join(space, quoteSplit[i].Split(' ')); // why is this the best way to do it
+                                quoteSplit[i] = quoteSplit[i].ReplaceAll(' ', space);
                             }
                         }
                         parameters = string.Join("", quoteSplit); // join everything back together
@@ -196,36 +204,38 @@ namespace Caretaker.Commands
                 }
 
                 int tempLength = tempParameters.Length, comLength = com.parameters.Length;
-                int test = (com.inf != null && tempLength > comLength) ? tempLength : comLength;
-                Console.WriteLine("test : " + test);
+                int max = (com.inf != null && tempLength > comLength) ? tempLength : comLength;
+                Console.WriteLine("max : " + max);
                 Console.WriteLine("tempParameters // " + string.Join(", ", tempParameters));
                 Console.WriteLine("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
-                for (int i = 0; i < test; i++) 
+                for (int i = 0; i < max; i++) 
                 {
-                    bool presetting = !tempParameters.IsIndexValid(i); // will this parameter be automatically set?
+                    bool isInput = tempParameters.IsIndexValid(i); // will this parameter be set manually?
                     Param? settingParam; // the Param the the preset and type are being grabbed from
                     // Console.WriteLine("presetting : " + setting);
-                    int colon = presetting ? -1 : tempParameters[i].IndexOf(':');
+                    int colon = !isInput ? -1 : tempParameters[i].IndexOf(':');
                     string valueStr = "";
                     if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
                         string tempParam = tempParameters[i];
-                        valueStr = tempParam[(colon + 1)..];
-                        settingParam = Array.Find(com.parameters, x => x.name == tempParam[..colon]);
+                        settingParam = Array.Find(com.parameters, x => x.name == tempParameters[i][..colon]);
                     } else {           // otherwise the settingParam will just be in order of the commands param array
                         settingParam = com.parameters[i];
                     }
+                    if (isInput) valueStr = tempParameters[i][(colon + 1)..];
                     
                     if (settingParam == null) {
                         if (colon == -1) {
-                            msg.ReplyAsync($"incorrect param name! use \"{MainHook.prefix}help {command}\" to get params for {command}.");
+                            await msg.ReplyAsync($"incorrect param name! use \"{MainHook.prefix}help {command}\" to get params for {command}.");
                         }
-                        return;
+                        return false;
                     }
                     string key = settingParam.name;
-                    dynamic value = presetting ? settingParam.preset : (settingParam.type switch {
+                    Caretaker.Log($"valueStr = {valueStr}, key = {key}");
+                    dynamic? value = !isInput ? settingParam.preset : (settingParam.type switch {
                         "string" => valueStr.ToString(),
                         "int32" => Int32.Parse(valueStr),
                         "boolean" => valueStr == "true",
+                        "user" => Caretaker.ParseUser(valueStr),
                         _ => valueStr,
                     });
                     // Console.WriteLine("value : " + value);
@@ -236,7 +246,19 @@ namespace Caretaker.Commands
                 }
             }
             
-            com.func.Invoke(msg, paramDict);
+            try {
+                await com.func.Invoke(msg, paramDict);
+                return true;
+            } catch (System.Exception err) {
+                await msg.ReplyAsync(err.ToString());
+                return false;
+            }
+            
+            // try {
+            //     com.func.Invoke(msg, paramDict);
+            // } catch (System.Exception error) {
+            //     Caretaker.LogError(error.ToString());
+            // }
             // return com;
         }
         public static string ListCommands(string singleCom, bool showHidden = false, bool cmd = false)
@@ -261,6 +283,8 @@ namespace Caretaker.Commands
             return string.Join("", response);
         }
 
+        // currently an instance isn't needed; try avoiding one?
+        // i.e just put the logic that would need an instance in a different script
         public static void Init()
         {
             var whichComms = Commands;
