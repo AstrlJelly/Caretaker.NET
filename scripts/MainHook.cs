@@ -72,11 +72,6 @@ namespace CaretakerNET
 
             await _client.DownloadUsersAsync(_client.Guilds);
 
-            Caretaker.Log(_client.Guilds.Count);
-            foreach (var guild in _client.Guilds) {
-                Caretaker.Log(guild.Name);
-            }
-
             // wait infinitely so the bot stays connected
             await Task.Delay(Timeout.Infinite);
         }
@@ -102,7 +97,7 @@ namespace CaretakerNET
                     stopwatch.Start();
                     await CommandHandler.ParseCommand(msg, command, parameters);
                     stopwatch.Stop();
-                    Caretaker.Log($"parsing {PREFIX}{command} command took {stopwatch.ElapsedMilliseconds} ms");
+                    Caretaker.LogDebug($"parsing {PREFIX}{command} command took {stopwatch.ElapsedMilliseconds} ms");
                     typing.Dispose();
                 } catch (Exception error) {
                     await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);

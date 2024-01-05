@@ -41,11 +41,14 @@ namespace CaretakerNET.Commands
 
     public class Param
     {
+        // public static readonly string[] customTypes = [
+        //     "user", "channel"
+        // ];
+
         public string name;
         public string desc;
         public dynamic preset;
         public string type;
-        public Func<string, dynamic?> toType;
         public Param(string name, string desc, dynamic preset, string? type = null)
         {
             this.name = name;
@@ -54,12 +57,6 @@ namespace CaretakerNET.Commands
             
             type ??= preset.GetType().Name;
             this.type = type.ToLower();
-            this.toType = this.type switch {
-                "int32"   => str => int.Parse(str),
-                "boolean" => str => str == "true",
-                "user"    => str => Caretaker.ParseUser(str),
-                "string" or _ => str => str,
-            };
         }
     }
 }

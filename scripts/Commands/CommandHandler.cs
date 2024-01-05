@@ -42,18 +42,11 @@ namespace CaretakerNET.Commands
             new("true", Emojis.True, "silly", async (msg, p) => {
                 if (!Emoji.TryParse(Emojis.True, out Emoji emoji)) return;
                 SocketMessage? reactMessage = (msg.ReferencedMessage as SocketMessage) ?? msg.Channel.CachedMessages.LastOrDefault();
-                // Console.WriteLine(msg.ReferencedMessage);
-                // Console.WriteLine(msg.Reference);
                 
                 for (int i = 0; i < p["amount"]; i++) {
                     if (reactMessage == null) return;
-                    Console.WriteLine(emoji.Name);
                     await reactMessage.AddReactionAsync(emoji);
                 }
-                // await msg.ReplyAsync("hi");
-                // string reply = ListCommands(p["command"]);
-                // await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
-                
             }, [new Param("amount", "the amount you agree with this message", 20)]),
 
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
@@ -84,27 +77,20 @@ namespace CaretakerNET.Commands
             ]),
 
             new("hello", "say hi to a user", "silly", async (msg, p) => {
-                // await msg.ReplyAsync("hi");
-                // string reply = ListCommands(p["command"]);
-                // await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
                 IUser user = p["user"];
                 if (user != null) {
-                    await msg.EmojiReact("✅");
-                    Caretaker.Log(user.Id);
                     if (user.Id != 1182009469824139395) {
-                        string from = "from" + msg.GetGuild().Name;
-                        await user.SendMessageAsync($"{msg.Author.GlobalName} {from} says hi!");
+                        var msgGuild = msg.TryGetGuild();
+                        string from = msgGuild != null ? " from " + msgGuild.Name : "";
+                        _ = msg.EmojiReact("✅");
+                        await user.SendMessageAsync($"{Caretaker.UserPingFromID(msg.Id)}{from} says hi!");
                     } else {
-                        await user.SendMessageAsync("aw hii :3");
+                        await msg.ReplyAsync("aw hii :3");
                     }
                 } else {
                     await msg.ReplyAsync($"i can't reach that person right now :( maybe just send them a normal hello");
                 }
             }, [new Param("user", "the username of the person you'd like to say hi to", "astrljelly", "user")]),
-
-            // new("test", ":3", "testing", async (msg, p) => {
-
-            // }, []),
 
             new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (msg, p) => {}),
 
@@ -157,11 +143,10 @@ namespace CaretakerNET.Commands
             }, [ new("serverName", "the name of the server to make an invite for", "") ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
-                SocketGuild? guild = MainHook.instance._client.Guilds.FirstOrDefault(x => x.Name.Equals("hhh", StringComparison.CurrentCultureIgnoreCase));
-                if (guild != null) {
-                    await msg.ReplyAsync(guild.Owner.GlobalName);
+                foreach (string str in p["params"]) {
+                    await msg.ReplyAsync(str);
                 }
-            }),
+            }, [ new("test1", "for testing", ""), new("test2", "for testing: electric boogaloo", ""), new("params", "params!!!", "") ]),
         ];
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
@@ -179,23 +164,23 @@ namespace CaretakerNET.Commands
                 (command, parameters) = parameters.SplitByFirstChar(' ');
             }
 
-            Console.WriteLine($"-{command}-");
-            Console.WriteLine($"-{parameters}-");
+            Caretaker.LogDebug($"-{command}-");
+            Caretaker.LogDebug($"-{parameters}-");
 
             if (!whichComms.TryGetValue(command, out Command? com) || com == null) return false;
             Dictionary<string, dynamic> paramDict = [];
-            if (com.parameters != null && com.parameters.Length > 0) {
+            if (com.parameters != null && (com.parameters.Length > 0 || com.inf != null)) {
                 const char space = '↭';
                 string[] splitParams = [];
                 if (parameters != "") { // only do these checks if there are parameters to check for
                     if (parameters.Contains('"')) {
                         string[] quoteSplit = parameters.Split('"');
 
-                        for (var i = 1; i < quoteSplit.Length; i += 2) { 
+                        for (int j = 1; j < quoteSplit.Length; j += 2) { 
                             // check every other section (they will always be "in" double quotes) 
                             // and check if it actually has spaces needed to be replaced
-                            if (quoteSplit[i].Contains(' ')) {
-                                quoteSplit[i] = quoteSplit[i].ReplaceAll(' ', space);
+                            if (quoteSplit[j].Contains(' ')) {
+                                quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
                             }
                         }
                         parameters = string.Join("", quoteSplit); // join everything back together
@@ -203,11 +188,20 @@ namespace CaretakerNET.Commands
                     splitParams = parameters.Split(' '); // then split it up as parameters
                 }
 
-                // int max = Math.Max(splitParams.Length, com.parameters.Length);
-                // Console.WriteLine("max : " + max);
-                Caretaker.Log("splitParams    // " + string.Join(", ", splitParams));
-                Caretaker.Log("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
-                for (int i = 0; i < com.parameters.Length; i++)
+                Caretaker.LogDebug("splitParams    // " + string.Join(", ", splitParams));
+                Caretaker.LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
+
+                static dynamic? ToType(string type, string str, SocketGuild? guild) => 
+                    type switch {
+                        "int32"       => int.Parse(str),
+                        "boolean"     => str == "true",
+                        "user"        => Caretaker.ParseUser(str),
+                        "channel"     => Caretaker.ParseChannel(str, guild),
+                        "string" or _ => str,
+                    };
+                
+                int i = 0;
+                for (i = 0; i < com.parameters.Length; i++)
                 {
                     Param? setParam = com.parameters[i]; // the Param the name/preset/type are being grabbed from
                     dynamic? value;
@@ -218,26 +212,33 @@ namespace CaretakerNET.Commands
                         if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
                             char? colonCheck = splitParams[i].TryGet(colon - 1);
                             if (colonCheck != null && colonCheck != '<') {
+                                string paramName = splitParams[i][..colon];
+                                if (paramName == "params") {
+                                    i++;
+                                    break;
+                                }
                                 valueStr = splitParams[i][(colon + 1)..];
-                                setParam = Array.Find(com.parameters, x => x.name == splitParams[i][..colon]);
+                                setParam = Array.Find(com.parameters, x => x.name == paramName);
                                 if (setParam == null) {
                                     await msg.ReplyAsync($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
                                     return false;
                                 }
                             }
                         }
-                        value = setParam.toType(valueStr);
+                        value = ToType(setParam.type, valueStr, msg.TryGetGuild());
                     } else {
-                        var p = setParam;
-                        value = p.type is "user" ? p.toType(p.preset) : p.preset;
+                        var p = setParam.preset;
+                        value = p.GetType() == typeof(string) ? ToType(setParam.type, p, msg.TryGetGuild()) : p;
                     }
 
                     bool success = paramDict.TryAdd(setParam.name, value);
                 }
 
-                if (com.inf != null && splitParams.Length > com.parameters.Length) {
+                if (com.inf != null) {
                     // if inf params are needed, grab everything after
-                    paramDict.TryAdd("params", splitParams.Skip(com.parameters.Length).Select(x => com.inf.toType(x)).ToArray());
+                    var paramsAsInfTypes = splitParams.Skip(i)
+                                                      .Select(splitParam => ToType(com.inf.type, splitParam, msg.TryGetGuild()));
+                    paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
                 }
             }
             
@@ -257,8 +258,7 @@ namespace CaretakerNET.Commands
             }
             List<string> response = [];
             string[] commands = singleCom != "" ? [singleCom] : commandDict.Keys.ToArray();
-            Caretaker.Log(commands.Length);
-            for (var i = 0; i < commands.Length; i++) {
+            for (int i = 0; i < commands.Length; i++) {
                 Command com = commandDict[commands[i]];
                 if (com.genre == "hidden" && !showHidden) continue;
                 var paramNames = com.parameters?.Select(x => x.name);

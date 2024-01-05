@@ -33,7 +33,6 @@ namespace CaretakerNET.Games
         {
             column = Math.Clamp(column, 0, MAXWIDTH - 1);
             board[column].Add((int)player);
-            Console.WriteLine(board.IsIndexValid(column));
         }
         public int GetElement(int x, int y)
         {

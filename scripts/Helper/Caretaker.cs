@@ -83,21 +83,34 @@ namespace CaretakerNET.Helper
             }
             return chnl.Guild;
         }
+        public static SocketGuild? TryGetGuild(this SocketMessage msg) 
+        {
+            try {
+                return GetGuild(msg);
+            } catch (System.Exception) {
+                return null;
+            }
+        }
 
         public async static Task EmojiReact(this IMessage msg, string emojiStr)
         {
             await msg.AddReactionAsync(Emoji.Parse(emojiStr));
         }
 
+        private static string? IDFromReference(string reference) {
+            return reference[0] == '<' && reference.Length >= 2 ? reference[2..^1] : null;
+        }
+
         public static IUser? ParseUser(string userToParse, SocketGuild? guild = null)
         {
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
+            Caretaker.Log(userToParse[2..^1]);
             Action[] actions = [
                 delegate { user = MainHook.instance._client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
                 // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
-                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(userToParse[0] == '<' ? userToParse[1..^1] : userToParse)); },
-                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName == userToParse); },
+                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
+                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
@@ -110,12 +123,13 @@ namespace CaretakerNET.Helper
             return user;
         }
 
-        public static ITextChannel? ParseChannel(string channelToParse, SocketGuild guild)
+        public static ITextChannel? ParseChannel(string channelToParse, SocketGuild? guild)
         {
+            if (guild == null) return null;
             ITextChannel? channel = null;
             Func<string, ITextChannel?>[] actions = [
                 x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Equals(channelToParse, StringComparison.CurrentCultureIgnoreCase)),
-                x => (ITextChannel)guild.GetChannel(ulong.Parse(channelToParse[0] == '<' ? channelToParse[1..^1] : channelToParse)),
+                x => (ITextChannel)guild.GetChannel(ulong.Parse(IDFromReference(channelToParse) ?? channelToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
@@ -127,7 +141,6 @@ namespace CaretakerNET.Helper
             }
             return channel;
         }
-
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
         public static string UserPingFromID(ulong id) => $"<@{id}>";
         #endregion
@@ -162,7 +175,7 @@ namespace CaretakerNET.Helper
             int modifier = 1;
             int[] converts = [1000, 60, 60, 24, 7];
 
-            for (var i = Math.Min(typeFrom, typeTo); i < Math.Max(typeFrom, typeTo); i++) {
+            for (int i = Math.Min(typeFrom, typeTo); i < Math.Max(typeFrom, typeTo); i++) {
                 modifier *= converts[i];
             }
 
