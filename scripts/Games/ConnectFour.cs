@@ -28,13 +28,13 @@ namespace CaretakerNET.Games
         private readonly List<List<int>> board; // array of a list of ints
         public const int MAXWIDTH = 7; // width of the board
         public const int MAXHEIGHT = 6; // height of the board
+        public void SetColumn(int column, int player) => SetColumn(column, (Player)player);
         public void SetColumn(int column, Player player)
         {
             column = Math.Clamp(column, 0, MAXWIDTH - 1);
             board[column].Add((int)player);
             Console.WriteLine(board.IsIndexValid(column));
         }
-        public void SetColumn(int column, int player) => SetColumn(column, (Player)player);
         public int GetElement(int x, int y)
         {
             return board[y].IsIndexValid(x) ? board[y][x] : 0;

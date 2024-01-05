@@ -26,7 +26,7 @@ namespace CaretakerNET
         // public Dictionary<ulong, UserPersist> _u = [];
 
         private readonly long startTime;
-        public const string prefix = ">";
+        public const string PREFIX = ">";
         public bool DebugMode = false;
 
         private readonly ulong[] TrustedUsers = [
@@ -64,16 +64,18 @@ namespace CaretakerNET
         {
             // Load();
             CommandHandler.Init();
-            foreach (var arg in args) {
-                Caretaker.Log(arg);
-            }
-            DebugMode = args.Contains("debug");
-
-            await _client.DownloadUsersAsync(_client.Guilds);
+            DebugMode = args.Contains("debug") || args.Contains("-d");
 
             // login and connect with token (change to config json file?)
             await _client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
             await _client.StartAsync();
+
+            await _client.DownloadUsersAsync(_client.Guilds);
+
+            Caretaker.Log(_client.Guilds.Count);
+            foreach (var guild in _client.Guilds) {
+                Caretaker.Log(guild.Name);
+            }
 
             // wait infinitely so the bot stays connected
             await Task.Delay(Timeout.Infinite);
@@ -84,20 +86,23 @@ namespace CaretakerNET
         private async Task MessageReceivedAsync(SocketMessage message)
         {
             // make sure the message is a user sent message, and output a new msg variable
-            // also make sure it's not a bot.
+            // also make sure it's not a bot/not banned
             bool banned = Array.Exists(BannedUsers, x => x == message.Author.Id);
-            if ((message is not SocketUserMessage msg) || msg.Author.IsBot && !banned) return; 
+            if ((message is not SocketUserMessage msg) || msg.Author.IsBot || banned) return; 
 
             var stopwatch = new Stopwatch();
             
-            if (msg.Content.StartsWith(prefix)) {
+            if (msg.Content.StartsWith(PREFIX)) {
                 
-                (string command, string parameters) = msg.Content[prefix.Length..].SplitByFirstChar(' ');
+                (string command, string parameters) = msg.Content[PREFIX.Length..].SplitByFirstChar(' ');
                 if (string.IsNullOrEmpty(command)) return;
 
                 try {
                     var typing = msg.Channel.EnterTypingState();
+                    stopwatch.Start();
                     await CommandHandler.ParseCommand(msg, command, parameters);
+                    stopwatch.Stop();
+                    Caretaker.Log($"parsing {PREFIX}{command} command took {stopwatch.ElapsedMilliseconds} ms");
                     typing.Dispose();
                 } catch (Exception error) {
                     await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);

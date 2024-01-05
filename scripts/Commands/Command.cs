@@ -1,4 +1,5 @@
 ﻿using System;
+using CaretakerNET.Helper;
 using Discord.WebSocket;
 
 namespace CaretakerNET.Commands
@@ -27,7 +28,7 @@ namespace CaretakerNET.Commands
             currentTimeout = 0;
 
             if (parameters != null) {
-                this.inf = parameters.Find(x => x.name == "inf");
+                this.inf = parameters.Find(x => x.name == "params");
                 if (this.inf != null) {
                     parameters.Remove(this.inf);
                 }
@@ -44,6 +45,7 @@ namespace CaretakerNET.Commands
         public string desc;
         public dynamic preset;
         public string type;
+        public Func<string, dynamic?> toType;
         public Param(string name, string desc, dynamic preset, string? type = null)
         {
             this.name = name;
@@ -52,6 +54,12 @@ namespace CaretakerNET.Commands
             
             type ??= preset.GetType().Name;
             this.type = type.ToLower();
+            this.toType = this.type switch {
+                "int32"   => str => int.Parse(str),
+                "boolean" => str => str == "true",
+                "user"    => str => Caretaker.ParseUser(str),
+                "string" or _ => str => str,
+            };
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ namespace CaretakerNET.Commands
 {
     public class CommandHandler
     {
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("help", "list all normal commands", "bot/commands", async (msg, p) => {
                 // await msg.ReplyAsync((string)p["command"]);
@@ -88,8 +90,10 @@ namespace CaretakerNET.Commands
                 IUser user = p["user"];
                 if (user != null) {
                     await msg.EmojiReact("✅");
+                    Caretaker.Log(user.Id);
                     if (user.Id != 1182009469824139395) {
-                        await user.SendMessageAsync($"{msg.Author.GlobalName} from {msg.GetGuild().Name} says hi!");
+                        string from = "from" + msg.GetGuild().Name;
+                        await user.SendMessageAsync($"{msg.Author.GlobalName} {from} says hi!");
                     } else {
                         await user.SendMessageAsync("aw hii :3");
                     }
@@ -107,7 +111,7 @@ namespace CaretakerNET.Commands
             new("help", "list all cmd commands", "comands", async (msg, p) => {
                 string reply = ListCommands(p["command"], true);
                 await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
-            }, [new Param("command", "the command to get help for (if empty, just lists all)", "help")]),
+            }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
 
             new("params", "reply with all params", "testing", async (msg, p) => {
                 var keys = p.Keys;
@@ -132,10 +136,34 @@ namespace CaretakerNET.Commands
                 await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
-            new("test", "testing code out", "testing", async (msg, p) => {
+            new("servers", "get all servers", "hidden", async (msg, p) => {
+                var client = MainHook.instance._client;
+                Caretaker.Log(client.Guilds.Count);
+                foreach (var guild in client.Guilds) {
+                    Caretaker.Log(guild.Name);
+                }
+            }),
 
+            new("invite", "make an invite to a server i'm in", "hidden", async (msg, p) => {
+                SocketGuild? guild = MainHook.instance._client.Guilds.FirstOrDefault(x => x.Name.Equals((string)p["serverName"], StringComparison.CurrentCultureIgnoreCase));
+                if (guild == null) {
+                    await msg.ReplyAsync("darn. no server with that name");
+                } else {
+                    // var invite = await guild.GetVanityInviteAsync();
+                    // await msg.ReplyAsync(invite.Url);
+                    var invite = await guild.GetInvitesAsync();
+                    await msg.ReplyAsync(invite.First().Url);
+                }
+            }, [ new("serverName", "the name of the server to make an invite for", "") ]),
+
+            new("test", "testing code out", "testing", async (msg, p) => {
+                SocketGuild? guild = MainHook.instance._client.Guilds.FirstOrDefault(x => x.Name.Equals("hhh", StringComparison.CurrentCultureIgnoreCase));
+                if (guild != null) {
+                    await msg.ReplyAsync(guild.Owner.GlobalName);
+                }
             }),
         ];
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 
         private static readonly Dictionary<string, Command> Commands = [];
         private static readonly Dictionary<string, Command> CmdCommands = [];
@@ -158,7 +186,7 @@ namespace CaretakerNET.Commands
             Dictionary<string, dynamic> paramDict = [];
             if (com.parameters != null && com.parameters.Length > 0) {
                 const char space = '↭';
-                string[] tempParameters = [];
+                string[] splitParams = [];
                 if (parameters != "") { // only do these checks if there are parameters to check for
                     if (parameters.Contains('"')) {
                         string[] quoteSplit = parameters.Split('"');
@@ -172,48 +200,44 @@ namespace CaretakerNET.Commands
                         }
                         parameters = string.Join("", quoteSplit); // join everything back together
                     }
-                    tempParameters = parameters.Split(' '); // then split it up as parameters
+                    splitParams = parameters.Split(' '); // then split it up as parameters
                 }
 
-
-                int tempLength = tempParameters.Length, comLength = com.parameters.Length;
-                int max = (com.inf != null && tempLength > comLength) ? tempLength : comLength;
-                Console.WriteLine("max : " + max);
-                Console.WriteLine("tempParameters // " + string.Join(", ", tempParameters));
-                Console.WriteLine("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
-                for (int i = 0; i < max; i++)
+                // int max = Math.Max(splitParams.Length, com.parameters.Length);
+                // Console.WriteLine("max : " + max);
+                Caretaker.Log("splitParams    // " + string.Join(", ", splitParams));
+                Caretaker.Log("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
+                for (int i = 0; i < com.parameters.Length; i++)
                 {
-                    bool isInput = tempParameters.IsIndexValid(i); // will this parameter be set manually?
-                    if (isInput && tempParameters[i].Contains('"')) {
-                        tempParameters[i] = tempParameters[i].ReplaceAll(space, ' ');
-                    }
-                    Param? settingParam; // the Param the the preset and type are being grabbed from
-                    int colon = !isInput ? -1 : tempParameters[i].IndexOf(':');
-                    string valueStr = "";
-                    if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
-                        string tempParam = tempParameters[i];
-                        settingParam = Array.Find(com.parameters, x => x.name == tempParameters[i][..colon]);
-                    } else {           // otherwise the settingParam will just be in order of the commands param array
-                        settingParam = com.parameters[i];
-                    }
-                    if (isInput) valueStr = tempParameters[i][(colon + 1)..];
+                    Param? setParam = com.parameters[i]; // the Param the name/preset/type are being grabbed from
+                    dynamic? value;
                     
-                    if (settingParam == null) {
-                        if (colon == -1) {
-                            await msg.ReplyAsync($"incorrect param name! use \"{MainHook.prefix}help {command}\" to get params for {command}.");
+                    if (splitParams.IsIndexValid(i)) { // will this parameter be set manually?
+                        int colon = splitParams[i].IndexOf(':');
+                        string valueStr = splitParams[i].ReplaceAll(space, ' ');
+                        if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
+                            char? colonCheck = splitParams[i].TryGet(colon - 1);
+                            if (colonCheck != null && colonCheck != '<') {
+                                valueStr = splitParams[i][(colon + 1)..];
+                                setParam = Array.Find(com.parameters, x => x.name == splitParams[i][..colon]);
+                                if (setParam == null) {
+                                    await msg.ReplyAsync($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
+                                    return false;
+                                }
+                            }
                         }
-                        return false;
+                        value = setParam.toType(valueStr);
+                    } else {
+                        var p = setParam;
+                        value = p.type is "user" ? p.toType(p.preset) : p.preset;
                     }
-                    string key = settingParam.name;
-                    Caretaker.Log($"valueStr = {valueStr}, key = {key}");
-                    dynamic? value = !isInput ? settingParam.preset : (settingParam.type switch {
-                        "string" => valueStr.ToString(),
-                        "int32" => int.Parse(valueStr),
-                        "boolean" => valueStr == "true",
-                        "user" => Caretaker.ParseUser(valueStr),
-                        _ => valueStr,
-                    });
-                    bool success = paramDict.TryAdd(key, value);
+
+                    bool success = paramDict.TryAdd(setParam.name, value);
+                }
+
+                if (com.inf != null && splitParams.Length > com.parameters.Length) {
+                    // if inf params are needed, grab everything after
+                    paramDict.TryAdd("params", splitParams.Skip(com.parameters.Length).Select(x => com.inf.toType(x)).ToArray());
                 }
             }
             
@@ -224,13 +248,6 @@ namespace CaretakerNET.Commands
                 await msg.ReplyAsync(err.ToString());
                 return false;
             }
-            
-            // try {
-            //     com.func.Invoke(msg, paramDict);
-            // } catch (System.Exception error) {
-            //     Caretaker.LogError(error.ToString());
-            // }
-            // return com;
         }
         public static string ListCommands(string singleCom, bool cmd = false, bool showHidden = false)
         {
@@ -240,6 +257,7 @@ namespace CaretakerNET.Commands
             }
             List<string> response = [];
             string[] commands = singleCom != "" ? [singleCom] : commandDict.Keys.ToArray();
+            Caretaker.Log(commands.Length);
             for (var i = 0; i < commands.Length; i++) {
                 Command com = commandDict[commands[i]];
                 if (com.genre == "hidden" && !showHidden) continue;
@@ -249,7 +267,7 @@ namespace CaretakerNET.Commands
                     joinedParams = $"{string.Join(", ", paramNames)}";
                 }
 
-                response.Add($"{MainHook.prefix}{commands[i]} ({joinedParams}) : {com.desc}\n");
+                response.Add($"{MainHook.PREFIX}{commands[i]} ({joinedParams}) : {com.desc}\n");
             }
             return string.Join("", response);
         }

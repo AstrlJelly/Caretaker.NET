@@ -17,6 +17,9 @@ namespace CaretakerNET.Helper
         // don't wanna type this every time lol (and i swear it performs ever so slightly better)
         public static string ReplaceAll(this string stringToReplace, string oldStr, string newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
         public static string ReplaceAll(this string stringToReplace, char oldStr, char newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
+
+        public static T? TryGet<T>(this IEnumerable<T> enumerable, int index) => enumerable.IsIndexValid(index) ? enumerable!.ElementAt(index) : default;
+
         // Item1 and Item2 look kinda ugly but a tuple makes sense for this method
         public static (string, string) SplitByIndex(this string stringToSplit, int index)
         {
@@ -85,15 +88,15 @@ namespace CaretakerNET.Helper
         {
             await msg.AddReactionAsync(Emoji.Parse(emojiStr));
         }
-        
+
         public static IUser? ParseUser(string userToParse, SocketGuild? guild = null)
         {
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
             Action[] actions = [
                 delegate { user = MainHook.instance._client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
-                delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
-                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(userToParse)); },
+                // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
+                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(userToParse[0] == '<' ? userToParse[1..^1] : userToParse)); },
                 delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName == userToParse); },
             ];
             for (int i = 0; i < actions.Length; i++) {
@@ -106,24 +109,45 @@ namespace CaretakerNET.Helper
             }
             return user;
         }
+
+        public static ITextChannel? ParseChannel(string channelToParse, SocketGuild guild)
+        {
+            ITextChannel? channel = null;
+            Func<string, ITextChannel?>[] actions = [
+                x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Equals(channelToParse, StringComparison.CurrentCultureIgnoreCase)),
+                x => (ITextChannel)guild.GetChannel(ulong.Parse(channelToParse[0] == '<' ? channelToParse[1..^1] : channelToParse)),
+            ];
+            for (int i = 0; i < actions.Length; i++) {
+                try {
+                    channel = actions[i](channelToParse);
+                    if (channel != null) break;
+                } catch {
+                    continue;
+                }
+            }
+            return channel;
+        }
+
+        public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
+        public static string UserPingFromID(ulong id) => $"<@{id}>";
         #endregion
 
         #region Logging
-        public static void Log(string message, LogSeverity severity = LogSeverity.Info)
+        public static void Log(object message, LogSeverity severity = LogSeverity.Info)
         {
             Console.ForegroundColor = severity switch {
                 LogSeverity.Critical or LogSeverity.Error => ConsoleColor.Red,
-                LogSeverity.Warning => ConsoleColor.Yellow,
-                LogSeverity.Verbose or LogSeverity.Debug => ConsoleColor.DarkGray,
-                LogSeverity.Info or _ => ConsoleColor.White,
+                LogSeverity.Warning                       => ConsoleColor.Yellow,
+                LogSeverity.Verbose or LogSeverity.Debug  => ConsoleColor.DarkGray,
+                LogSeverity.Info or _                     => ConsoleColor.White,
             };
-            Console.WriteLine(message);
+            Console.WriteLine(message.ToString());
             Console.ResetColor();
         }
 
-        public static void LogWarning(string message = "Warning!") => Log(message, LogSeverity.Warning);
-        public static void LogError(string message = "Error!") => Log(message, LogSeverity.Error);
-        public static void LogError(System.Exception message) => LogError(message.ToString());
+        public static void LogWarning(object? message = null) { Log(message ?? "Warning!", LogSeverity.Warning); }
+        public static void LogError(object? message = null) { Log(message ?? "Error!", LogSeverity.Error); }
+        public static void LogDebug(object? message = null) { if (MainHook.instance.DebugMode) Log(message ?? "null", LogSeverity.Info); }
         #endregion
 
         #region Time
