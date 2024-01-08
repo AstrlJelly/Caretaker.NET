@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 
-namespace CaretakerNET.Helper
+namespace CaretakerNET.Core
 {
     public static class Caretaker
     {
@@ -57,9 +57,10 @@ namespace CaretakerNET.Helper
             return enumerable.IsIndexValid(i) && enumerable.ElementAt(i).IsIndexValid(j) ? enumerable.ElementAt(i).ElementAt(j) : default;
         }
 
-        public static T GetRandom<T>(this IEnumerable<T> list) {
+        public static T? GetRandom<T>(this IEnumerable<T> list) {
             var random = new Random(); 
-            return list.ElementAt(random.Next(list.Count()));
+            int count = list.Count();
+            return count > 0 ? list.ElementAt(random.Next(list.Count())) : default;
         }
         #endregion
 
@@ -76,6 +77,21 @@ namespace CaretakerNET.Helper
         #endregion
 
         #region Discord
+        public static async Task<IUserMessage> Reply(this IUserMessage msg, object reply, bool ping = false)
+        {
+            return await msg.ReplyAsync(reply.ToString());
+        }
+
+        public static async Task<IUserMessage> RandomReply(this IUserMessage msg, object[] replies, bool ping = false)
+        {
+            return await msg.Reply(replies.GetRandom() ?? "", ping);
+        }
+
+        public static async Task<IUserMessage> EmbedReply(this IUserMessage msg, Embed embed)
+        {
+            return await msg.ReplyAsync(embed: embed);
+        }
+
         public static SocketGuild GetGuild(this SocketMessage msg) 
         {
             if (msg.Channel is not SocketGuildChannel chnl) { // pattern matching is freaky but i like it
@@ -105,7 +121,6 @@ namespace CaretakerNET.Helper
         {
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
-            Caretaker.Log(userToParse[2..^1]);
             Action[] actions = [
                 delegate { user = MainHook.instance._client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
                 // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
@@ -186,18 +201,10 @@ namespace CaretakerNET.Helper
         #endregion
     
         #region Async
-        // public void WaitFor(uint time, Time scale, Action action) {
-        //     var timer = new DispatcherTimer();
-        //     timer.Tick += delegate
-
-        //     {
-        //         action.Invoke();
-        //         timer.Stop();
-        //     };
-
-        //     timer.Interval = TimeSpan.FromMilliseconds(millisecond);
-        //     timer.Start();
-        // }
+        public static void Sleep()
+        {
+            
+        } 
         #endregion
     }
 }

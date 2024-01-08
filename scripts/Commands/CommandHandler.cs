@@ -6,12 +6,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using CaretakerNET.ExternalEmojis;
 using CaretakerNET.Games;
-using CaretakerNET.Helper;
+using CaretakerNET.Core;
 
 
 // using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.WebSocket;
+using System.Security.Cryptography;
+using System.Collections.Frozen;
 
 namespace CaretakerNET.Commands
 {
@@ -19,107 +21,116 @@ namespace CaretakerNET.Commands
     {
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
-            new("help", "list all normal commands", "bot/commands", async (msg, p) => {
-                // await msg.ReplyAsync((string)p["command"]);
+            new("help", "list all normal commands", "commands", async (msg, p) => {
+                // await msg.Reply((string)p["command"]);
                 string reply = ListCommands(p["command"]);
-                await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
+                await msg.Reply(reply, false);
             }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
 
             new("echo", "list all normal commands", "silly", async (msg, p) => {
                 string reply = (string)p["reply"];
                 if (!reply.Contains("@everyone") && !reply.Contains("@here") && reply != "") {
-                    // DelayFactory.DelayAction(500, new Action(() => { this.RunAction(); }));
-                    await msg.ReplyAsync((string)p["reply"], allowedMentions: AllowedMentions.None);
+                    await Task.Delay(p["wait"]);
+                    await msg.Reply((string)p["reply"], false);
                 } else {
                     string[] replies = [ "stop that!!!", "hey you can't do that :(", "explode", "why...", Emojis.Sab ];
-                    await msg.ReplyAsync(p["reply"] != "" ? replies.GetRandom() : Emojis.Sab);
+                    await msg.Reply(p["reply"] != "" ? replies.GetRandom()! : Emojis.Sab);
                 }
             }, [
                 new Param("reply", "the message to echo", Emojis.Smide),
-                // new Param("wait", "how long to wait until replying", 0),
+                new Param("wait", "how long to wait until replying", 0),
             ]),
 
             new("true", Emojis.True, "silly", async (msg, p) => {
-                if (!Emoji.TryParse(Emojis.True, out Emoji emoji)) return;
-                SocketMessage? reactMessage = (msg.ReferencedMessage as SocketMessage) ?? msg.Channel.CachedMessages.LastOrDefault();
-                
-                for (int i = 0; i < p["amount"]; i++) {
-                    if (reactMessage == null) return;
-                    await reactMessage.AddReactionAsync(emoji);
-                }
+                EmojiSpam(msg, Emojis.True, p["amount"]);
             }, [new Param("amount", "the amount you agree with this message", 20)]),
 
+            // new("false", Emojis.True, "silly", async (msg, p) => {
+            //     await EmojiSpam(msg, Emojis.False);
+            // }, [new Param("amount", "the amount you agree with this message", 20)]),
+
+            new("smide", Emojis.Smide, "silly", async (msg, p) => {
+                EmojiSpam(msg, Emojis.Smide, p["amount"]);
+            }, [ new Param("amount", $"how {Emojis.Smide} this message makes you feel", 20) ]),
+
+            // new("explode", Emojis.True, "silly", async (msg, p) => {
+            //     await EmojiSpam(msg, Emojis.ExplodingHead);
+            // }, [new Param("amount", "the amount you agree with this message", 20)]),
+
+            new("c4go", "play connect 4 using this command!", "games", async (msg, p) => {
+
+            }),
+
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
-                SocketUser? victim;
-                if (p["username"] == "") {
-                    victim = msg.ReferencedMessage.Author as SocketUser;
-                } else {
-                    victim = msg.GetGuild().Users.FirstOrDefault(x => x.Nickname == p["username"] || x.GlobalName == p["username"]);
-                }
+                IUser? victim = p["user"];
                 if (victim == null) {
-                    await msg.ReplyAsync($"hmm... seems like the user you tried to challenge is unavailable.");
+                    await msg.Reply($"hmm... seems like the user you tried to challenge is unavailable.");
                     return;
                 } else {
+                    switch (p["game"])
+                    {
+                        case "c4" or "connect4": {
+                            var challengeMsg = await msg.ReplyAsync($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
 
-                }
-                switch (p["game"])
-                {
-                    case "c4" or "connect4": {
+                        } break;
+                        default: {
 
-                    } break;
-                    default: {
-
-                    } break;
+                        } break;
+                    }
                 }
             }, [
                 new Param("game", "which game would you like to challenge with?", ""),
                 new Param("user", "the username/display name of the person you'd like to challenge", "", "user")
             ]),
 
-            new("hello", "say hi to a user", "silly", async (msg, p) => {
+            new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
                 IUser user = p["user"];
                 if (user != null) {
-                    if (user.Id != 1182009469824139395) {
+                    if (user.Id == 1182009469824139395) {
+                        await msg.Reply("aw hii :3");
+                    } else if (user.Id == msg.Author.Id) {
+                        await msg.RandomReply([":(", "you can just say hello to somebody else..!", ""]);
+                    } else {
                         var msgGuild = msg.TryGetGuild();
                         string from = msgGuild != null ? " from " + msgGuild.Name : "";
                         _ = msg.EmojiReact("✅");
-                        await user.SendMessageAsync($"{Caretaker.UserPingFromID(msg.Id)}{from} says hi!");
-                    } else {
-                        await msg.ReplyAsync("aw hii :3");
+                        await user.SendMessageAsync($"{msg.Author.GlobalName} ({msg.Author.Username}){from} says hi!");
                     }
                 } else {
-                    await msg.ReplyAsync($"i can't reach that person right now :( maybe just send them a normal hello");
+                    await msg.Reply($"i can't reach that person right now :( maybe just send them a normal hello");
                 }
-            }, [new Param("user", "the username of the person you'd like to say hi to", "astrljelly", "user")]),
+            }, [new Param("user", "the username of the person you'd like to say hi to", "1182009469824139395", "user")]),
 
             new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (msg, p) => {}),
 
-            new("help", "list all cmd commands", "comands", async (msg, p) => {
+            new("help", "list all cmd commands", "commands", async (msg, p) => {
                 string reply = ListCommands(p["command"], true);
-                await msg.ReplyAsync(reply, allowedMentions: AllowedMentions.None);
+                await msg.Reply(reply, false);
             }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
 
             new("params", "reply with all params", "testing", async (msg, p) => {
                 var keys = p.Keys;
                 foreach (var value in p.Values) {
-                    await msg.ReplyAsync((string)value);
+                    await msg.Reply((string)value);
                 }
-                // await msg.ReplyAsync(p);
+                // await msg.Reply(p);
             }, [new Param("test", "", 0)]),
 
             new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
                 if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
-                MainHook.instance.c4.SetColumn(p["column"], p["player"]);
+                MainHook.instance.c4.AddToColumn(p["column"], p["player"]);
             }, [ new("column", "", 0), new("player", "", 1) ]),
             
             new("c4get", "GET connect 4", "games", async (msg, p) => {
                 if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
-                await msg.ReplyAsync(((int)MainHook.instance.c4.GetElement(p["x"], p["y"])).ToString());
+                await msg.Reply(((int)MainHook.instance.c4.GetElement(p["x"], p["y"])).ToString());
             }, [ new("x", "", 0), new("y", "", 0) ]),
             
             new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
                 if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
-                await msg.ReplyAsync(MainHook.instance.c4.DisplayBoard());
+                await msg.Reply(MainHook.instance.c4.DisplayBoard());
+                var win = MainHook.instance.c4.WinCheck();
+                if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
             new("servers", "get all servers", "hidden", async (msg, p) => {
@@ -133,19 +144,22 @@ namespace CaretakerNET.Commands
             new("invite", "make an invite to a server i'm in", "hidden", async (msg, p) => {
                 SocketGuild? guild = MainHook.instance._client.Guilds.FirstOrDefault(x => x.Name.Equals((string)p["serverName"], StringComparison.CurrentCultureIgnoreCase));
                 if (guild == null) {
-                    await msg.ReplyAsync("darn. no server with that name");
+                    await msg.Reply("darn. no server with that name");
                 } else {
                     // var invite = await guild.GetVanityInviteAsync();
-                    // await msg.ReplyAsync(invite.Url);
+                    // await msg.Reply(invite.Url);
                     var invite = await guild.GetInvitesAsync();
-                    await msg.ReplyAsync(invite.First().Url);
+                    await msg.Reply(invite.First().Url);
                 }
             }, [ new("serverName", "the name of the server to make an invite for", "") ]),
 
+            new("kill", "kills the bot", "hidden", async (msg, p) => {
+                await Task.Delay(p["delay"]);
+                // MainHook.instance.Kill(true);
+            }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
+
             new("test", "testing code out", "testing", async (msg, p) => {
-                foreach (string str in p["params"]) {
-                    await msg.ReplyAsync(str);
-                }
+                MainHook.instance.CloseMainWindow(); 
             }, [ new("test1", "for testing", ""), new("test2", "for testing: electric boogaloo", ""), new("params", "params!!!", "") ]),
         ];
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -158,6 +172,8 @@ namespace CaretakerNET.Commands
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
         public async static Task<bool> ParseCommand(SocketUserMessage msg, string command, string parameters = "")
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
             var whichComms = Commands;
             if (command == "cmd") {
                 whichComms = CmdCommands;
@@ -220,7 +236,7 @@ namespace CaretakerNET.Commands
                                 valueStr = splitParams[i][(colon + 1)..];
                                 setParam = Array.Find(com.parameters, x => x.name == paramName);
                                 if (setParam == null) {
-                                    await msg.ReplyAsync($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
+                                    await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
                                     return false;
                                 }
                             }
@@ -241,15 +257,19 @@ namespace CaretakerNET.Commands
                     paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
                 }
             }
+
+            stopwatch.Stop();
+            Caretaker.LogDebug($"[{DateTime.Now:HH:mm:ss tt}] took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters");
             
             try {
                 await com.func.Invoke(msg, paramDict);
                 return true;
             } catch (System.Exception err) {
-                await msg.ReplyAsync(err.ToString());
+                await msg.Reply(err.ToString());
                 return false;
             }
         }
+        
         public static string ListCommands(string singleCom, bool cmd = false, bool showHidden = false)
         {
             var commandDict = cmd ? CmdCommands : Commands;
@@ -257,9 +277,10 @@ namespace CaretakerNET.Commands
                 return $"{singleCom} is NOT a command. try again :/";
             }
             List<string> response = [];
-            string[] commands = singleCom != "" ? [singleCom] : commandDict.Keys.ToArray();
-            for (int i = 0; i < commands.Length; i++) {
-                Command com = commandDict[commands[i]];
+            // string[] commands = singleCom != "" ? [singleCom] : commandDict.Keys.ToArray();
+            Command[] commandsToList = singleCom != "" ? [ commandDict[singleCom] ] : commands;
+            foreach (var com in commandsToList)
+            {
                 if (com.genre == "hidden" && !showHidden) continue;
                 var paramNames = com.parameters?.Select(x => x.name);
                 string joinedParams = "";
@@ -267,9 +288,23 @@ namespace CaretakerNET.Commands
                     joinedParams = $"{string.Join(", ", paramNames)}";
                 }
 
-                response.Add($"{MainHook.PREFIX}{commands[i]} ({joinedParams}) : {com.desc}\n");
+                response.Add($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
             }
-            return string.Join("", response);
+            return response.Count > 0 ? string.Join("", response) : "mmm... no.";
+        }
+        
+        public static void EmojiSpam(SocketUserMessage msg, string emojiStr, int amount)
+        {
+            SocketMessage? reactMessage = (SocketMessage?)msg.ReferencedMessage ?? msg.Channel.CachedMessages.ToArray()[^2];
+            Caretaker.Log(reactMessage?.Content ?? "it's null.");
+            
+            // if (!Emoji.TryParse(emojiStr, out Emoji emoji)) return;
+            var emoji = Emote.Parse(emojiStr);
+            
+            for (int i = 0; i < amount; i++) {
+                if (reactMessage == null) return;
+                _ = Task.Run(async () => {await reactMessage.AddReactionAsync(emoji);});
+            }
         }
 
         // currently an instance isn't needed; try avoiding one?
@@ -278,9 +313,16 @@ namespace CaretakerNET.Commands
         {
             var whichComms = Commands;
             foreach (var command in commands) {
-                whichComms.Add(command.name, command);
+                var commandNames = command.name.Split(", ");
+                // if (commandNames.Length > 1) command.name = commandNames[0];
+                foreach (var commandName in commandNames) {
+                    whichComms.Add(commandName, command);
+                }
+                
                 if (command.name == "cmd") whichComms = CmdCommands;
             }
+            Commands.ToFrozenDictionary();
+            CmdCommands.ToFrozenDictionary();
         }
     }
 }

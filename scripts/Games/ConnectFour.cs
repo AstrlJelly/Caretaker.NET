@@ -1,9 +1,10 @@
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using CaretakerNET.Helper;
+using CaretakerNET.Core;
 using Discord.WebSocket;
 
 namespace CaretakerNET.Games
@@ -22,22 +23,93 @@ namespace CaretakerNET.Games
     {
         public enum Player
         {
-            One = 1,
+            None,
+            One,
             Two,
         }
+
+        public struct Win(Player winningPlayer, Vector2[] winPoints) {
+            public Player winningPlayer = winningPlayer;
+            public Vector2[] winPoints = winPoints;
+        }
+
         private readonly List<List<int>> board; // array of a list of ints
         public const int MAXWIDTH = 7; // width of the board
         public const int MAXHEIGHT = 6; // height of the board
-        public void SetColumn(int column, int player) => SetColumn(column, (Player)player);
-        public void SetColumn(int column, Player player)
+
+        public bool AddToColumn(int column, int player) => AddToColumn(column, (Player)player);
+        public bool AddToColumn(int column, Player player)
         {
-            column = Math.Clamp(column, 0, MAXWIDTH - 1);
-            board[column].Add((int)player);
+            // technically don't need the else but i think it makes it look nicer
+            if (column > MAXWIDTH -1 || board[column].Count > MAXWIDTH - 1) {
+                return false;
+            } else {
+                board[column].Add((int)player);
+                return true;
+            }
         }
+        
         public int GetElement(int x, int y)
         {
             return board[y].IsIndexValid(x) ? board[y][x] : 0;
         }
+
+        // this is one of the most complicated things ive done in code so far so
+        // if you're some random person looking at this, sorry if it's atrocious
+        // CURRENTLY THIS IS WRITTEN BY BING AI, LOL (it does suck rn though, i wanna see how optimized i can get it)
+        public Win WinCheck()
+        {
+            // Check horizontal lines
+            for (int i = 0; i < 6; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i, j + 1) && GetElement(i, j) == GetElement(i, j + 2) && GetElement(i, j) == GetElement(i, j + 3))
+                    {
+                        return new Win((Player)GetElement(i, j), []);
+                    }
+                }
+            }
+
+            // Check vertical lines
+            for (int j = 0; j < 7; j++)
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j) && GetElement(i, j) == GetElement(i + 2, j) && GetElement(i, j) == GetElement(i + 3, j))
+                    {
+                        return new Win((Player)GetElement(i, j), []);
+                    }
+                }
+            }
+
+            // Check diagonal lines (top-left to bottom-right)
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j + 1) && GetElement(i, j) == GetElement(i + 2, j + 2) && GetElement(i, j) == GetElement(i + 3, j + 3))
+                    {
+                        return new Win((Player)GetElement(i, j), []);
+                    }
+                }
+            }
+
+            // Check diagonal lines (bottom-left to top-right)
+            for (int i = 3; i < 6; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i - 1, j + 1) && GetElement(i, j) == GetElement(i - 2, j + 2) && GetElement(i, j) == GetElement(i - 3, j + 3))
+                    {
+                        return new Win((Player)GetElement(i, j), []);
+                    }
+                }
+            }
+
+            return new Win(Player.None, []);
+        }
+
         public string DisplayBoard()
         {
             List<string> joinedRows = [];
