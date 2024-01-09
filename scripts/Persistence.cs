@@ -2,11 +2,12 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using CaretakerNET.Games;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
+
+using CaretakerNET.Games;
 
 namespace CaretakerNET
 {
@@ -36,10 +37,10 @@ namespace CaretakerNET
         public string? lastCounter;
     }
 
-    public class SlowMode
+    public class SlowMode(ITextChannel? channel, int timer)
     {
-        public ITextChannel? channel;
-        public int timer;
+        public ITextChannel? channel = channel;
+        public int timer = timer;
     }
 
     public class ServerPersist

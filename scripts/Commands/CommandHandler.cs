@@ -7,13 +7,10 @@ using System.Threading.Tasks;
 using CaretakerNET.ExternalEmojis;
 using CaretakerNET.Games;
 using CaretakerNET.Core;
+using System.Collections.Frozen; // frozen dictionary doesn't seem very important
 
-
-// using Microsoft.Extensions.DependencyInjection;
 using Discord;
 using Discord.WebSocket;
-using System.Security.Cryptography;
-using System.Collections.Frozen;
 
 namespace CaretakerNET.Commands
 {
@@ -41,6 +38,14 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
+            new("jerma", "get a random jerma voiceline", "silly", async (msg, p) => {
+                EmojiSpam(msg, Emojis.True, p["amount"]);
+            }, [new Param("amount", "the amount you agree with this message", 20)]),
+
+            new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
+
+            }, [new Param("fileName", "what the file will be renamed to", "")]),
+
             new("true", Emojis.True, "silly", async (msg, p) => {
                 EmojiSpam(msg, Emojis.True, p["amount"]);
             }, [new Param("amount", "the amount you agree with this message", 20)]),
@@ -66,17 +71,39 @@ namespace CaretakerNET.Commands
                 if (victim == null) {
                     await msg.Reply($"hmm... seems like the user you tried to challenge is unavailable.");
                     return;
-                } else {
-                    switch (p["game"])
-                    {
-                        case "c4" or "connect4": {
-                            var challengeMsg = await msg.ReplyAsync($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
-
-                        } break;
-                        default: {
-
-                        } break;
-                    }
+                }
+                switch (p["game"])
+                {
+                    case "c4" or "connect4": {
+                        var challengeMsg = await msg.ReplyAsync($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
+                        bool accepted = false;
+                        for (int i = 0; i < 60; i++)
+                        {
+                            Emoji? checkmark = Emoji.Parse("✅");
+                            if (!challengeMsg.Reactions.ContainsKey(checkmark)) continue;
+                            int reactionCount = challengeMsg.Reactions.ContainsKey(checkmark) ? challengeMsg.Reactions[checkmark].ReactionCount : 0;
+                            var acceptedUsers = await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
+                                                                  .FlattenAsync();
+                            foreach (var user in acceptedUsers)
+                            {
+                                if (!user.IsBot && user.Id == victim.Id) {
+                                    accepted = true;
+                                    break;
+                                }
+                            }
+                            if (accepted) break;
+                            await Task.Delay(1000);
+                        }
+                        if (accepted) {
+                            MainHook.instance.players = [ msg.Author.Id, victim.Id ];
+                            await msg.ReplyAsync($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
+                        } else {
+                            _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{msg.Content}*\ntook too long! oops.");
+                        }
+                    } break;
+                    default: {
+                        await msg.Reply("that's not a game!");
+                    } break;
                 }
             }, [
                 new Param("game", "which game would you like to challenge with?", ""),
@@ -117,17 +144,17 @@ namespace CaretakerNET.Commands
             }, [new Param("test", "", 0)]),
 
             new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
-                if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
+                MainHook.instance.c4 ??= new();
                 MainHook.instance.c4.AddToColumn(p["column"], p["player"]);
             }, [ new("column", "", 0), new("player", "", 1) ]),
             
             new("c4get", "GET connect 4", "games", async (msg, p) => {
-                if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
+                MainHook.instance.c4 ??= new();
                 await msg.Reply(((int)MainHook.instance.c4.GetElement(p["x"], p["y"])).ToString());
             }, [ new("x", "", 0), new("y", "", 0) ]),
             
             new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
-                if (MainHook.instance.c4 == null) MainHook.instance.c4 = new();
+                MainHook.instance.c4 ??= new();
                 await msg.Reply(MainHook.instance.c4.DisplayBoard());
                 var win = MainHook.instance.c4.WinCheck();
                 if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
@@ -142,7 +169,7 @@ namespace CaretakerNET.Commands
             }),
 
             new("invite", "make an invite to a server i'm in", "hidden", async (msg, p) => {
-                SocketGuild? guild = MainHook.instance._client.Guilds.FirstOrDefault(x => x.Name.Equals((string)p["serverName"], StringComparison.CurrentCultureIgnoreCase));
+                SocketGuild? guild = p["guild"];
                 if (guild == null) {
                     await msg.Reply("darn. no server with that name");
                 } else {
@@ -151,11 +178,10 @@ namespace CaretakerNET.Commands
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
-            }, [ new("serverName", "the name of the server to make an invite for", "") ]),
+            }, [ new("guild", "the name of the server to make an invite for", "", "guild") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
                 await Task.Delay(p["delay"]);
-                // MainHook.instance.Kill(true);
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
@@ -277,15 +303,16 @@ namespace CaretakerNET.Commands
                 return $"{singleCom} is NOT a command. try again :/";
             }
             List<string> response = [];
-            // string[] commands = singleCom != "" ? [singleCom] : commandDict.Keys.ToArray();
-            Command[] commandsToList = singleCom != "" ? [ commandDict[singleCom] ] : commands;
-            foreach (var com in commandsToList)
+            string[] commandKeys = singleCom != "" ? [ singleCom ] : commandDict.Keys.ToArray();
+            for (int i = 0; i < commandKeys.Length; i++)
             {
+                var com = commandDict[commandKeys[i]];
+                if (commandKeys.IsIndexValid(i - 1) && commandDict[commandKeys[i - 1]].name == com.name) continue;
                 if (com.genre == "hidden" && !showHidden) continue;
-                var paramNames = com.parameters?.Select(x => x.name);
                 string joinedParams = "";
-                if (paramNames?.FirstOrDefault() != null) {
-                    joinedParams = $"{string.Join(", ", paramNames)}";
+                if (com.parameters != null) {
+                    IEnumerable<string> paramNames = com.parameters.Select(x => x.name);
+                    joinedParams = string.Join(", ", paramNames) + (com.inf != null ? ", params" : "");
                 }
 
                 response.Add($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
@@ -293,17 +320,27 @@ namespace CaretakerNET.Commands
             return response.Count > 0 ? string.Join("", response) : "mmm... no.";
         }
         
-        public static void EmojiSpam(SocketUserMessage msg, string emojiStr, int amount)
+        public static async void EmojiSpam(IUserMessage msg, string emojiStr, int amount)
         {
-            SocketMessage? reactMessage = (SocketMessage?)msg.ReferencedMessage ?? msg.Channel.CachedMessages.ToArray()[^2];
-            Caretaker.Log(reactMessage?.Content ?? "it's null.");
+            IMessage? reactMessage = msg.ReferencedMessage;
+            if (reactMessage == null) {
+                var messages = await msg.Channel.GetMessagesAsync(5).FlattenAsync();
+                reactMessage = messages.ElementAt(1);
+            }
+            
+            Caretaker.Log("amount : " + amount);
             
             // if (!Emoji.TryParse(emojiStr, out Emoji emoji)) return;
             var emoji = Emote.Parse(emojiStr);
             
             for (int i = 0; i < amount; i++) {
-                if (reactMessage == null) return;
-                _ = Task.Run(async () => {await reactMessage.AddReactionAsync(emoji);});
+                if (reactMessage == null) {
+                    Caretaker.LogWarning(msg.Author.Username + " had their emoji spam cancelled.");
+                    return;
+                }
+                Caretaker.Log("REACT!!!!!!!!!");
+                _ = reactMessage.AddReactionAsync(emoji);
+                await Task.Delay(1000);
             }
         }
 
@@ -321,8 +358,6 @@ namespace CaretakerNET.Commands
                 
                 if (command.name == "cmd") whichComms = CmdCommands;
             }
-            Commands.ToFrozenDictionary();
-            CmdCommands.ToFrozenDictionary();
         }
     }
 }

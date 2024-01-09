@@ -9,7 +9,7 @@ using Discord.WebSocket;
 
 namespace CaretakerNET.Games
 {
-    /*// VISUAL GUIDE
+    /*
     {0, 0, 0, 0, 0, 0}
     {1, 0, 0, 0, 0, 0}
     {2, 1, 2, 0, 0, 0}
@@ -17,7 +17,7 @@ namespace CaretakerNET.Games
     {1, 1, 0, 0, 0, 0}
     {2, 0, 0, 0, 0, 0}
     {0, 0, 0, 0, 0, 0}
-    */// END VISUAL GUIDE
+    */
 
     public class ConnectFour
     {
@@ -36,6 +36,9 @@ namespace CaretakerNET.Games
         private readonly List<List<int>> board; // array of a list of ints
         public const int MAXWIDTH = 7; // width of the board
         public const int MAXHEIGHT = 6; // height of the board
+
+        public ulong player1;
+        public ulong player2;
 
         public bool AddToColumn(int column, int player) => AddToColumn(column, (Player)player);
         public bool AddToColumn(int column, Player player)
@@ -59,53 +62,55 @@ namespace CaretakerNET.Games
         // CURRENTLY THIS IS WRITTEN BY BING AI, LOL (it does suck rn though, i wanna see how optimized i can get it)
         public Win WinCheck()
         {
-            // Check horizontal lines
-            for (int i = 0; i < 6; i++)
-            {
-                for (int j = 0; j < 4; j++)
-                {
-                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i, j + 1) && GetElement(i, j) == GetElement(i, j + 2) && GetElement(i, j) == GetElement(i, j + 3))
-                    {
-                        return new Win((Player)GetElement(i, j), []);
-                    }
-                }
-            }
+            // // Check horizontal lines
+            // for (int i = 0; i < 6; i++)
+            // {
+            //     for (int j = 0; j < 4; j++)
+            //     {
+            //         if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i, j + 1) && GetElement(i, j) == GetElement(i, j + 2) && GetElement(i, j) == GetElement(i, j + 3))
+            //         {
+            //             return new Win((Player)GetElement(i, j), []);
+            //         }
+            //     }
+            // }
 
-            // Check vertical lines
-            for (int j = 0; j < 7; j++)
-            {
-                for (int i = 0; i < 3; i++)
-                {
-                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j) && GetElement(i, j) == GetElement(i + 2, j) && GetElement(i, j) == GetElement(i + 3, j))
-                    {
-                        return new Win((Player)GetElement(i, j), []);
-                    }
-                }
-            }
+            // // Check vertical lines
+            // for (int j = 0; j < 7; j++)
+            // {
+            //     for (int i = 0; i < 3; i++)
+            //     {
+            //         if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j) && GetElement(i, j) == GetElement(i + 2, j) && GetElement(i, j) == GetElement(i + 3, j))
+            //         {
+            //             return new Win((Player)GetElement(i, j), []);
+            //         }
+            //     }
+            // }
 
-            // Check diagonal lines (top-left to bottom-right)
-            for (int i = 0; i < 3; i++)
-            {
-                for (int j = 0; j < 4; j++)
-                {
-                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j + 1) && GetElement(i, j) == GetElement(i + 2, j + 2) && GetElement(i, j) == GetElement(i + 3, j + 3))
-                    {
-                        return new Win((Player)GetElement(i, j), []);
-                    }
-                }
-            }
+            // // Check diagonal lines (top-left to bottom-right)
+            // for (int i = 0; i < 3; i++)
+            // {
+            //     for (int j = 0; j < 4; j++)
+            //     {
+            //         if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i + 1, j + 1) && GetElement(i, j) == GetElement(i + 2, j + 2) && GetElement(i, j) == GetElement(i + 3, j + 3))
+            //         {
+            //             return new Win((Player)GetElement(i, j), []);
+            //         }
+            //     }
+            // }
 
-            // Check diagonal lines (bottom-left to top-right)
-            for (int i = 3; i < 6; i++)
-            {
-                for (int j = 0; j < 4; j++)
-                {
-                    if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i - 1, j + 1) && GetElement(i, j) == GetElement(i - 2, j + 2) && GetElement(i, j) == GetElement(i - 3, j + 3))
-                    {
-                        return new Win((Player)GetElement(i, j), []);
-                    }
-                }
-            }
+            // // Check diagonal lines (bottom-left to top-right)
+            // for (int i = 3; i < 6; i++)
+            // {
+            //     for (int j = 0; j < 4; j++)
+            //     {
+            //         if (GetElement(i, j) != 0 && GetElement(i, j) == GetElement(i - 1, j + 1) && GetElement(i, j) == GetElement(i - 2, j + 2) && GetElement(i, j) == GetElement(i - 3, j + 3))
+            //         {
+            //             return new Win((Player)GetElement(i, j), []);
+            //         }
+            //     }
+            // }
+
+
 
             return new Win(Player.None, []);
         }

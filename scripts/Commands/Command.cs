@@ -1,5 +1,6 @@
 ﻿using System;
 using CaretakerNET.Core;
+using Discord;
 using Discord.WebSocket;
 
 namespace CaretakerNET.Commands
@@ -9,7 +10,7 @@ namespace CaretakerNET.Commands
         public readonly string name;
         public readonly string desc;
         public readonly string genre;
-        public delegate Task RunAsync(SocketUserMessage msg, Dictionary<string, dynamic> p);
+        public delegate Task RunAsync(IUserMessage msg, Dictionary<string, dynamic> p);
         // public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
         public readonly RunAsync func;
         public readonly Param[] parameters;
@@ -31,6 +32,7 @@ namespace CaretakerNET.Commands
                 this.inf = parameters.Find(x => x.name == "params");
                 if (this.inf != null) {
                     parameters.Remove(this.inf);
+                    Caretaker.Log(this.inf.name);
                 }
                 this.parameters = [.. parameters];
             } else {

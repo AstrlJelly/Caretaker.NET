@@ -50,11 +50,21 @@ namespace CaretakerNET.Core
         #endregion
 
         #region List
-        public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index < enumerable.Count();
+        public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index > 0 && index < enumerable.Count();
 
         // ElementAt moment
         public static T? GetFromIndexes<T>(this IEnumerable<IEnumerable<T>> enumerable, int i, int j) {
             return enumerable.IsIndexValid(i) && enumerable.ElementAt(i).IsIndexValid(j) ? enumerable.ElementAt(i).ElementAt(j) : default;
+        }
+
+        // Item1 and Item2 look kinda ugly but a tuple makes sense for this method
+        public static (List<T>, List<T>?) SplitByIndex<T>(this List<T> listToSplit, int index)
+        {
+            if (listToSplit.IsIndexValid(index)) {
+                return (listToSplit[..index], listToSplit[(index + 1)..]);
+            } else {
+                return (listToSplit, default);
+            }
         }
 
         public static T? GetRandom<T>(this IEnumerable<T> list) {
@@ -92,14 +102,14 @@ namespace CaretakerNET.Core
             return await msg.ReplyAsync(embed: embed);
         }
 
-        public static SocketGuild GetGuild(this SocketMessage msg) 
+        public static SocketGuild GetGuild(this IUserMessage msg) 
         {
             if (msg.Channel is not SocketGuildChannel chnl) { // pattern matching is freaky but i like it
                 throw new Exception($"msg with id ${msg.Id} apparently... didn't have a channel?? idk.");
             }
             return chnl.Guild;
         }
-        public static SocketGuild? TryGetGuild(this SocketMessage msg) 
+        public static SocketGuild? TryGetGuild(this IUserMessage msg) 
         {
             try {
                 return GetGuild(msg);

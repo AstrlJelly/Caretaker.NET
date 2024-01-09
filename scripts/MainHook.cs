@@ -22,8 +22,7 @@ namespace CaretakerNET
 
         public readonly DiscordSocketClient _client;
         public ConnectFour? c4;
-        public ulong player1;
-        public ulong player2;
+        public ulong[] players = [];
         public readonly Dictionary<ulong, ServerPersist> _s = [];
         // public Dictionary<ulong, UserPersist> _u = [];
 
@@ -33,6 +32,7 @@ namespace CaretakerNET
 
         private readonly ulong[] TrustedUsers = [
             438296397452935169, // @astrljelly
+            752589264398712834, // @antoutta
         ];
         private readonly ulong[] BannedUsers = [
             468933965110312980, // @lifinale
@@ -47,7 +47,6 @@ namespace CaretakerNET
                 MessageCacheSize = 50,
             });
 
-            // Subscribe the logging handler to both the client and the CommandService.
             _client.Log += ClientLog;
             _client.MessageReceived += MessageReceivedAsync;
 
@@ -61,7 +60,6 @@ namespace CaretakerNET
         private static Task ClientLog(LogMessage message)
         {
             Caretaker.Log($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", message.Severity);
-            
             return Task.CompletedTask;
         }
 
@@ -81,71 +79,33 @@ namespace CaretakerNET
             await Task.Delay(Timeout.Infinite);
         }
 
-        public async Task MyButtonHandler(SocketMessageComponent component)
-        {
-            _ = Task.Run(async () => {
-                // We can now check for our custom id
-                switch(component.Data.CustomId)
-                {
-                    // Since we set our buttons custom id as 'custom-id', we can check for it like this:
-                    case "c4accept":
-                        // Lets respond by sending a message saying they clicked the button
-                        await component.RespondAsync($"{component.User.Mention} has clicked the button!");
-                    break;
-                }
-            });
-            await Task.CompletedTask;
-        }
-
         private async Task MessageReceivedAsync(SocketMessage message)
         {
-            // // make sure the message is a user sent message, and output a new msg variable
-            // // also make sure it's not a bot/not banned
-            // bool banned = Array.Exists(BannedUsers, x => x == message.Author.Id);
-            // if ((message is not SocketUserMessage msg) || msg.Author.IsBot || banned) return; 
-
-            // var stopwatch = new Stopwatch();
-            
-            // if (msg.Content.StartsWith(PREFIX)) {
-                
-            //     (string command, string parameters) = msg.Content[PREFIX.Length..].SplitByFirstChar(' ');
-            //     if (string.IsNullOrEmpty(command)) return;
-
-            //     try {
-            //         var typing = msg.Channel.EnterTypingState();
-            //         stopwatch.Start();
-            //         await CommandHandler.ParseCommand(msg, command, parameters);
-            //         stopwatch.Stop();
-            //         Caretaker.LogDebug($"parsing {PREFIX}{command} command took {stopwatch.ElapsedMilliseconds} ms");
-            //         typing.Dispose();
-            //     } catch (Exception error) {
-            //         await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);
-            //         throw;
-            //     }
-            // }
+            // wrap in Task.Run() so that multiple commands can be handled at the same time
             _ = Task.Run(async () => {
                 // make sure the message is a user sent message, and output a new msg variable
                 // also make sure it's not a bot/not banned
                 bool banned = Array.Exists(BannedUsers, x => x == message.Author.Id);
-                if ((message is not SocketUserMessage msg) || msg.Author.IsBot || banned) return; 
+                if ((message is not SocketUserMessage msg) || msg.Author.IsBot || banned) return;
 
-                var stopwatch = new Stopwatch();
-                
                 if (msg.Content.StartsWith(PREFIX)) {
                     (string command, string parameters) = msg.Content[PREFIX.Length..].SplitByFirstChar(' ');
                     if (string.IsNullOrEmpty(command)) return;
 
-                    var typing = msg.Channel.EnterTypingState();
-                    try {
-                        stopwatch.Start();
-                        await CommandHandler.ParseCommand(msg, command, parameters);
-                        stopwatch.Stop();
-                        Caretaker.LogDebug($"parsing {PREFIX}{command} command took {stopwatch.ElapsedMilliseconds} ms");
-                    } catch (Exception error) {
-                        await msg.ReplyAsync(error.ToString(), allowedMentions: AllowedMentions.None);
-                        throw;
+                    // var typing = msg.Channel.EnterTypingState();
+                    using (msg.Channel.EnterTypingState()) {
+                        try {
+                            Stopwatch sw = new();
+                            sw.Start();
+                            await CommandHandler.ParseCommand(msg, command, parameters);
+                            sw.Stop();
+                            Caretaker.LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
+                        } catch (Exception error) {
+                            await msg.Reply(error, false);
+                            throw;
+                        }
                     }
-                    typing.Dispose();
+                    // typing.Dispose();
                 }
             });
             await Task.CompletedTask; 
