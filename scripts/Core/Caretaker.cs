@@ -50,7 +50,7 @@ namespace CaretakerNET.Core
         #endregion
 
         #region List
-        public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index > 0 && index < enumerable.Count();
+        public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index >= 0 && index < enumerable.Count();
 
         // ElementAt moment
         public static T? GetFromIndexes<T>(this IEnumerable<IEnumerable<T>> enumerable, int i, int j) {
@@ -68,7 +68,7 @@ namespace CaretakerNET.Core
         }
 
         public static T? GetRandom<T>(this IEnumerable<T> list) {
-            var random = new Random(); 
+            var random = new Random();
             int count = list.Count();
             return count > 0 ? list.ElementAt(random.Next(list.Count())) : default;
         }
@@ -94,7 +94,8 @@ namespace CaretakerNET.Core
 
         public static async Task<IUserMessage> RandomReply(this IUserMessage msg, object[] replies, bool ping = false)
         {
-            return await msg.Reply(replies.GetRandom() ?? "", ping);
+            string? reply = (string?)replies.GetRandom();
+            return await msg.Reply(string.IsNullOrEmpty(reply) ? "." : reply, ping);
         }
 
         public static async Task<IUserMessage> EmbedReply(this IUserMessage msg, Embed embed)
@@ -102,20 +103,10 @@ namespace CaretakerNET.Core
             return await msg.ReplyAsync(embed: embed);
         }
 
-        public static SocketGuild GetGuild(this IUserMessage msg) 
+        public static SocketGuild? GetGuild(this IUserMessage msg) 
         {
-            if (msg.Channel is not SocketGuildChannel chnl) { // pattern matching is freaky but i like it
-                throw new Exception($"msg with id ${msg.Id} apparently... didn't have a channel?? idk.");
-            }
+            if (msg.Channel is not SocketGuildChannel chnl) return null;
             return chnl.Guild;
-        }
-        public static SocketGuild? TryGetGuild(this IUserMessage msg) 
-        {
-            try {
-                return GetGuild(msg);
-            } catch (System.Exception) {
-                return null;
-            }
         }
 
         public async static Task EmojiReact(this IMessage msg, string emojiStr)
@@ -127,25 +118,23 @@ namespace CaretakerNET.Core
             return reference[0] == '<' && reference.Length >= 2 ? reference[2..^1] : null;
         }
 
-        public static IUser? ParseUser(string userToParse, SocketGuild? guild = null)
+        public static SocketGuild? ParseGuild(string guildToParse)
         {
-            IUser? user = null;
-            (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
-            Action[] actions = [
-                delegate { user = MainHook.instance._client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
-                // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
-                delegate { user = MainHook.instance._client.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
-                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
+            SocketGuild? guild = null;
+            var c = MainHook.instance.Client;
+            Func<string, SocketGuild?>[] actions = [
+                x => c.Guilds.FirstOrDefault(g => g.Name.Equals(guildToParse, StringComparison.CurrentCultureIgnoreCase) || g.Id == ulong.Parse(guildToParse)),
+                // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
-                    actions[i].Invoke();
-                    if (user != null) break;
+                    guild = actions[i](guildToParse);
+                    if (guild != null) break;
                 } catch {
                     continue;
                 }
             }
-            return user;
+            return guild;
         }
 
         public static ITextChannel? ParseChannel(string channelToParse, SocketGuild? guild)
@@ -166,12 +155,34 @@ namespace CaretakerNET.Core
             }
             return channel;
         }
+
+        public static IUser? ParseUser(string userToParse, SocketGuild? guild)
+        {
+            IUser? user = null;
+            (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
+            Action[] actions = [
+                delegate { user = MainHook.instance.Client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
+                // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
+                delegate { user = MainHook.instance.Client.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
+                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
+            ];
+            for (int i = 0; i < actions.Length; i++) {
+                try {
+                    actions[i].Invoke();
+                    if (user != null) break;
+                } catch {
+                    continue;
+                }
+            }
+            return user;
+        }
+
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
         public static string UserPingFromID(ulong id) => $"<@{id}>";
         #endregion
 
-        #region Logging
-        public static void Log(object message, LogSeverity severity = LogSeverity.Info)
+        #region Console
+        public static void Log(object message, bool time = false, LogSeverity severity = LogSeverity.Info)
         {
             Console.ForegroundColor = severity switch {
                 LogSeverity.Critical or LogSeverity.Error => ConsoleColor.Red,
@@ -179,13 +190,19 @@ namespace CaretakerNET.Core
                 LogSeverity.Verbose or LogSeverity.Debug  => ConsoleColor.DarkGray,
                 LogSeverity.Info or _                     => ConsoleColor.White,
             };
+            if (time) message = $"[{CurrentTime()}] " + message;
             Console.WriteLine(message.ToString());
             Console.ResetColor();
         }
 
-        public static void LogWarning(object? message = null) { Log(message ?? "Warning!", LogSeverity.Warning); }
-        public static void LogError(object? message = null) { Log(message ?? "Error!", LogSeverity.Error); }
-        public static void LogDebug(object? message = null) { if (MainHook.instance.DebugMode) Log(message ?? "null", LogSeverity.Info); }
+        public static void LogWarning(object? message = null, bool time = false) { Log(message ?? "Warning!", time, LogSeverity.Warning); }
+        public static void LogError(object? message = null, bool time = false) { Log(message ?? "Error!", time, LogSeverity.Error); }
+        public static void LogDebug(object? message = null, bool time = false) { if (MainHook.instance.DebugMode) Log(message ?? "null", time, LogSeverity.Info); }
+
+        public static void ChangeConsoleTitle(string status)
+        {
+            Console.Title = "CaretakerNET : ";
+        }
         #endregion
 
         #region Time
@@ -207,7 +224,9 @@ namespace CaretakerNET.Core
             return (typeFrom > typeTo) ? (time * modifier) : (time / modifier);
         }
 
-        public static long CurrentTime() => new DateTimeOffset().ToUnixTimeMilliseconds();
+        public static string CurrentTime() => DateTime.Now.ToString("HH:mm:ss tt");
+
+        public static long DateNow() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         #endregion
     
         #region Async

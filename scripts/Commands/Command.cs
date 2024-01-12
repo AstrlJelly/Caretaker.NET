@@ -11,14 +11,14 @@ namespace CaretakerNET.Commands
         public readonly string desc;
         public readonly string genre;
         public delegate Task RunAsync(IUserMessage msg, Dictionary<string, dynamic> p);
-        // public delegate void Run(SocketUserMessage msg, Dictionary<string, dynamic> p);
+        // public delegate void Run(IUserMessage msg, Dictionary<string, dynamic> p);
         public readonly RunAsync func;
         public readonly Param[] parameters;
         public readonly Param? inf;
         public string[][] limitedTo;
         public int timeout;
         public int currentTimeout;
-        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 0)
+        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 500)
         {
             this.name = name;
             this.desc = desc;

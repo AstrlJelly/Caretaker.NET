@@ -38,29 +38,9 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
-            new("jerma", "get a random jerma voiceline", "silly", async (msg, p) => {
-                EmojiSpam(msg, Emojis.True, p["amount"]);
-            }, [new Param("amount", "the amount you agree with this message", 20)]),
-
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
 
             }, [new Param("fileName", "what the file will be renamed to", "")]),
-
-            new("true", Emojis.True, "silly", async (msg, p) => {
-                EmojiSpam(msg, Emojis.True, p["amount"]);
-            }, [new Param("amount", "the amount you agree with this message", 20)]),
-
-            // new("false", Emojis.True, "silly", async (msg, p) => {
-            //     await EmojiSpam(msg, Emojis.False);
-            // }, [new Param("amount", "the amount you agree with this message", 20)]),
-
-            new("smide", Emojis.Smide, "silly", async (msg, p) => {
-                EmojiSpam(msg, Emojis.Smide, p["amount"]);
-            }, [ new Param("amount", $"how {Emojis.Smide} this message makes you feel", 20) ]),
-
-            // new("explode", Emojis.True, "silly", async (msg, p) => {
-            //     await EmojiSpam(msg, Emojis.ExplodingHead);
-            // }, [new Param("amount", "the amount you agree with this message", 20)]),
 
             new("c4go", "play connect 4 using this command!", "games", async (msg, p) => {
 
@@ -75,7 +55,7 @@ namespace CaretakerNET.Commands
                 switch (p["game"])
                 {
                     case "c4" or "connect4": {
-                        var challengeMsg = await msg.ReplyAsync($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
+                        var challengeMsg = await msg.Reply($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
                         bool accepted = false;
                         for (int i = 0; i < 60; i++)
                         {
@@ -95,8 +75,8 @@ namespace CaretakerNET.Commands
                             await Task.Delay(1000);
                         }
                         if (accepted) {
-                            MainHook.instance.players = [ msg.Author.Id, victim.Id ];
-                            await msg.ReplyAsync($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
+                            MainHook.instance.c4 = new(msg.Author.Id, victim.Id);
+                            await msg.Reply($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
                         } else {
                             _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{msg.Content}*\ntook too long! oops.");
                         }
@@ -116,9 +96,11 @@ namespace CaretakerNET.Commands
                     if (user.Id == 1182009469824139395) {
                         await msg.Reply("aw hii :3");
                     } else if (user.Id == msg.Author.Id) {
-                        await msg.RandomReply([":(", "you can just say hello to somebody else..!", ""]);
+                        await msg.RandomReply([":(", "you can just say hello to somebody else..!", Emojis.Sab]);
+                    } else if (msg.Content == ">hello world") { // silly workaround
+                        await msg.Reply("Hello, world!");
                     } else {
-                        var msgGuild = msg.TryGetGuild();
+                        var msgGuild = msg.GetGuild();
                         string from = msgGuild != null ? " from " + msgGuild.Name : "";
                         _ = msg.EmojiReact("✅");
                         await user.SendMessageAsync($"{msg.Author.GlobalName} ({msg.Author.Username}){from} says hi!");
@@ -128,40 +110,35 @@ namespace CaretakerNET.Commands
                 }
             }, [new Param("user", "the username of the person you'd like to say hi to", "1182009469824139395", "user")]),
 
-            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (msg, p) => {}),
+            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (_, _) => {}),
 
             new("help", "list all cmd commands", "commands", async (msg, p) => {
                 string reply = ListCommands(p["command"], true);
                 await msg.Reply(reply, false);
             }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
 
-            new("params", "reply with all params", "testing", async (msg, p) => {
-                var keys = p.Keys;
-                foreach (var value in p.Values) {
-                    await msg.Reply((string)value);
-                }
-                // await msg.Reply(p);
-            }, [new Param("test", "", 0)]),
+            new("save", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Save()),
+            new("load", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Load()),
 
             new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
-                MainHook.instance.c4 ??= new();
+                var c4 = MainHook.instance.c4 ??= new();
                 MainHook.instance.c4.AddToColumn(p["column"], p["player"]);
             }, [ new("column", "", 0), new("player", "", 1) ]),
             
             new("c4get", "GET connect 4", "games", async (msg, p) => {
-                MainHook.instance.c4 ??= new();
-                await msg.Reply(((int)MainHook.instance.c4.GetElement(p["x"], p["y"])).ToString());
+                var c4 = MainHook.instance.c4 ??= new();
+                await msg.Reply(((int)MainHook.instance.c4.ElementAt(p["x"], p["y"])).ToString());
             }, [ new("x", "", 0), new("y", "", 0) ]),
             
             new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
-                MainHook.instance.c4 ??= new();
+                var c4 = MainHook.instance.c4 ??= new();
                 await msg.Reply(MainHook.instance.c4.DisplayBoard());
                 var win = MainHook.instance.c4.WinCheck();
                 if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
             new("servers", "get all servers", "hidden", async (msg, p) => {
-                var client = MainHook.instance._client;
+                var client = MainHook.instance.Client;
                 Caretaker.Log(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
                     Caretaker.Log(guild.Name);
@@ -173,19 +150,24 @@ namespace CaretakerNET.Commands
                 if (guild == null) {
                     await msg.Reply("darn. no server with that name");
                 } else {
-                    // var invite = await guild.GetVanityInviteAsync();
-                    // await msg.Reply(invite.Url);
+                    Caretaker.Log(guild.Name);
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
             }, [ new("guild", "the name of the server to make an invite for", "", "guild") ]),
 
+            new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
+                // talkingChannel = Caretaker.ParseChannel(sections[0][PREFIX.Length..], Caretaker.ParseGuild(sections.IsIndexValid(1) ? sections[1] : "1113913617608355992"));
+                MainHook.instance.talkingChannel = (ITextChannel?)msg.Channel;
+            }),
+
             new("kill", "kills the bot", "hidden", async (msg, p) => {
                 await Task.Delay(p["delay"]);
+                MainHook.instance.Stop();
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
-                MainHook.instance.CloseMainWindow(); 
+
             }, [ new("test1", "for testing", ""), new("test2", "for testing: electric boogaloo", ""), new("params", "params!!!", "") ]),
         ];
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -196,7 +178,7 @@ namespace CaretakerNET.Commands
         // public static CommandHandler instance = new();
 
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
-        public async static Task<bool> ParseCommand(SocketUserMessage msg, string command, string parameters = "")
+        public async static Task<bool> ParseCommand(IUserMessage msg, string command, string parameters = "")
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -237,8 +219,9 @@ namespace CaretakerNET.Commands
                     type switch {
                         "int32"       => int.Parse(str),
                         "boolean"     => str == "true",
-                        "user"        => Caretaker.ParseUser(str),
+                        "user"        => Caretaker.ParseUser(str, guild),
                         "channel"     => Caretaker.ParseChannel(str, guild),
+                        "guild"       => Caretaker.ParseGuild(str),
                         "string" or _ => str,
                     };
                 
@@ -267,10 +250,10 @@ namespace CaretakerNET.Commands
                                 }
                             }
                         }
-                        value = ToType(setParam.type, valueStr, msg.TryGetGuild());
+                        value = ToType(setParam.type, valueStr, msg.GetGuild());
                     } else {
                         var p = setParam.preset;
-                        value = p.GetType() == typeof(string) ? ToType(setParam.type, p, msg.TryGetGuild()) : p;
+                        value = p.GetType() == typeof(string) ? ToType(setParam.type, p, msg.GetGuild()) : p;
                     }
 
                     bool success = paramDict.TryAdd(setParam.name, value);
@@ -279,13 +262,13 @@ namespace CaretakerNET.Commands
                 if (com.inf != null) {
                     // if inf params are needed, grab everything after
                     var paramsAsInfTypes = splitParams.Skip(i)
-                                                      .Select(splitParam => ToType(com.inf.type, splitParam, msg.TryGetGuild()));
+                                                      .Select(splitParam => ToType(com.inf.type, splitParam, msg.GetGuild()));
                     paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
                 }
             }
 
             stopwatch.Stop();
-            Caretaker.LogDebug($"[{DateTime.Now:HH:mm:ss tt}] took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters");
+            Caretaker.LogDebug($"took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters", true);
             
             try {
                 await com.func.Invoke(msg, paramDict);
@@ -318,30 +301,6 @@ namespace CaretakerNET.Commands
                 response.Add($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
             }
             return response.Count > 0 ? string.Join("", response) : "mmm... no.";
-        }
-        
-        public static async void EmojiSpam(IUserMessage msg, string emojiStr, int amount)
-        {
-            IMessage? reactMessage = msg.ReferencedMessage;
-            if (reactMessage == null) {
-                var messages = await msg.Channel.GetMessagesAsync(5).FlattenAsync();
-                reactMessage = messages.ElementAt(1);
-            }
-            
-            Caretaker.Log("amount : " + amount);
-            
-            // if (!Emoji.TryParse(emojiStr, out Emoji emoji)) return;
-            var emoji = Emote.Parse(emojiStr);
-            
-            for (int i = 0; i < amount; i++) {
-                if (reactMessage == null) {
-                    Caretaker.LogWarning(msg.Author.Username + " had their emoji spam cancelled.");
-                    return;
-                }
-                Caretaker.Log("REACT!!!!!!!!!");
-                _ = reactMessage.AddReactionAsync(emoji);
-                await Task.Delay(1000);
-            }
         }
 
         // currently an instance isn't needed; try avoiding one?
