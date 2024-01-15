@@ -12,6 +12,7 @@ using CaretakerNET.Core;
 using CaretakerNET.Commands;
 using CaretakerNET.Games;
 using CaretakerNET.ExternalEmojis;
+using Discord.Webhook;
 
 namespace CaretakerNET
 {
@@ -54,7 +55,10 @@ namespace CaretakerNET
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
 
-            AppDomain.CurrentDomain.UnhandledException += delegate { Stop(); };
+            AppDomain.CurrentDomain.UnhandledException += async delegate { 
+                await Client.StopAsync();
+                await Save();
+            };
 
             startTime = new DateTimeOffset().ToUnixTimeMilliseconds();
         }
@@ -71,7 +75,7 @@ namespace CaretakerNET
             DebugMode = args.Contains("debug") || args.Contains("-d");
             TestingMode = args.Contains("testing") || args.Contains("-t");
 
-            Caretaker.ChangeConsoleTitle("Starting...");
+            // Caretaker.ChangeConsoleTitle("Starting...");
 
             // login and connect with token (change to config json file?)
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
@@ -81,34 +85,40 @@ namespace CaretakerNET
 
             await Load();
 
-            talkingChannel = Caretaker.ParseChannel("1113944754460315759", Caretaker.ParseGuild("1113913617608355992"));
+            talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
 
-            Console.TreatControlCAsInput = true; // disables ctrl+c, just type "c" then hit enter
+            // i literally have no clue why but this breaks Console.ReadLine(). it even breaks BACKSPACE fsr
+            // Console.TreatControlCAsInput = true;
 
             // keep running until Stop() is called
             while (keepRunning) {
                 string? readLine = Console.ReadLine();
-                var channel = Caretaker.ParseChannel("1113944754460315759", Caretaker.ParseGuild("1113913617608355992"));
-                if (channel != null && !string.IsNullOrEmpty(readLine)) {
-                    await channel.SendMessageAsync(readLine);
+                if (readLine == "c") {
+                    Stop();
+                    break;
                 }
-                // if (readLine == "c") {
-                //     Stop();
-                //     break;
-                // }
-                // if (readLine != null) {
-                //     Task<IUserMessage>? message = null;
-                //     if (talkingChannel != null && readLine != "") message = talkingChannel.SendMessageAsync(readLine);
-                //     if (readLine.StartsWith(PREFIX) && message != null) {
-                //         _ = Task.Run(async () => {
-                //             var msg = await message;
-                //             (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                //             // Caretaker.Log(msg.Content);
-                //             await CommandHandler.ParseCommand(msg, command, parameters);
-                //         });
-                //     }
-                // }
-                // Console.WriteLine(Console.ReadLine()?.ToUpper() ?? "NOTHING!!!");
+                if (!string.IsNullOrEmpty(readLine)) {
+                    if (talkingChannel is IIntegrationChannel channel)
+                    {
+                        using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+
+                        await channel.CreateWebhookAsync("Unsynced", ajIcon);
+                        var wh = new DiscordWebhookClient("CaretakerNET");
+                        await wh.SendMessageAsync(readLine);
+                    }
+
+
+                    // Task<IUserMessage>? message = null;
+                    // if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
+                    // if (readLine.StartsWith(PREFIX) && message != null) {
+                    //     _ = Task.Run(async () => {
+                    //         var msg = await message;
+                    //         (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
+                    //         // Caretaker.Log(msg.Content);
+                    //         await CommandHandler.ParseCommand(msg, command, parameters);
+                    //     });
+                    // }
+                }
             }
             await Client.StopAsync();
             await Save();

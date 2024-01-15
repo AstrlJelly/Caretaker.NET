@@ -118,10 +118,9 @@ namespace CaretakerNET.Core
             return reference[0] == '<' && reference.Length >= 2 ? reference[2..^1] : null;
         }
 
-        public static SocketGuild? ParseGuild(string guildToParse)
+        public static SocketGuild? ParseGuild(this DiscordSocketClient c, string guildToParse)
         {
             SocketGuild? guild = null;
-            var c = MainHook.instance.Client;
             Func<string, SocketGuild?>[] actions = [
                 x => c.Guilds.FirstOrDefault(g => g.Name.Equals(guildToParse, StringComparison.CurrentCultureIgnoreCase) || g.Id == ulong.Parse(guildToParse)),
                 // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
@@ -137,7 +136,7 @@ namespace CaretakerNET.Core
             return guild;
         }
 
-        public static ITextChannel? ParseChannel(string channelToParse, SocketGuild? guild)
+        public static ITextChannel? ParseChannel(this SocketGuild guild, string channelToParse)
         {
             if (guild == null) return null;
             ITextChannel? channel = null;
@@ -156,14 +155,14 @@ namespace CaretakerNET.Core
             return channel;
         }
 
-        public static IUser? ParseUser(string userToParse, SocketGuild? guild)
+        public static IUser? ParseUser(this DiscordSocketClient c, string userToParse, SocketGuild? guild = null)
         {
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
             Action[] actions = [
-                delegate { user = MainHook.instance.Client.GetUser(userToParse, discriminator == "" ? null : discriminator); },
-                // delegate { user = MainHook.instance._client.GetUser(userToParse.ToLower()); },
-                delegate { user = MainHook.instance.Client.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
+                delegate { user = c.GetUser(userToParse, discriminator == "" ? null : discriminator); },
+                // delegate { user = c.GetUser(userToParse.ToLower()); },
+                delegate { user = c.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
                 delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
             ];
             for (int i = 0; i < actions.Length; i++) {

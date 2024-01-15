@@ -219,9 +219,9 @@ namespace CaretakerNET.Commands
                     type switch {
                         "int32"       => int.Parse(str),
                         "boolean"     => str == "true",
-                        "user"        => Caretaker.ParseUser(str, guild),
-                        "channel"     => Caretaker.ParseChannel(str, guild),
-                        "guild"       => Caretaker.ParseGuild(str),
+                        "user"        => MainHook.instance.Client.ParseUser(str, guild),
+                        "channel"     => guild?.ParseChannel(str),
+                        "guild"       => MainHook.instance.Client.ParseGuild(str),
                         "string" or _ => str,
                     };
                 
