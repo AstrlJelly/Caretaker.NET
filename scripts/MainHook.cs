@@ -98,26 +98,26 @@ namespace CaretakerNET
                     break;
                 }
                 if (!string.IsNullOrEmpty(readLine)) {
-                    if (talkingChannel is IIntegrationChannel channel)
-                    {
-                        using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+                    // if (talkingChannel is IIntegrationChannel channel)
+                    // {
+                    //     using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
 
-                        await channel.CreateWebhookAsync("Unsynced", ajIcon);
-                        var wh = new DiscordWebhookClient("CaretakerNET");
-                        await wh.SendMessageAsync(readLine);
-                    }
-
-
-                    // Task<IUserMessage>? message = null;
-                    // if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
-                    // if (readLine.StartsWith(PREFIX) && message != null) {
-                    //     _ = Task.Run(async () => {
-                    //         var msg = await message;
-                    //         (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                    //         // Caretaker.Log(msg.Content);
-                    //         await CommandHandler.ParseCommand(msg, command, parameters);
-                    //     });
+                    //     await channel.CreateWebhookAsync("Unsynced", ajIcon);
+                    //     var wh = new DiscordWebhookClient("CaretakerNET");
+                    //     await wh.SendMessageAsync(readLine);
                     // }
+
+
+                    Task<IUserMessage>? message = null;
+                    if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
+                    if (readLine.StartsWith(PREFIX) && message != null) {
+                        _ = Task.Run(async () => {
+                            var msg = await message;
+                            (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
+                            // Caretaker.Log(msg.Content);
+                            await CommandHandler.ParseCommand(msg, command, parameters);
+                        });
+                    }
                 }
             }
             await Client.StopAsync();
@@ -218,21 +218,18 @@ namespace CaretakerNET
                         return;
                     }
 
-                    // var typing = msg.Channel.EnterTypingState();
-                    using (msg.Channel.EnterTypingState()) {
-                        try {
-                            Stopwatch sw = new();
-                            sw.Start();
-                            await CommandHandler.ParseCommand(msg, command, parameters);
-                            UserData[msg.Author.Id].timeout = Caretaker.DateNow() + 1000;
-                            sw.Stop();
-                            Caretaker.LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
-                        } catch (Exception error) {
-                            await msg.Reply(error, false);
-                            throw;
-                        }
+                    var typing = msg.Channel.EnterTypingState();
+                    try {
+                        Stopwatch sw = new();
+                        sw.Start();
+                        await CommandHandler.ParseCommand(msg, command, parameters);
+                        UserData[msg.Author.Id].timeout = Caretaker.DateNow() + 1000;
+                        sw.Stop();
+                        Caretaker.LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
+                    } catch (Exception error) {
+                        await msg.Reply(error.Message, false);
                     }
-                    // typing.Dispose();
+                    typing.Dispose();
                 }
             });
             await Task.CompletedTask; 

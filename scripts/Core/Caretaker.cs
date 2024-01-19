@@ -89,7 +89,7 @@ namespace CaretakerNET.Core
         #region Discord
         public static async Task<IUserMessage> Reply(this IUserMessage msg, object reply, bool ping = false)
         {
-            return await msg.ReplyAsync(reply.ToString());
+            return await msg.ReplyAsync(reply.ToString(), allowedMentions: ping ? AllowedMentions.All : AllowedMentions.None);
         }
 
         public static async Task<IUserMessage> RandomReply(this IUserMessage msg, object[] replies, bool ping = false)

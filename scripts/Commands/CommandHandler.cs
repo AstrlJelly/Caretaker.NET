@@ -11,6 +11,7 @@ using System.Collections.Frozen; // frozen dictionary doesn't seem very importan
 
 using Discord;
 using Discord.WebSocket;
+using System.Threading.Channels;
 
 namespace CaretakerNET.Commands
 {
@@ -157,9 +158,13 @@ namespace CaretakerNET.Commands
             }, [ new("guild", "the name of the server to make an invite for", "", "guild") ]),
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
-                // talkingChannel = Caretaker.ParseChannel(sections[0][PREFIX.Length..], Caretaker.ParseGuild(sections.IsIndexValid(1) ? sections[1] : "1113913617608355992"));
-                MainHook.instance.talkingChannel = (ITextChannel?)msg.Channel;
-            }),
+                SocketGuild? guild = p["guild"] ?? msg.GetGuild();
+                if (guild == null) {
+                    await msg.Reply("mmm... nope.");
+                    return;
+                }
+                MainHook.instance.talkingChannel = string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : (ITextChannel)msg.Channel;
+            }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", "guild") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
                 await Task.Delay(p["delay"]);
@@ -218,6 +223,7 @@ namespace CaretakerNET.Commands
                 static dynamic? ToType(string type, string str, SocketGuild? guild) => 
                     type switch {
                         "int32"       => int.Parse(str),
+                        "uint32"      => uint.Parse(str),
                         "boolean"     => str == "true",
                         "user"        => MainHook.instance.Client.ParseUser(str, guild),
                         "channel"     => guild?.ParseChannel(str),
