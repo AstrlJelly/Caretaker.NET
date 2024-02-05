@@ -35,11 +35,11 @@ namespace CaretakerNET
         public bool DebugMode = false;
         public bool TestingMode = false;
 
-        private readonly ulong[] TrustedUsers = [
+        private static readonly HashSet<ulong> TrustedUsers = [
             438296397452935169, // @astrljelly
             752589264398712834, // @antoutta
         ];
-        private readonly ulong[] BannedUsers = [
+        private static readonly HashSet<ulong> BannedUsers = [
             468933965110312980, // @lifinale
         ];
 
@@ -139,16 +139,14 @@ namespace CaretakerNET
             UserData = await Persist.LoadUsers();
         }
 
-        // this dynamic is a VERY bad bandaid
-        // right now it's called from a generic method and i don't know the best way to cast T to Dictionary<ulong, ServerPersist>
-        public void CheckServerData(dynamic serverData)
+        public void CheckServerData()
         {
             Parallel.ForEach(Client.Guilds, (guild) => 
             {
-                if (serverData.TryGetValue(guild.Id, out ServerPersist? value) && value != null) {
+                if (ServerData.TryGetValue(guild.Id, out ServerPersist? value) && value != null) {
                     ServerPersist.CheckClassVariables(value!);
                 } else {
-                    serverData.Add(guild.Id, new ServerPersist());
+                    ServerData.Add(guild.Id, new ServerPersist());
                 }
             });
             // foreach (var guild in Client.Guilds)
@@ -193,7 +191,7 @@ namespace CaretakerNET
             // wrap in Task.Run() so that multiple commands can be handled at the same time
             _ = Task.Run(async () => {
                 if (message.Channel.Id == talkingChannel?.Id && message.Author.Id != 1182009469824139395) {
-                    Caretaker.Log($"{message.Author.GlobalName} : {message.Content}", true);
+                    Caretaker.LogInfo($"{message.Author.GlobalName} : {message.Content}", true);
                 }
 
                 // make sure the message is a user sent message, and output a new msg variable

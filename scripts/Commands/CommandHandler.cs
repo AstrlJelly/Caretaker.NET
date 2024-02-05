@@ -17,13 +17,21 @@ namespace CaretakerNET.Commands
 {
     public class CommandHandler
     {
+        public enum ParseFailType
+        {
+
+        }
+
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("help", "list all normal commands", "commands", async (msg, p) => {
                 // await msg.Reply((string)p["command"]);
                 string reply = ListCommands(p["command"]);
                 await msg.Reply(reply, false);
-            }, [new Param("command", "the command to get help for (if empty, just lists all)", "")]),
+            }, [ 
+                new Param("command", "the command to get help for (if empty, just lists all)", ""),
+                new Param("listParams", "list parameters?", false)
+            ]),
 
             new("echo", "list all normal commands", "silly", async (msg, p) => {
                 string reply = (string)p["reply"];
@@ -140,9 +148,9 @@ namespace CaretakerNET.Commands
 
             new("servers", "get all servers", "hidden", async (msg, p) => {
                 var client = MainHook.instance.Client;
-                Caretaker.Log(client.Guilds.Count);
+                Caretaker.LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
-                    Caretaker.Log(guild.Name);
+                    Caretaker.LogInfo(guild.Name);
                 }
             }),
 
@@ -151,7 +159,7 @@ namespace CaretakerNET.Commands
                 if (guild == null) {
                     await msg.Reply("darn. no server with that name");
                 } else {
-                    Caretaker.Log(guild.Name);
+                    // Caretaker.LogTemp(guild.Name);
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
@@ -220,16 +228,18 @@ namespace CaretakerNET.Commands
                 Caretaker.LogDebug("splitParams    // " + string.Join(", ", splitParams));
                 Caretaker.LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
 
-                static dynamic? ToType(string type, string str, SocketGuild? guild) => 
-                    type switch {
-                        "int32"       => int.Parse(str),
-                        "uint32"      => uint.Parse(str),
-                        "boolean"     => str == "true",
-                        "user"        => MainHook.instance.Client.ParseUser(str, guild),
-                        "channel"     => guild?.ParseChannel(str),
-                        "guild"       => MainHook.instance.Client.ParseGuild(str),
-                        "string" or _ => str,
-                    };
+                // static dynamic? ToType(string type, string str, SocketGuild? guild) => 
+                //     type switch {
+                //         "int32"       => str.Parse<int>(),
+                //         "uint32"      => str.Parse<uint>(),
+                //         "double"      => str.Parse<double>(),
+                //         "boolean"     => str == "true",
+                //         "user"        => MainHook.instance.Client.ParseUser(str, guild),
+                //         "channel"     => guild?.ParseChannel(str),
+                //         "guild"       => MainHook.instance.Client.ParseGuild(str),
+                //         "string" or _ => str,
+                //     };
+                var guild = msg.GetGuild();
                 
                 int i = 0;
                 for (i = 0; i < com.parameters.Length; i++)
@@ -238,28 +248,39 @@ namespace CaretakerNET.Commands
                     dynamic? value;
                     
                     if (splitParams.IsIndexValid(i)) { // will this parameter be set manually?
-                        int colon = splitParams[i].IndexOf(':');
-                        string valueStr = splitParams[i].ReplaceAll(space, ' ');
+                        int colon = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable check if it's an emoji or not
+                        string valueStr = splitParams[i].ReplaceAll(space, ' '); // get the spaces back
                         if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
-                            char? colonCheck = splitParams[i].TryGet(colon - 1);
-                            if (colonCheck != null && colonCheck != '<') {
-                                string paramName = splitParams[i][..colon];
-                                if (paramName == "params") {
-                                    i++;
-                                    break;
-                                }
-                                valueStr = splitParams[i][(colon + 1)..];
-                                setParam = Array.Find(com.parameters, x => x.name == paramName);
-                                if (setParam == null) {
-                                    await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
-                                    return false;
-                                }
+                            string paramName = splitParams[i][..colon];
+                            if (paramName == "params") { // if it's params, break this loop and start adding to the params
+                                i++;
+                                break;
                             }
+                            valueStr = splitParams[i][(colon + 1)..];
+                            setParam = Array.Find(com.parameters, x => x.name == paramName);
+                            if (setParam == null) {
+                                await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
+                                return false;
+                            }
+                            // char? colonCheck = splitParams[i].TryGet(colon - 1);
+                            // if (colonCheck != null && colonCheck != '<') {
+                            //     string paramName = splitParams[i][..colon];
+                            //     if (paramName == "params") {
+                            //         i++;
+                            //         break;
+                            //     }
+                            //     valueStr = splitParams[i][(colon + 1)..];
+                            //     setParam = Array.Find(com.parameters, x => x.name == paramName);
+                            //     if (setParam == null) {
+                            //         await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
+                            //         return false;
+                            //     }
+                            // }
                         }
-                        value = ToType(setParam.type, valueStr, msg.GetGuild());
+                        value = setParam.ToType(valueStr, guild);
                     } else {
                         var p = setParam.preset;
-                        value = p.GetType() == typeof(string) ? ToType(setParam.type, p, msg.GetGuild()) : p;
+                        value = p.GetType() == typeof(string) ? setParam.ToType(p, guild) : p;
                     }
 
                     bool success = paramDict.TryAdd(setParam.name, value);
@@ -268,7 +289,7 @@ namespace CaretakerNET.Commands
                 if (com.inf != null) {
                     // if inf params are needed, grab everything after
                     var paramsAsInfTypes = splitParams.Skip(i)
-                                                      .Select(splitParam => ToType(com.inf.type, splitParam, msg.GetGuild()));
+                                                      .Select(splitParam => com.inf.ToType(splitParam, guild));
                     paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
                 }
             }

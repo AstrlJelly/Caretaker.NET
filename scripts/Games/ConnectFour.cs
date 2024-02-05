@@ -21,7 +21,7 @@ namespace CaretakerNET.Games
 
     public class ConnectFour
     {
-        public enum Player
+        public enum Player : int
         {
             None,
             One,
@@ -40,7 +40,7 @@ namespace CaretakerNET.Games
         public readonly ulong player1;
         public readonly ulong player2;
 
-        public bool AddToColumn(int column, int player) => AddToColumn(column, (Player)player);
+        public bool AddToColumn(int column, int player) => AddToColumn(column, player);
         public bool AddToColumn(int column, Player player)
         {
             // technically don't need the else but i think it makes it look nicer

@@ -28,13 +28,13 @@ namespace CaretakerNET.Commands
             this.timeout = timeout;
             currentTimeout = 0;
 
+            this.inf = null;
             if (parameters != null) {
-                this.inf = parameters.Find(x => x.name == "params");
-                if (this.inf != null) {
-                    parameters.Remove(this.inf);
-                    Caretaker.Log(this.inf.name);
+                if (parameters.TryFindIndex(x => x.name == "params", out int infIndex)) {
+                    this.inf = parameters[infIndex];
+                    parameters.RemoveAt(infIndex);
                 }
-                this.parameters = [.. parameters];
+                this.parameters = [..parameters];
             } else {
                 this.parameters = [];
             }
@@ -43,10 +43,19 @@ namespace CaretakerNET.Commands
 
     public class Param
     {
-        // public static readonly string[] customTypes = [
-        //     "user", "channel"
-        // ];
-
+        public dynamic? ToType(string str, SocketGuild? guild) {
+            return type switch {
+                "int32"       => str.Parse<int>(),
+                "uint32"      => str.Parse<uint>(),
+                "double"      => str.Parse<double>(),
+                "boolean"     => str == "true",
+                "user"        => MainHook.instance.Client.ParseUser(str, guild),
+                "channel"     => guild?.ParseChannel(str),
+                "guild"       => MainHook.instance.Client.ParseGuild(str),
+                "string" or _ => str,
+            };
+        }
+                    
         public string name;
         public string desc;
         public dynamic preset;

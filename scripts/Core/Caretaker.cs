@@ -47,6 +47,33 @@ namespace CaretakerNET.Core
             }
             return newStrings;
         }
+
+        public static T? Parse<T>(this string stringToParse)
+        {
+            dynamic? parsed = typeof(T).ToString() switch
+            {
+                "Int64" => int.Parse(stringToParse),
+                "UInt64" => uint.Parse(stringToParse),
+                "Double" => double.Parse(stringToParse),
+                _ => null,
+            };
+            return (T?)parsed; // this cast gets around the silly compiler
+        }
+
+        // public static bool TryParse<T>(this string stringToParse, out T parsed)
+        // {
+        //     switch (typeof(T).ToString().ToLower())
+        //     {
+        //         case "":
+        //         break;
+        //         default:
+        //     }
+        //     // parsed = typeof(T) switch
+        //     // {
+
+        //     //     _ => default,
+        //     // };
+        // }
         #endregion
 
         #region List
@@ -67,10 +94,20 @@ namespace CaretakerNET.Core
             }
         }
 
-        public static T? GetRandom<T>(this IEnumerable<T> list) {
+        public static T? GetRandom<T>(this IEnumerable<T> enumerable) {
             var random = new Random();
-            int count = list.Count();
-            return count > 0 ? list.ElementAt(random.Next(list.Count())) : default;
+            int count = enumerable.Count();
+            return count > 0 ? enumerable.ElementAt(random.Next(count)) : default;
+        }
+
+        public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> match, out int index) {
+            index = -1;
+            foreach (T item in enumerable)
+            {
+                index++;
+                if (match.Invoke(item)) return true;
+            }
+            return false;
         }
         #endregion
 
@@ -165,6 +202,7 @@ namespace CaretakerNET.Core
                 delegate { user = c.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
                 delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
             ];
+            Caretaker.LogTemp(userToParse);
             for (int i = 0; i < actions.Length; i++) {
                 try {
                     actions[i].Invoke();
@@ -190,10 +228,13 @@ namespace CaretakerNET.Core
                 LogSeverity.Info or _                     => ConsoleColor.White,
             };
             if (time) message = $"[{CurrentTime()}] " + message;
-            Console.WriteLine(message.ToString());
+            Console.WriteLine(message?.ToString());
             Console.ResetColor();
         }
 
+        [Obsolete("THIS SHOULD BE TEMPORARY!!")] // a LOT of logging.
+        public static void LogTemp(object? message = null, bool time = false) { Log(message ?? "null", time, LogSeverity.Info); }
+        public static void LogInfo(object? message = null, bool time = false) { Log(message ?? "null", time, LogSeverity.Info); }
         public static void LogWarning(object? message = null, bool time = false) { Log(message ?? "Warning!", time, LogSeverity.Warning); }
         public static void LogError(object? message = null, bool time = false) { Log(message ?? "Error!", time, LogSeverity.Error); }
         public static void LogDebug(object? message = null, bool time = false) { if (MainHook.instance.DebugMode) Log(message ?? "null", time, LogSeverity.Info); }

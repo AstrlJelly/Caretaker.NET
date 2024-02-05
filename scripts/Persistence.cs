@@ -25,30 +25,27 @@ namespace CaretakerNET
 
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
-            Caretaker.Log("Start saving...", true);
+            Caretaker.LogInfo($"Start saving to {path}...", true);
             string? serializedDict = JsonConvert.SerializeObject(objectToSave);
             await File.WriteAllTextAsync(path, serializedDict);
-            Caretaker.Log("Saved!", true);
+            Caretaker.LogInfo("Saved!", true);
         }
 
         // tells the compiler that T always implements new(), so that i can construct a default dictionary. i love C#
         private static async Task<T> Load<T>(string path) where T : new()
         {
-            Caretaker.Log("Start loading...", true);
+            Caretaker.LogInfo($"Start loading from {path}...", true);
             var jsonFileStr = await File.ReadAllTextAsync(path);
             // Caretaker.LogDebug("jsonFileStr : " + jsonFileStr);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
                 try {
                     var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr);
                     if (deserializedDict != null) {
-                        Caretaker.Log("deserializedDict : " + deserializedDict);
-                        if (typeof(T) == typeof(Dictionary<ulong, ServerPersist>)) {
-                            MainHook.instance.CheckServerData(deserializedDict);
-                        }
-                        Caretaker.Log("Loaded!", true);
+                        // Caretaker.LogTemp("deserializedDict : " + deserializedDict);
+                        Caretaker.LogInfo("Loaded!", true);
                         return deserializedDict;
                     } else {
-                        throw new Exception($"Load(\"{path}\") failed!");
+                        throw new Exception($"Load (\"{path}\") failed!");
                     }
                 } catch (System.Exception err) {
                     Caretaker.LogError(err, true);
@@ -128,7 +125,7 @@ namespace CaretakerNET
         //     SlowModes = [];
         // }
     }
-    public class UserPersist
+    public class UserPersist()
     {
         public class Item(string name, string desc, float price)
         {
@@ -139,13 +136,5 @@ namespace CaretakerNET
 
         public List<Item> inventory = [];
         public long timeout = 0;
-
-        // public Persist() {
-        //     // CommandData = [];
-        //     Count = new();
-        //     Chain = new();
-        //     Convo = new();
-        //     SlowModes = [];
-        // }
     }
 }
