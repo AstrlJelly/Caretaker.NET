@@ -47,6 +47,12 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
+            new("count", "set the counting channel", "silly", async (msg, p) => {
+                
+            }, [
+                new Param("channel", "the channel to talk in", "", "channel"),
+            ]),
+
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
 
             }, [new Param("fileName", "what the file will be renamed to", "")]),
@@ -84,7 +90,8 @@ namespace CaretakerNET.Commands
                             await Task.Delay(1000);
                         }
                         if (accepted) {
-                            MainHook.instance.c4 = new(msg.Author.Id, victim.Id);
+                            if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                            s.connectFour = new(msg.Author.Id, victim.Id);
                             await msg.Reply($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
                         } else {
                             _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{msg.Content}*\ntook too long! oops.");
@@ -130,23 +137,26 @@ namespace CaretakerNET.Commands
             new("load", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Load()),
 
             new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
-                var c4 = MainHook.instance.c4 ??= new();
-                MainHook.instance.c4.AddToColumn(p["column"], p["player"]);
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                var c4 = s.connectFour ??= new();
+                c4.AddToColumn(p["column"], p["player"]);
             }, [ new("column", "", 0), new("player", "", 1) ]),
             
             new("c4get", "GET connect 4", "games", async (msg, p) => {
-                var c4 = MainHook.instance.c4 ??= new();
-                await msg.Reply(((int)MainHook.instance.c4.ElementAt(p["x"], p["y"])).ToString());
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                var c4 = s.connectFour ??= new();
+                await msg.Reply(((int)c4.ElementAt(p["x"], p["y"])).ToString());
             }, [ new("x", "", 0), new("y", "", 0) ]),
             
             new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
-                var c4 = MainHook.instance.c4 ??= new();
-                await msg.Reply(MainHook.instance.c4.DisplayBoard());
-                var win = MainHook.instance.c4.WinCheck();
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                var c4 = s.connectFour ??= new();
+                await msg.Reply(c4.DisplayBoard());
+                var win = c4.WinCheck();
                 if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
-            new("servers", "get all servers", "hidden", async (msg, p) => {
+            new("guilds", "get all guilds", "hidden", async (msg, p) => {
                 var client = MainHook.instance.Client;
                 Caretaker.LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
@@ -154,16 +164,16 @@ namespace CaretakerNET.Commands
                 }
             }),
 
-            new("invite", "make an invite to a server i'm in", "hidden", async (msg, p) => {
+            new("invite", "make an invite to a guild i'm in", "hidden", async (msg, p) => {
                 SocketGuild? guild = p["guild"];
                 if (guild == null) {
-                    await msg.Reply("darn. no server with that name");
+                    await msg.Reply("darn. no guild with that name");
                 } else {
                     // Caretaker.LogTemp(guild.Name);
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
-            }, [ new("guild", "the name of the server to make an invite for", "", "guild") ]),
+            }, [ new("guild", "the name of the guild to make an invite for", "", "guild") ]),
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
                 SocketGuild? guild = p["guild"] ?? msg.GetGuild();
@@ -171,7 +181,7 @@ namespace CaretakerNET.Commands
                     await msg.Reply("mmm... nope.");
                     return;
                 }
-                MainHook.instance.talkingChannel = string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : (ITextChannel)msg.Channel;
+                MainHook.instance.talkingChannel = (SocketGuildChannel?)(string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : msg.Channel);
             }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", "guild") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {

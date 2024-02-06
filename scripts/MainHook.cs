@@ -24,10 +24,8 @@ namespace CaretakerNET
         private bool keepRunning = true;
 
         public readonly DiscordSocketClient Client;
-        public ITextChannel? talkingChannel;
-        public ConnectFour? c4;
-        public ulong[] players = [];
-        private Dictionary<ulong, ServerPersist> ServerData = [];
+        public SocketGuildChannel? talkingChannel;
+        private Dictionary<ulong, GuildPersist> GuildData = [];
         private Dictionary<ulong, UserPersist> UserData = [];
 
         private readonly long startTime;
@@ -65,7 +63,7 @@ namespace CaretakerNET
 
         private static Task ClientLog(LogMessage message)
         {
-            Caretaker.Log($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, message.Severity);
+            Caretaker.InternalLog($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, message.Severity);
             return Task.CompletedTask;
         }
 
@@ -85,10 +83,25 @@ namespace CaretakerNET
 
             await Load();
 
-            talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
-
             // i literally have no clue why but this breaks Console.ReadLine(). it even breaks BACKSPACE fsr
             // Console.TreatControlCAsInput = true;
+
+            while (true) // apparently guilds have to load, so wait for that
+            {
+                bool good = Client.Guilds.Count > 0;
+                foreach (var guild in Client.Guilds) {
+                    if (string.IsNullOrEmpty(guild.Name)) {
+                        good = false;
+                    }
+                }
+                if (good) {
+                    Caretaker.LogDebug("Guilds : " + string.Join(", ", Client.Guilds.Select(x => x.Name)));
+                    break;
+                }
+                await Task.Delay(50);
+            }
+
+            talkingChannel = (SocketGuildChannel?)Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
 
             // keep running until Stop() is called
             while (keepRunning) {
@@ -98,26 +111,29 @@ namespace CaretakerNET
                     break;
                 }
                 if (!string.IsNullOrEmpty(readLine)) {
-                    // if (talkingChannel is IIntegrationChannel channel)
-                    // {
-                    //     using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
-
-                    //     await channel.CreateWebhookAsync("Unsynced", ajIcon);
-                    //     var wh = new DiscordWebhookClient("CaretakerNET");
-                    //     await wh.SendMessageAsync(readLine);
-                    // }
-
-
-                    Task<IUserMessage>? message = null;
-                    if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
-                    if (readLine.StartsWith(PREFIX) && message != null) {
-                        _ = Task.Run(async () => {
-                            var msg = await message;
-                            (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                            // Caretaker.Log(msg.Content);
-                            await CommandHandler.ParseCommand(msg, command, parameters);
-                        });
+                    Caretaker.Log(talkingChannel is IIntegrationChannel);
+                    if (talkingChannel is IIntegrationChannel channel)
+                    {
+                        var webhooks = await channel.GetWebhooksAsync();
+                        var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
+                        Caretaker.Log(webhook?.Name);
+                        if (webhook == null) {
+                            using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+                            webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
+                        }
+                        await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
                     }
+
+                    // Task<IUserMessage>? message = null;
+                    // if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
+                    // if (readLine.StartsWith(PREFIX) && message != null) {
+                    //     _ = Task.Run(async () => {
+                    //         var msg = await message;
+                    //         (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
+                    //         // Caretaker.Log(msg.Content);
+                    //         await CommandHandler.ParseCommand(msg, command, parameters);
+                    //     });
+                    // }
                 }
             }
             await Client.StopAsync();
@@ -129,45 +145,47 @@ namespace CaretakerNET
 
         public async Task Save()
         {
-            await Persist.SaveServers(ServerData);
+            await Persist.SaveGuilds(GuildData);
             await Persist.SaveUsers(UserData);
         }
 
         public async Task Load()
         {
-            ServerData = await Persist.LoadServers();
+            GuildData = await Persist.LoadGuildss();
             UserData = await Persist.LoadUsers();
         }
 
-        public void CheckServerData()
+        public void CheckGuildData()
         {
             Parallel.ForEach(Client.Guilds, (guild) => 
             {
-                if (ServerData.TryGetValue(guild.Id, out ServerPersist? value) && value != null) {
-                    ServerPersist.CheckClassVariables(value!);
-                } else {
-                    ServerData.Add(guild.Id, new ServerPersist());
+                if (!GuildData.TryGetValue(guild.Id, out GuildPersist? value) || value == null) {
+                    GuildData.Add(guild.Id, new GuildPersist());
                 }
             });
             // foreach (var guild in Client.Guilds)
             // {
-            //     if (serverData.TryGetValue(guild.Id, out ServerPersist? value) && value != null) {
+            //     if (guildData.TryGetValue(guild.Id, out GuildPersist? value) && value != null) {
             //         value!.CheckClassVariables(value);
             //     } else {
-            //         serverData.Add(guild.Id, new ServerPersist());
+            //         guildData.Add(guild.Id, new GuildPersist());
             //     }
             // }
         }
 
-        // returns null if not in server, like if you're in dms
-        public ServerPersist? GetServerData(IUserMessage msg) => GetServerData(msg.GetGuild()?.Id ?? 0);
-        public ServerPersist GetServerData(IGuild guild) => GetServerData(guild.Id)!;
-        public ServerPersist? GetServerData(ulong id)
+        // returns null if not in guild, like if you're in dms
+        public bool TryGetGuildData(IUserMessage msg, out GuildPersist? data) {
+            data = GetGuildData(msg.GetGuild()?.Id ?? 0);
+            return data != null;
+        }
+        public GuildPersist? GetGuildData(IUserMessage msg) => GetGuildData(msg.GetGuild()?.Id ?? 0);
+        public GuildPersist GetGuildData(IGuild guild) => GetGuildData(guild.Id)!;
+        public GuildPersist? GetGuildData(ulong id)
         {
             if (id != 0) { 
-                if (!ServerData.TryGetValue(id, out ServerPersist? value)) {
-                    value = new ServerPersist();
-                    ServerData.Add(id, value);
+                if (!GuildData.TryGetValue(id, out GuildPersist? value)) {
+                    value = new GuildPersist();
+                    GuildData.Add(id, value);
                 }
                 return value;
             } else {

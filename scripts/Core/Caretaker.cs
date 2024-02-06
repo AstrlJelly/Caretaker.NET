@@ -48,16 +48,27 @@ namespace CaretakerNET.Core
             return newStrings;
         }
 
-        public static T? Parse<T>(this string stringToParse)
+        // public static T? Parse<T>(this string stringToParse)
+        // {
+        //     dynamic? parsed = typeof(T).ToString() switch
+        //     {
+        //         "Int64" => int.Parse(stringToParse),
+        //         "UInt64" => uint.Parse(stringToParse),
+        //         "Double" => double.Parse(stringToParse),
+        //         _ => null,
+        //     };
+        //     return (T?)parsed; // this cast gets around the silly compiler
+        // }
+
+        public static bool Match(this string stringToMatch, params string[] stringsToMatch)
         {
-            dynamic? parsed = typeof(T).ToString() switch
+            for (int i = 0; i < stringsToMatch.Length; i++)
             {
-                "Int64" => int.Parse(stringToParse),
-                "UInt64" => uint.Parse(stringToParse),
-                "Double" => double.Parse(stringToParse),
-                _ => null,
-            };
-            return (T?)parsed; // this cast gets around the silly compiler
+                if (stringToMatch.Equals(stringsToMatch[i], StringComparison.CurrentCultureIgnoreCase)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // public static bool TryParse<T>(this string stringToParse, out T parsed)
@@ -159,7 +170,7 @@ namespace CaretakerNET.Core
         {
             SocketGuild? guild = null;
             Func<string, SocketGuild?>[] actions = [
-                x => c.Guilds.FirstOrDefault(g => g.Name.Equals(guildToParse, StringComparison.CurrentCultureIgnoreCase) || g.Id == ulong.Parse(guildToParse)),
+                x => c.Guilds.FirstOrDefault(g => Caretaker.Match(guildToParse, g.Name) || g.Id == ulong.Parse(guildToParse)),
                 // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
@@ -178,7 +189,7 @@ namespace CaretakerNET.Core
             if (guild == null) return null;
             ITextChannel? channel = null;
             Func<string, ITextChannel?>[] actions = [
-                x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Equals(channelToParse, StringComparison.CurrentCultureIgnoreCase)),
+                x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Match(channelToParse)),
                 x => (ITextChannel)guild.GetChannel(ulong.Parse(IDFromReference(channelToParse) ?? channelToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
@@ -197,12 +208,11 @@ namespace CaretakerNET.Core
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
             Action[] actions = [
-                delegate { user = c.GetUser(userToParse, discriminator == "" ? null : discriminator); },
-                // delegate { user = c.GetUser(userToParse.ToLower()); },
                 delegate { user = c.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
-                delegate { user = guild?.Users.FirstOrDefault(x => x.Nickname == userToParse || x.GlobalName.Equals(userToParse, StringComparison.CurrentCultureIgnoreCase)); },
+                delegate { user = c.GetUser(userToParse, discriminator == "" ? null : discriminator); },
+                delegate { user = guild?.Users.FirstOrDefault(x => userToParse.Match(x.Nickname, x.GlobalName)); },
             ];
-            Caretaker.LogTemp(userToParse);
+            Caretaker.InternalLog(userToParse);
             for (int i = 0; i < actions.Length; i++) {
                 try {
                     actions[i].Invoke();
@@ -219,7 +229,7 @@ namespace CaretakerNET.Core
         #endregion
 
         #region Console
-        public static void Log(object message, bool time = false, LogSeverity severity = LogSeverity.Info)
+        public static void InternalLog(object message, bool time = false, LogSeverity severity = LogSeverity.Info)
         {
             Console.ForegroundColor = severity switch {
                 LogSeverity.Critical or LogSeverity.Error => ConsoleColor.Red,
@@ -233,11 +243,11 @@ namespace CaretakerNET.Core
         }
 
         [Obsolete("THIS SHOULD BE TEMPORARY!!")] // a LOT of logging.
-        public static void LogTemp(object? message = null, bool time = false) { Log(message ?? "null", time, LogSeverity.Info); }
-        public static void LogInfo(object? message = null, bool time = false) { Log(message ?? "null", time, LogSeverity.Info); }
-        public static void LogWarning(object? message = null, bool time = false) { Log(message ?? "Warning!", time, LogSeverity.Warning); }
-        public static void LogError(object? message = null, bool time = false) { Log(message ?? "Error!", time, LogSeverity.Error); }
-        public static void LogDebug(object? message = null, bool time = false) { if (MainHook.instance.DebugMode) Log(message ?? "null", time, LogSeverity.Info); }
+        public static void Log(object? message = null, bool time = false) { InternalLog(message ?? "null", time, LogSeverity.Info); }
+        public static void LogInfo(object? message = null, bool time = false) { InternalLog(message ?? "null", time, LogSeverity.Info); }
+        public static void LogWarning(object? message = null, bool time = false) { InternalLog(message ?? "Warning!", time, LogSeverity.Warning); }
+        public static void LogError(object? message = null, bool time = false) { InternalLog(message ?? "Error!", time, LogSeverity.Error); }
+        public static void LogDebug(object? message = null, bool time = false) { if (MainHook.instance.DebugMode) InternalLog(message ?? "null", time, LogSeverity.Info); }
 
         public static void ChangeConsoleTitle(string status)
         {

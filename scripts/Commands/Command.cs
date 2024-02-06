@@ -11,6 +11,7 @@ namespace CaretakerNET.Commands
         public readonly string desc;
         public readonly string genre;
         public delegate Task RunAsync(IUserMessage msg, Dictionary<string, dynamic> p);
+        public delegate Task RunInGuildAsync(IUserMessage msg, Dictionary<string, dynamic> p, Dictionary<string, GuildPersist> s);
         // public delegate void Run(IUserMessage msg, Dictionary<string, dynamic> p);
         public readonly RunAsync func;
         public readonly Param[] parameters;
@@ -45,9 +46,9 @@ namespace CaretakerNET.Commands
     {
         public dynamic? ToType(string str, SocketGuild? guild) {
             return type switch {
-                "int32"       => str.Parse<int>(),
-                "uint32"      => str.Parse<uint>(),
-                "double"      => str.Parse<double>(),
+                "int32"       => int.Parse(str),
+                "uint32"      => uint.Parse(str),
+                "double"      => double.Parse(str),
                 "boolean"     => str == "true",
                 "user"        => MainHook.instance.Client.ParseUser(str, guild),
                 "channel"     => guild?.ParseChannel(str),
