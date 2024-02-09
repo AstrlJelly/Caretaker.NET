@@ -25,7 +25,11 @@ namespace CaretakerNET.Commands
             this.desc = desc;
             this.genre = genre;
             this.func = func;
-            this.limitedTo = limitedTo ?? [];
+            this.limitedTo = new string[3][];
+            for (int i = 0; i < 3; i++) {
+                // if limitedTo isn't null, and limitedTo[i] is usable, assign limitedTo[i]. else just []
+                this.limitedTo[i] = limitedTo != null && limitedTo.IsIndexValid(i) && limitedTo[i] != null ? limitedTo[i] : [];
+            }
             this.timeout = timeout;
             currentTimeout = 0;
 

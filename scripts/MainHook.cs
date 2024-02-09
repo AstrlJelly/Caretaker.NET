@@ -1,20 +1,17 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
-// using Microsoft.CodeAnalysis.CSharp.Scripting;
+using System.Data;
+
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
+using Discord.Webhook;
 
 using CaretakerNET.Core;
 using CaretakerNET.Commands;
 using CaretakerNET.Games;
 using CaretakerNET.ExternalEmojis;
-using Discord.Webhook;
-using org.mariuszgromada.math.mxparser;
-using System.Data;
 
 namespace CaretakerNET
 {
@@ -272,7 +269,7 @@ namespace CaretakerNET
                                 // s.count will not be null here but the compiler doesn't know that 😢
                                 var count = s.count;
                                 // duplicate check
-                                if (s.count?.LastCountMsg?.Author.Id == author.Id && !author.IsTrusted()) {
+                                if (s.count?.LastCountMsg?.Author.Id == author.Id) {
                                     s.count.Reset(false);
                                     return ("💀", "you can't count twice in a row! try again");
                                 }
@@ -322,6 +319,7 @@ namespace CaretakerNET
                                     // if the messages are close together, point that out. happens pretty often
                                     var lastMsg = s.count?.LastCountMsg;
                                     long difference = msg.TimeCreated() - (s.count?.LastCountMsg?.TimeCreated() ?? 0);
+                                    count.Reset(false);
                                     // currently 500 millseconds; tweak if it's too little or too much
                                     return ("❌", (difference > 500 || lastMsg == null) ?
                                         "aw you're not very good at counting, are you?" : 

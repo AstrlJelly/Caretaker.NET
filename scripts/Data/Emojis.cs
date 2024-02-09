@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
 
 namespace CaretakerNET.ExternalEmojis
@@ -18,9 +17,9 @@ namespace CaretakerNET.ExternalEmojis
 
     public static class ParsedEmojis
     {
-        public static IEmote Smide() => Emoji.Parse(Emojis.Smide);
-        public static IEmote Sab() => Emoji.Parse(Emojis.Sab);
-        public static IEmote True() => Emoji.Parse(Emojis.True);
-        public static IEmote TalkingFlower() => Emoji.Parse(Emojis.TalkingFlower);
+        public readonly static IEmote Smide = Emoji.Parse(Emojis.Smide);
+        public readonly static IEmote Sab = Emoji.Parse(Emojis.Sab);
+        public readonly static IEmote True = Emoji.Parse(Emojis.True);
+        public readonly static IEmote TalkingFlower = Emoji.Parse(Emojis.TalkingFlower);
     }
 }

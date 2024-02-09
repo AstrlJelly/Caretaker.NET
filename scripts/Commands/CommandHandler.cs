@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using CaretakerNET.ExternalEmojis;
-using CaretakerNET.Games;
-using CaretakerNET.Core;
+using System.Data;
+using System.Text;
 using System.Collections.Frozen; // frozen dictionary doesn't seem very important
 
 using Discord;
 using Discord.WebSocket;
-using System.Threading.Channels;
-using System.Text;
+
+using CaretakerNET.ExternalEmojis;
+using CaretakerNET.Games;
+using CaretakerNET.Core;
 
 namespace CaretakerNET.Commands
 {
@@ -37,7 +35,7 @@ namespace CaretakerNET.Commands
             new("echo", "list all normal commands", "silly", async (msg, p) => {
                 string reply = (string)p["reply"];
                 if (!reply.Contains("@everyone") && !reply.Contains("@here") && reply != "") {
-                    await Task.Delay(p["wait"]);
+                    await Task.Delay(int.Abs(p["wait"]));
                     await msg.Reply((string)p["reply"], false);
                 } else {
                     string[] replies = [ "stop that!!!", "hey you can't do that :(", "explode", "why...", Emojis.Sab ];
@@ -49,7 +47,13 @@ namespace CaretakerNET.Commands
             ]),
 
             new("math", "do math!", "silly", async (msg, p) => {
-                
+                DataTable dt = new();
+                string reply = ((string)p["math"]).Replace(" ", "");
+                reply = reply switch {
+                    "9+10" => "21",
+                    _ => dt.Compute(reply, null)?.ToString() ?? "null",
+                };
+                await msg.Reply(reply);
             }, [ new Param("math", "the math to do", "2 + 2"), ]),
 
             new("count", "set the counting channel", "silly", async (msg, p) => {
@@ -63,7 +67,7 @@ namespace CaretakerNET.Commands
             }, [
                 new Param("channel", "the channel to count in", "", "channel"),
                 new Param("reset", "reset everything?", true),
-            ]),
+            ], [ [  ] ]),
 
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
 
@@ -235,23 +239,16 @@ namespace CaretakerNET.Commands
                 string[] splitParams = [];
                 if (parameters != "") { // only do these checks if there are parameters to check for
                     if (parameters.Contains('"')) {
-                        StringBuilder quoteReplacer = new(parameters);
+                        string[] quoteSplit = parameters.Split('"');
 
-                        for (int j = 1; j < quoteReplacer.Length; j += 2) { 
+                        for (int j = 1; j < quoteSplit.Length; j += 2) { 
                             // check every other section (they will always be "in" double quotes) 
                             // and check if it actually has spaces needed to be replaced
-
+                            if (quoteSplit[j].Contains(' ')) {
+                                quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
+                            }
                         }
-                        // string[] quoteSplit = parameters.Split('"');
-
-                        // for (int j = 1; j < quoteSplit.Length; j += 2) { 
-                        //     // check every other section (they will always be "in" double quotes) 
-                        //     // and check if it actually has spaces needed to be replaced
-                        //     if (quoteSplit[j].Contains(' ')) {
-                        //         quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
-                        //     }
-                        // }
-                        // parameters = string.Join("", quoteSplit); // join everything back together
+                        parameters = string.Join("", quoteSplit); // join everything back together
                     }
                     splitParams = parameters.Split(' '); // then split it up as parameters
                 }
@@ -259,20 +256,9 @@ namespace CaretakerNET.Commands
                 Caretaker.LogDebug("splitParams    // " + string.Join(", ", splitParams));
                 Caretaker.LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
 
-                // static dynamic? ToType(string type, string str, SocketGuild? guild) => 
-                //     type switch {
-                //         "int32"       => str.Parse<int>(),
-                //         "uint32"      => str.Parse<uint>(),
-                //         "double"      => str.Parse<double>(),
-                //         "boolean"     => str == "true",
-                //         "user"        => MainHook.instance.Client.ParseUser(str, guild),
-                //         "channel"     => guild?.ParseChannel(str),
-                //         "guild"       => MainHook.instance.Client.ParseGuild(str),
-                //         "string" or _ => str,
-                //     };
                 var guild = msg.GetGuild();
-                
-                int i = 0;
+
+                int i = 0; // make i global so it can be used later
                 for (i = 0; i < com.parameters.Length; i++)
                 {
                     Param? setParam = com.parameters[i]; // the Param the name/preset/type are being grabbed from
@@ -283,8 +269,11 @@ namespace CaretakerNET.Commands
                         string valueStr = splitParams[i].ReplaceAll(space, ' '); // get the spaces back
                         if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
                             string paramName = splitParams[i][..colon];
-                            if (paramName == "params") { // if it's params, break this loop and start adding to the params
-                                i++;
+                            if (paramName == "params" && com.inf != null) { // if it's params, break this loop and start adding to the params
+                                // if inf params are needed, grab everything after
+                                var paramsAsInfTypes = splitParams.Skip(i + 1)
+                                                                  .Select(splitParam => com.inf.ToType(splitParam, guild));
+                                paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
                                 break;
                             }
                             valueStr = splitParams[i][(colon + 1)..];
@@ -293,20 +282,6 @@ namespace CaretakerNET.Commands
                                 await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
                                 return false;
                             }
-                            // char? colonCheck = splitParams[i].TryGet(colon - 1);
-                            // if (colonCheck != null && colonCheck != '<') {
-                            //     string paramName = splitParams[i][..colon];
-                            //     if (paramName == "params") {
-                            //         i++;
-                            //         break;
-                            //     }
-                            //     valueStr = splitParams[i][(colon + 1)..];
-                            //     setParam = Array.Find(com.parameters, x => x.name == paramName);
-                            //     if (setParam == null) {
-                            //         await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {command}\" to get params for {command}.");
-                            //         return false;
-                            //     }
-                            // }
                         }
                         value = setParam.ToType(valueStr, guild);
                     } else {
@@ -314,14 +289,8 @@ namespace CaretakerNET.Commands
                         value = p.GetType() == typeof(string) ? setParam.ToType(p, guild) : p;
                     }
 
-                    bool success = paramDict.TryAdd(setParam.name, value);
-                }
-
-                if (com.inf != null) {
-                    // if inf params are needed, grab everything after
-                    var paramsAsInfTypes = splitParams.Skip(i)
-                                                      .Select(splitParam => com.inf.ToType(splitParam, guild));
-                    paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
+                    // bool success = paramDict.TryAdd(setParam.name, value);
+                    paramDict.TryAdd(setParam.name, value);
                 }
             }
 
@@ -332,7 +301,7 @@ namespace CaretakerNET.Commands
                 await com.func.Invoke(msg, paramDict);
                 return true;
             } catch (System.Exception err) {
-                await msg.Reply(err.ToString());
+                await msg.Reply(err.Message);
                 return false;
             }
         }
@@ -351,13 +320,14 @@ namespace CaretakerNET.Commands
                 var com = commandDict[commandKeys[i]];
                 if (commandKeys.IsIndexValid(i - 1) && commandDict[commandKeys[i - 1]].name == com.name) continue;
                 if (com.genre == "hidden" && !showHidden) continue;
-                string joinedParams = "";
+                response.Append($"{MainHook.PREFIX}{com.name} (");
+                // string joinedParams = "";
                 if (com.parameters != null) {
                     IEnumerable<string> paramNames = com.parameters.Select(x => x.name);
-                    joinedParams = string.Join(", ", paramNames) + (com.inf != null ? ", params" : "");
+                    response.Append(string.Join(", ", paramNames) + (com.inf != null ? ", params" : ""));
                 }
 
-                response.Append($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
+                response.Append($") : {com.desc}\n");
             }
             return response.Length > 0 ? response.ToString() : "mmm... no.";
         }

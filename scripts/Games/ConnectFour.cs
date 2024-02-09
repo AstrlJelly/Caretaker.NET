@@ -1,12 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using System.Reflection;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using CaretakerNET.Core;
+
 using Discord.WebSocket;
+
+using CaretakerNET.Core;
 
 namespace CaretakerNET.Games
 {

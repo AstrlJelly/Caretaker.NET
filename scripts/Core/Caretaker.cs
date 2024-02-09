@@ -1,11 +1,8 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
-using System.Reflection;
 using System.Text;
-// using System.Windows.Threading;
-using System.Threading;
-using System.Threading.Tasks;
+
 using Discord;
 using Discord.WebSocket;
 
