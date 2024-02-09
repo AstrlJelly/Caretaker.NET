@@ -13,6 +13,8 @@ namespace CaretakerNET.Core
 {
     public static class Caretaker
     {
+        public const ulong CARETAKER_ID = 1182009469824139395;
+
         #region String
         // don't wanna type this every time lol (and i swear it performs ever so slightly better)
         public static string ReplaceAll(this string stringToReplace, string oldStr, string newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
@@ -151,6 +153,11 @@ namespace CaretakerNET.Core
             return await msg.ReplyAsync(embed: embed);
         }
 
+        public static long TimeCreated(this IUserMessage msg)
+        {
+            return msg.CreatedAt.ToUnixTimeMilliseconds();
+        }
+
         public static SocketGuild? GetGuild(this IUserMessage msg) 
         {
             if (msg.Channel is not SocketGuildChannel chnl) return null;
@@ -222,6 +229,11 @@ namespace CaretakerNET.Core
                 }
             }
             return user;
+        }
+
+        public static bool IsTrusted(this IUser user)
+        {
+            return MainHook.TrustedUsers.Contains(user.Id);
         }
 
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";

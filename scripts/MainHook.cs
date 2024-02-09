@@ -13,18 +13,20 @@ using CaretakerNET.Commands;
 using CaretakerNET.Games;
 using CaretakerNET.ExternalEmojis;
 using Discord.Webhook;
+using org.mariuszgromada.math.mxparser;
+using System.Data;
 
 namespace CaretakerNET
 {
     public class MainHook
     {
-        // gets called when program is ran; starts async loop
+        // gets called when program is run; starts async loop
         public readonly static MainHook instance = new();
         static Task Main(string[] args) => instance.MainAsync(args);
         private bool keepRunning = true;
 
         public readonly DiscordSocketClient Client;
-        public SocketGuildChannel? talkingChannel;
+        public ITextChannel? talkingChannel;
         private Dictionary<ulong, GuildPersist> GuildData = [];
         private Dictionary<ulong, UserPersist> UserData = [];
 
@@ -33,11 +35,11 @@ namespace CaretakerNET
         public bool DebugMode = false;
         public bool TestingMode = false;
 
-        private static readonly HashSet<ulong> TrustedUsers = [
+        public static readonly ulong[] TrustedUsers = [
             438296397452935169, // @astrljelly
             752589264398712834, // @antoutta
         ];
-        private static readonly HashSet<ulong> BannedUsers = [
+        public static readonly ulong[] BannedUsers = [
             468933965110312980, // @lifinale
         ];
 
@@ -52,6 +54,7 @@ namespace CaretakerNET
 
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
+            Client.Ready += ClientReady;
 
             AppDomain.CurrentDomain.UnhandledException += async delegate { 
                 await Client.StopAsync();
@@ -79,29 +82,10 @@ namespace CaretakerNET
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
             await Client.StartAsync();
 
-            await Client.DownloadUsersAsync(Client.Guilds);
-
-            await Load();
-
             // i literally have no clue why but this breaks Console.ReadLine(). it even breaks BACKSPACE fsr
             // Console.TreatControlCAsInput = true;
 
-            while (true) // apparently guilds have to load, so wait for that
-            {
-                bool good = Client.Guilds.Count > 0;
-                foreach (var guild in Client.Guilds) {
-                    if (string.IsNullOrEmpty(guild.Name)) {
-                        good = false;
-                    }
-                }
-                if (good) {
-                    Caretaker.LogDebug("Guilds : " + string.Join(", ", Client.Guilds.Select(x => x.Name)));
-                    break;
-                }
-                await Task.Delay(50);
-            }
-
-            talkingChannel = (SocketGuildChannel?)Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
+            // while (!keepRunning) { }
 
             // keep running until Stop() is called
             while (keepRunning) {
@@ -111,34 +95,48 @@ namespace CaretakerNET
                     break;
                 }
                 if (!string.IsNullOrEmpty(readLine)) {
-                    Caretaker.Log(talkingChannel is IIntegrationChannel);
-                    if (talkingChannel is IIntegrationChannel channel)
-                    {
-                        var webhooks = await channel.GetWebhooksAsync();
-                        var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
-                        Caretaker.Log(webhook?.Name);
-                        if (webhook == null) {
-                            using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
-                            webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
-                        }
-                        await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
-                    }
-
-                    // Task<IUserMessage>? message = null;
-                    // if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
-                    // if (readLine.StartsWith(PREFIX) && message != null) {
-                    //     _ = Task.Run(async () => {
-                    //         var msg = await message;
-                    //         (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                    //         // Caretaker.Log(msg.Content);
-                    //         await CommandHandler.ParseCommand(msg, command, parameters);
-                    //     });
+                    // // the channel just doesn't wanna be IIntegrationChannel?? idk
+                    // Caretaker.Log(talkingChannel is IIntegrationChannel);
+                    // if (talkingChannel is IIntegrationChannel channel)
+                    // {
+                    //     var webhooks = await channel.GetWebhooksAsync();
+                    //     var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
+                    //     Caretaker.Log(webhook?.Name);
+                    //     if (webhook == null) {
+                    //         using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+                    //         webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
+                    //     }
+                    //     await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
                     // }
+
+                    Task<IUserMessage>? message = null;
+                    if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
+                    if (readLine.StartsWith(PREFIX) && message != null) {
+                        _ = Task.Run(async () => {
+                            var msg = await message;
+                            (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
+                            // Caretaker.Log(msg.Content);
+                            await CommandHandler.ParseCommand(msg, command, parameters);
+                        });
+                    }
                 }
             }
             await Client.StopAsync();
             await Save();
             // await Task.Delay(Timeout.Infinite);
+        }
+
+        public async Task ClientReady()
+        {
+            await Client.DownloadUsersAsync(Client.Guilds);
+
+            Caretaker.LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
+            await Load();
+
+
+            talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
+            keepRunning = true;
+            // return Task.CompletedTask;
         }
 
         public void Stop() => keepRunning = false;
@@ -151,8 +149,25 @@ namespace CaretakerNET
 
         public async Task Load()
         {
-            GuildData = await Persist.LoadGuildss();
+            GuildData = await Persist.LoadGuilds();
             UserData = await Persist.LoadUsers();
+            CheckGuildData();
+            // int i = 0;
+            foreach (var key in GuildData.Keys) {
+                if (key <= 0) {
+                    GuildData.Remove(key);
+                } else {
+                    try {
+                        GuildData[key].Init(Client);
+                    } catch (System.Exception error) {
+                        GuildData[key] = new(key);
+                        Caretaker.LogError(error);
+                        throw;
+                    }
+                }
+                
+                // i++;
+            }
         }
 
         public void CheckGuildData()
@@ -160,7 +175,7 @@ namespace CaretakerNET
             Parallel.ForEach(Client.Guilds, (guild) => 
             {
                 if (!GuildData.TryGetValue(guild.Id, out GuildPersist? value) || value == null) {
-                    GuildData.Add(guild.Id, new GuildPersist());
+                    GuildData.Add(guild.Id, new GuildPersist(guild.Id));
                 }
             });
             // foreach (var guild in Client.Guilds)
@@ -174,7 +189,8 @@ namespace CaretakerNET
         }
 
         // returns null if not in guild, like if you're in dms
-        public bool TryGetGuildData(IUserMessage msg, out GuildPersist? data) {
+        public bool TryGetGuildData(IUserMessage msg, out GuildPersist? data) 
+        {
             data = GetGuildData(msg.GetGuild()?.Id ?? 0);
             return data != null;
         }
@@ -184,7 +200,7 @@ namespace CaretakerNET
         {
             if (id != 0) { 
                 if (!GuildData.TryGetValue(id, out GuildPersist? value)) {
-                    value = new GuildPersist();
+                    value = new GuildPersist(id);
                     GuildData.Add(id, value);
                 }
                 return value;
@@ -208,13 +224,11 @@ namespace CaretakerNET
         {
             // wrap in Task.Run() so that multiple commands can be handled at the same time
             _ = Task.Run(async () => {
-                if (message.Channel.Id == talkingChannel?.Id && message.Author.Id != 1182009469824139395) {
-                    Caretaker.LogInfo($"{message.Author.GlobalName} : {message.Content}", true);
-                }
+                if (message is not SocketUserMessage msg) return;
 
                 // make sure the message is a user sent message, and output a new msg variable
                 // also make sure it's not a bot/not banned
-                if ((message is not SocketUserMessage msg) || msg.Author.IsBot) return;
+                if (msg.Author.IsBot) return;
 
                 if (msg.Content.StartsWith(PREFIX)) {
                     bool banned = BannedUsers.Contains(msg.Author.Id);
@@ -246,6 +260,89 @@ namespace CaretakerNET
                         await msg.Reply(error.Message, false);
                     }
                     typing.Dispose();
+                } else {
+                    if (TryGetGuildData(msg, out GuildPersist? s) && s != null) {
+                        Dictionary<ulong, Func<SocketUser, (string, string)?>> actions = new() {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                            { talkingChannel?.Id ?? 0, _ => {
+                                Caretaker.LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
+                                return null;
+                            } },
+                            { s.count?.Channel?.Id ?? 0, author => {
+                                // s.count will not be null here but the compiler doesn't know that 😢
+                                var count = s.count;
+                                // duplicate check
+                                if (s.count?.LastCountMsg?.Author.Id == author.Id && !author.IsTrusted()) {
+                                    s.count.Reset(false);
+                                    return ("💀", "you can't count twice in a row! try again");
+                                }
+                                
+                                // parse number from message
+                                DataTable dt = new();
+                                int? newNumberTemp = (int?)dt.Compute(msg.Content, null) ?? (int?)dt.Compute(msg.Content.Split(' ')[0], null);
+                                int newNumber = 0;
+
+                                if (newNumberTemp == null) {
+                                    List<char> numbers = [];
+                                    bool numberStarted = false;
+                                    for (int i = 0; i < msg.Content.Length; i++)
+                                    {
+                                        if (char.IsNumber(msg.Content[i])) {
+                                            numberStarted = true;
+                                            numbers.Add(msg.Content[i]);
+                                        } else {
+                                            if (numberStarted) break;
+                                        }
+                                    }
+                                    if (numbers.Count > 0) {
+                                        newNumber = int.Parse(string.Join("", numbers));
+                                    } /* else { // maybe? would need to be reworked.
+                                        List<int?> computes = [];
+                                        int lastWorkingIndex = 0;
+                                        for (int i = 0; i < msg.Content.Length; i++)
+                                        {
+                                            int? tempNumber = (int?)dt.Compute(msg.Content[..i], null);
+                                            if (tempNumber != null) lastWorkingIndex = i;
+                                            computes.Add(tempNumber);
+                                        }
+                                        newNumberTemp = computes[lastWorkingIndex];
+                                        if (newNumberTemp != null) {
+                                            newNumber = (int)newNumberTemp;
+                                        }
+                                    } */
+                                } else {
+                                    newNumber = (int)newNumberTemp;
+                                }
+
+                                // is the new number one more than the last?
+                                if (newNumber == count.Current + 1) {
+                                    count.Current++;
+                                    return ("✅", "");
+                                } else {
+                                    // if the messages are close together, point that out. happens pretty often
+                                    var lastMsg = s.count?.LastCountMsg;
+                                    long difference = msg.TimeCreated() - (s.count?.LastCountMsg?.TimeCreated() ?? 0);
+                                    // currently 500 millseconds; tweak if it's too little or too much
+                                    return ("❌", (difference > 500 || lastMsg == null) ?
+                                        "aw you're not very good at counting, are you?" : 
+                                        "too many cooks in the kitchen!!"
+                                    );
+                                }
+                            } },
+                            { s.chain?.Channel?.Id ?? 0, delegate {
+                                return null;
+                            } },
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+                        };
+                        // epic tuples 😄😄😄
+                        (string emojiToParse, string reply) = actions[msg.Channel.Id].Invoke(msg.Author) ?? ("", "");
+                        if (!string.IsNullOrEmpty(emojiToParse)) {
+                            await msg.EmojiReact(emojiToParse);
+                        }
+                        if (!string.IsNullOrEmpty(reply)) {
+                            await msg.Reply(reply);
+                        }
+                    }
                 }
             });
             await Task.CompletedTask; 

@@ -12,6 +12,7 @@ using System.Collections.Frozen; // frozen dictionary doesn't seem very importan
 using Discord;
 using Discord.WebSocket;
 using System.Threading.Channels;
+using System.Text;
 
 namespace CaretakerNET.Commands
 {
@@ -47,17 +48,28 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
-            new("count", "set the counting channel", "silly", async (msg, p) => {
+            new("math", "do math!", "silly", async (msg, p) => {
                 
+            }, [ new Param("math", "the math to do", "2 + 2"), ]),
+
+            new("count", "set the counting channel", "silly", async (msg, p) => {
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                ITextChannel? channel = p["channel"] ?? msg.Channel; // TryGetGuildData makes sure this is done in a guild, so this is 99.9% not null?
+                if (p["reset"]) {
+                    s.count.Reset(true);
+                }
+                s.count.Channel = channel; 
+                await msg.AddReactionAsync(Emoji.Parse("✅"));
             }, [
-                new Param("channel", "the channel to talk in", "", "channel"),
+                new Param("channel", "the channel to count in", "", "channel"),
+                new Param("reset", "reset everything?", true),
             ]),
 
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
 
             }, [new Param("fileName", "what the file will be renamed to", "")]),
 
-            new("c4go", "play connect 4 using this command!", "games", async (msg, p) => {
+            new("c4go", "play connect 4 using this command!", "hidden", async (msg, p) => {
 
             }),
 
@@ -72,21 +84,22 @@ namespace CaretakerNET.Commands
                     case "c4" or "connect4": {
                         var challengeMsg = await msg.Reply($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
                         bool accepted = false;
+                        Emoji? checkmark = Emoji.Parse("✅");
+                        Emoji? crossmark = Emoji.Parse("❌");
+                        // var checkmarkReaction = await challengeMsg.AddReactionAsync(checkmark);
+                        await challengeMsg.AddReactionAsync(checkmark);
+                        await challengeMsg.AddReactionAsync(crossmark);
                         for (int i = 0; i < 60; i++)
                         {
-                            Emoji? checkmark = Emoji.Parse("✅");
                             if (!challengeMsg.Reactions.ContainsKey(checkmark)) continue;
                             int reactionCount = challengeMsg.Reactions.ContainsKey(checkmark) ? challengeMsg.Reactions[checkmark].ReactionCount : 0;
-                            var acceptedUsers = await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
-                                                                  .FlattenAsync();
-                            foreach (var user in acceptedUsers)
-                            {
-                                if (!user.IsBot && user.Id == victim.Id) {
-                                    accepted = true;
-                                    break;
-                                }
-                            }
-                            if (accepted) break;
+                            var acceptedUser = 
+                            (await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
+                                .FlattenAsync())
+                                .First(user => !user.IsBot && user.Id == victim.Id);
+                            accepted = true;
+                            if (acceptedUser != null) break;
+                            // Caretaker.Log("Hmmmmm " + i);
                             await Task.Delay(1000);
                         }
                         if (accepted) {
@@ -94,7 +107,8 @@ namespace CaretakerNET.Commands
                             s.connectFour = new(msg.Author.Id, victim.Id);
                             await msg.Reply($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
                         } else {
-                            _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{msg.Content}*\ntook too long! oops.");
+                            var prevContent = challengeMsg.Content;
+                            _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{prevContent}*\ntook too long! oops.");
                         }
                     } break;
                     default: {
@@ -113,7 +127,7 @@ namespace CaretakerNET.Commands
                         await msg.Reply("aw hii :3");
                     } else if (user.Id == msg.Author.Id) {
                         await msg.RandomReply([":(", "you can just say hello to somebody else..!", Emojis.Sab]);
-                    } else if (msg.Content == ">hello world") { // silly workaround
+                    } else if (msg.Content == ">hello world") { // silly workaround, i wonder if i should improve this
                         await msg.Reply("Hello, world!");
                     } else {
                         var msgGuild = msg.GetGuild();
@@ -181,7 +195,7 @@ namespace CaretakerNET.Commands
                     await msg.Reply("mmm... nope.");
                     return;
                 }
-                MainHook.instance.talkingChannel = (SocketGuildChannel?)(string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : msg.Channel);
+                MainHook.instance.talkingChannel = (ITextChannel?)(string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : msg.Channel);
             }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", "guild") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
@@ -221,16 +235,23 @@ namespace CaretakerNET.Commands
                 string[] splitParams = [];
                 if (parameters != "") { // only do these checks if there are parameters to check for
                     if (parameters.Contains('"')) {
-                        string[] quoteSplit = parameters.Split('"');
+                        StringBuilder quoteReplacer = new(parameters);
 
-                        for (int j = 1; j < quoteSplit.Length; j += 2) { 
+                        for (int j = 1; j < quoteReplacer.Length; j += 2) { 
                             // check every other section (they will always be "in" double quotes) 
                             // and check if it actually has spaces needed to be replaced
-                            if (quoteSplit[j].Contains(' ')) {
-                                quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
-                            }
+
                         }
-                        parameters = string.Join("", quoteSplit); // join everything back together
+                        // string[] quoteSplit = parameters.Split('"');
+
+                        // for (int j = 1; j < quoteSplit.Length; j += 2) { 
+                        //     // check every other section (they will always be "in" double quotes) 
+                        //     // and check if it actually has spaces needed to be replaced
+                        //     if (quoteSplit[j].Contains(' ')) {
+                        //         quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
+                        //     }
+                        // }
+                        // parameters = string.Join("", quoteSplit); // join everything back together
                     }
                     splitParams = parameters.Split(' '); // then split it up as parameters
                 }
@@ -258,7 +279,7 @@ namespace CaretakerNET.Commands
                     dynamic? value;
                     
                     if (splitParams.IsIndexValid(i)) { // will this parameter be set manually?
-                        int colon = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable check if it's an emoji or not
+                        int colon = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
                         string valueStr = splitParams[i].ReplaceAll(space, ' '); // get the spaces back
                         if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
                             string paramName = splitParams[i][..colon];
@@ -322,7 +343,8 @@ namespace CaretakerNET.Commands
             if (singleCom != "" && !commandDict.ContainsKey(singleCom)) {
                 return $"{singleCom} is NOT a command. try again :/";
             }
-            List<string> response = [];
+            // List<string> response = [];
+            StringBuilder response = new();
             string[] commandKeys = singleCom != "" ? [ singleCom ] : commandDict.Keys.ToArray();
             for (int i = 0; i < commandKeys.Length; i++)
             {
@@ -335,9 +357,9 @@ namespace CaretakerNET.Commands
                     joinedParams = string.Join(", ", paramNames) + (com.inf != null ? ", params" : "");
                 }
 
-                response.Add($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
+                response.Append($"{MainHook.PREFIX}{com.name} ({joinedParams}) : {com.desc}\n");
             }
-            return response.Count > 0 ? string.Join("", response) : "mmm... no.";
+            return response.Length > 0 ? response.ToString() : "mmm... no.";
         }
 
         // currently an instance isn't needed; try avoiding one?

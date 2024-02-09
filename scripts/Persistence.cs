@@ -15,18 +15,23 @@ namespace CaretakerNET
     public static class Persist
     {
         const string GUILD_PATH = "./persist/guild.json";
-        const string USER_PATH   = "./persist/user.json";
+        const string USER_PATH  = "./persist/user.json";
 
         public static async Task SaveGuilds(this Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
-        public static async Task SaveUsers(this Dictionary<ulong, UserPersist> dictionary)     => await Save(USER_PATH, dictionary);
+        public static async Task SaveUsers(this Dictionary<ulong, UserPersist> dictionary)   => await Save(USER_PATH, dictionary);
 
-        public static async Task<Dictionary<ulong, GuildPersist>> LoadGuildss() => await Load<Dictionary<ulong, GuildPersist>>(GUILD_PATH);
-        public static async Task<Dictionary<ulong, UserPersist>>   LoadUsers()   => await Load<Dictionary<ulong, UserPersist>>(USER_PATH);
+        public static async Task<Dictionary<ulong, GuildPersist>> LoadGuilds() => await Load<Dictionary<ulong, GuildPersist>>(GUILD_PATH);
+        public static async Task<Dictionary<ulong, UserPersist>>  LoadUsers()  => await Load<Dictionary<ulong, UserPersist>>(USER_PATH);
 
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
             Caretaker.LogInfo($"Start saving to {path}...", true);
-            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented);
+            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented
+            , new JsonSerializerSettings 
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            }
+            );
             await File.WriteAllTextAsync(path, serializedDict);
             Caretaker.LogInfo("Saved!", true);
         }
@@ -57,65 +62,114 @@ namespace CaretakerNET
         }
     }
 
-    public class GuildPersist
+    public class GuildPersist(ulong guildId)
     {
-        public class Chain
+        public class Chain()
         {
-            public ITextChannel? channel;
-            public string? current;
-            public int chainLength;
-            public string? prevChain;
-            public string? lastChainer;
-            public int autoChain;
+            [JsonIgnore] public ITextChannel? Channel;
+            internal ulong ChannelId;
+            public string? Current;
+            public int ChainLength;
+            public string? PrevChain;
+            public ulong LastChainer;
+            public int AutoChain;
+
+            public void Init(SocketGuild guild)
+            {
+                // if (ChannelId != null) {
+                    Channel = (ITextChannel?)guild.GetChannel(ChannelId);
+                // }
+            }
         }
 
         public class Convo
         {
-            public ITextChannel? convoChannel;
-            public ITextChannel? replyChannel;
+            [JsonIgnore] private ITextChannel? convoChannel;
+            [JsonIgnore] private ITextChannel? replyChannel;
+            [JsonProperty] internal ulong convoChannelId;
+            [JsonProperty] internal ulong replyChannelId;
+            [JsonIgnore] internal ITextChannel? ConvoChannel { get => convoChannel; set {
+                convoChannel = value;
+                if (value != null) {
+                    convoChannelId = value.Id;
+                }
+            }}
+            [JsonIgnore] internal ITextChannel? ReplyChannel { get => replyChannel; set {
+                replyChannel = value;
+                if (value != null) {
+                    replyChannelId = value.Id;
+                }
+            }}
+
+            public void Init(SocketGuild guild)
+            {
+                ConvoChannel = (ITextChannel?)guild.GetChannel(convoChannelId);
+                ReplyChannel = (ITextChannel?)guild.GetChannel(replyChannelId);
+            }
         }
 
-        public class Count
+        public class Count(ITextChannel? channel = null, int current = 0, int prevNumber = 0, int highestNum = 0, IUserMessage? lastCountMsg = null)
         {
-            public ITextChannel? channel;
-            public int current;
-            public int prevNumber;
-            public int highestNum;
-            public string? lastCounter;
+            public void Reset(bool fullReset)
+            {
+                if (HighestNum < Current) HighestNum = Current;
+                PrevNumber = Current;
+                Current = 0;
+                if (fullReset) LastCountMsg = null;
+            }
+            [JsonIgnore] internal ITextChannel? channel = channel;
+            [JsonIgnore] internal IUserMessage? lastCountMsg = lastCountMsg;
+            [JsonProperty] internal ulong channelId;
+            [JsonProperty] internal ulong lastCountMsgChannelId, lastCountMsgId;
+            [JsonIgnore] public ITextChannel? Channel { get => channel; set {
+                channel = value;
+                if (value != null) {
+                    channelId = value.Id;
+                }
+            }}
+            [JsonIgnore] public IUserMessage? LastCountMsg { get => lastCountMsg; set {
+                lastCountMsg = value;
+                if (value != null) {
+                    lastCountMsgChannelId = value.Channel.Id;
+                    lastCountMsgId = value.Id;
+                }
+            }}
+            public int Current = current;
+            public int PrevNumber = prevNumber;
+            public int HighestNum = highestNum;
+
+            public async void Init(SocketGuild guild)
+            {
+                Channel = (ITextChannel?)guild.GetChannel(channelId);
+                if (guild.GetChannel(lastCountMsgChannelId) is ITextChannel channel && channel != null) {
+                    LastCountMsg = (IUserMessage?)await channel.GetMessageAsync(lastCountMsgId);
+                }
+            }
         }
 
-        public class SlowMode(ITextChannel? channel, int timer)
-        {
-            public ITextChannel? channel = channel;
-            public int timer = timer;
-        }
-        // // generated by bing ai. check if this actually works, and try to understand it
-        // public static void CheckClassVariables(object obj)
+        // public class SlowMode(ITextChannel? channel, int timer)
         // {
-        //     Type type = obj.GetType();
-        //     FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-        //     foreach (FieldInfo field in fields)
-        //     {
-        //         if (field.FieldType.IsClass && !field.FieldType.IsArray)
-        //         {
-        //             CheckClassVariables(field.GetValue(obj));
-        //         }
-        //         else if (field.FieldType.IsValueType && !field.FieldType.IsPrimitive && !field.FieldType.IsEnum)
-        //         {
-        //             if (field.GetValue(obj) == null)
-        //             {
-        //                 field.SetValue(obj, Activator.CreateInstance(field.FieldType));
-        //             }
-        //         }
-        //     }
+        //     public ITextChannel? channel = channel;
+        //     public int timer = timer;
         // }
 
         // public Dictionary<string, dynamic> CommandData;
+        public ulong guildId = guildId;
         public Count count = new();
         public Chain chain = new();
         public Convo convo = new();
-        public List<SlowMode> slowModes = [];
+        // public List<SlowMode> slowModes = [];
+        public Dictionary<ulong, int> slowModes = []; // channel id and timer
         public ConnectFour? connectFour = null;
+
+        public void Init(DiscordSocketClient client)
+        {
+            var guild = client.GetGuild(guildId);
+            count.Init(guild);
+            chain.Init(guild);
+            convo.Init(guild);
+        }
+
 
         // public Persist() {
         //     // CommandData = [];
@@ -138,3 +192,4 @@ namespace CaretakerNET
         public long timeout = 0;
     }
 }
+

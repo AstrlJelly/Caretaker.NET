@@ -56,7 +56,7 @@ namespace CaretakerNET.Commands
                 "string" or _ => str,
             };
         }
-                    
+
         public string name;
         public string desc;
         public dynamic preset;

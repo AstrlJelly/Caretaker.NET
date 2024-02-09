@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CaretakerNET.Core;
@@ -40,7 +41,7 @@ namespace CaretakerNET.Games
         public readonly ulong player1;
         public readonly ulong player2;
 
-        public bool AddToColumn(int column, int player) => AddToColumn(column, player);
+        public bool AddToColumn(int column, int player) => AddToColumn(column, (Player)player);
         public bool AddToColumn(int column, Player player)
         {
             // technically don't need the else but i think it makes it look nicer
@@ -121,21 +122,23 @@ namespace CaretakerNET.Games
             // useful if you want win data outside of the method call, like if you want to reset after a winning move
             Win win = winTemp ?? WinCheck();
             bool anyWin = win.winningPlayer != Player.None;
-            List<string> joinedRows = [];
+            // List<string> joinedRows = [];
+            StringBuilder joinedRows = new();
             for (int i = MAXHEIGHT - 1; i >= 0; i--) {
-                List<string> joinedChars = [];
+                // List<string> joinedChars = [];
+                StringBuilder joinedChars = new();
                 for (int j = 0; j < MAXWIDTH; j++) {
                     int player = board[j].IsIndexValid(i) ? board[j][i] : 0;
                     bool isWin = anyWin && win.winPoints.Contains(new(i, j)); // the vector2 in this uses x, y, while this displays using y, x
-                    joinedChars.Add((Player)player switch {
+                    joinedChars.Append((Player)player switch {
                         Player.One => isWin ? "❤" : "🔴",  // red circle/heart (p1)
                         Player.Two => isWin ? "💛" : "🟡", // yellow circle/heart (p2)
                         _ => "⬛" // black square (empty)
                     });
                 }
-                joinedRows.Add(string.Join("", joinedChars) + "\n");
+                joinedRows.AppendLine(joinedChars.ToString());
             }
-            return string.Join("", joinedRows);
+            return joinedRows.ToString();
         }
         public ConnectFour(ulong player1 = 0, ulong player2 = 0)
         {
