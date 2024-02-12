@@ -116,10 +116,10 @@ namespace CaretakerNET.Games
             return new Win(Player.None, []);
         }
 
-        public string DisplayBoard(Win? winTemp = null)
+        public string DisplayBoard(out Win win)
         {
             // useful if you want win data outside of the method call, like if you want to reset after a winning move
-            Win win = winTemp ?? WinCheck();
+            win = WinCheck();
             bool anyWin = win.winningPlayer != Player.None;
             // List<string> joinedRows = [];
             StringBuilder joinedRows = new();
