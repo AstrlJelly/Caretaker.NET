@@ -75,9 +75,7 @@ namespace CaretakerNET
 
             public void Init(SocketGuild guild)
             {
-                // if (ChannelId != null) {
-                    Channel = (ITextChannel?)guild.GetChannel(ChannelId);
-                // }
+                Channel = (ITextChannel?)guild.GetChannel(ChannelId);
             }
         }
 

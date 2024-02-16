@@ -11,25 +11,22 @@ namespace CaretakerNET.Commands
         public readonly string desc;
         public readonly string genre;
         public delegate Task RunAsync(IUserMessage msg, Dictionary<string, dynamic> p);
-        public delegate Task RunInGuildAsync(IUserMessage msg, Dictionary<string, dynamic> p, Dictionary<string, GuildPersist> s);
-        // public delegate void Run(IUserMessage msg, Dictionary<string, dynamic> p);
+        // public delegate Task RunInGuildAsync(IUserMessage msg, Dictionary<string, dynamic> p, Dictionary<string, GuildPersist> s);
         public readonly RunAsync func;
         public readonly Param[] parameters;
         public readonly Param? inf;
-        public string[][] limitedTo;
+        public HashSet<ChannelPermission> limitedToPerms;
+        public HashSet<ulong> limitedToIds;
         public int timeout;
         public int currentTimeout;
-        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, string[][]? limitedTo = null, int timeout = 500)
+        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, HashSet<ChannelPermission>? limitedToPerms = null, HashSet<ulong>? limitedToIds = null, int timeout = 500)
         {
             this.name = name;
             this.desc = desc;
             this.genre = genre;
             this.func = func;
-            this.limitedTo = new string[3][];
-            for (int i = 0; i < 3; i++) {
-                // if limitedTo isn't null, and limitedTo[i] is usable, assign limitedTo[i]. else just []
-                this.limitedTo[i] = limitedTo != null && limitedTo.IsIndexValid(i) && limitedTo[i] != null ? limitedTo[i] : [];
-            }
+            this.limitedToPerms = limitedToPerms ?? [];
+            this.limitedToIds = limitedToIds ?? [];
             this.timeout = timeout;
             currentTimeout = 0;
 
@@ -43,6 +40,20 @@ namespace CaretakerNET.Commands
             } else {
                 this.parameters = [];
             }
+        }
+
+        public bool HasPerms(IUserMessage msg) {
+            if (msg.GetGuild() == null) return true;
+            return HasPerms((SocketGuildUser)msg.Author, (IGuildChannel)msg.Channel);
+        }
+        public bool HasPerms(SocketGuildUser user, IGuildChannel chnl)
+        {
+            if (limitedToIds.Contains(user.Id)) return true;
+            var userPerms = user.GetPermissions(chnl);
+            foreach (var perm in limitedToPerms) {
+                if (userPerms.Has(perm)) return true;
+            }
+            return limitedToPerms.Count <= 0 && limitedToIds.Count <= 0;
         }
     }
 

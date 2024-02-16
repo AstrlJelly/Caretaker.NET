@@ -1,4 +1,7 @@
-﻿using System;
+﻿global using static CaretakerNET.Core.Caretaker;
+global using CaretakerNET.Core;
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
@@ -8,10 +11,10 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Webhook;
 
-using CaretakerNET.Core;
 using CaretakerNET.Commands;
 using CaretakerNET.Games;
 using CaretakerNET.ExternalEmojis;
+using org.mariuszgromada.math.mxparser;
 
 namespace CaretakerNET
 {
@@ -28,16 +31,19 @@ namespace CaretakerNET
         private Dictionary<ulong, UserPersist> UserData = [];
 
         private readonly long startTime;
+        // public const char PREFIX = '>';
+        public const char PREFIX_CHAR = '>';
         public const string PREFIX = ">";
         public bool DebugMode = false;
         public bool TestingMode = false;
 
-        public static readonly ulong[] TrustedUsers = [
+        public static readonly HashSet<ulong> TrustedUsers = [
             438296397452935169, // @astrljelly
             752589264398712834, // @antoutta
         ];
-        public static readonly ulong[] BannedUsers = [
-            468933965110312980, // @lifinale
+        public static readonly HashSet<ulong> BannedUsers = [
+            // 468933965110312980, // @lifinale, it's been long enough
+            // 476021507420586014, // @vincells, thin ice
         ];
 
         private MainHook()
@@ -63,7 +69,7 @@ namespace CaretakerNET
 
         private static Task ClientLog(LogMessage message)
         {
-            Caretaker.InternalLog($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, message.Severity);
+            InternalLog($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, message.Severity);
             return Task.CompletedTask;
         }
 
@@ -73,7 +79,7 @@ namespace CaretakerNET
             DebugMode = args.Contains("debug") || args.Contains("-d");
             TestingMode = args.Contains("testing") || args.Contains("-t");
 
-            // Caretaker.ChangeConsoleTitle("Starting...");
+            // ChangeConsoleTitle("Starting...");
 
             // login and connect with token (change to config json file?)
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
@@ -82,7 +88,17 @@ namespace CaretakerNET
             // i literally have no clue why but this breaks Console.ReadLine(). it even breaks BACKSPACE fsr
             // Console.TreatControlCAsInput = true;
 
-            // while (!keepRunning) { }
+            // const int EXLCUDE = 5;
+            // const int MAX = 10;
+            // var rd = new Random();
+            // for (int i = 0; i < 100; i++)
+            // {
+            //     int randomInt = rd.Next(0, MAX - 1);
+            //     if (randomInt == EXLCUDE) {
+            //         randomInt++;
+            //     }
+            //     Log(randomInt);
+            // }
 
             // keep running until Stop() is called
             while (keepRunning) {
@@ -93,12 +109,12 @@ namespace CaretakerNET
                 }
                 if (!string.IsNullOrEmpty(readLine)) {
                     // // the channel just doesn't wanna be IIntegrationChannel?? idk
-                    // Caretaker.Log(talkingChannel is IIntegrationChannel);
+                    // Log(talkingChannel is IIntegrationChannel);
                     // if (talkingChannel is IIntegrationChannel channel)
                     // {
                     //     var webhooks = await channel.GetWebhooksAsync();
                     //     var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
-                    //     Caretaker.Log(webhook?.Name);
+                    //     Log(webhook?.Name);
                     //     if (webhook == null) {
                     //         using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
                     //         webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
@@ -112,8 +128,10 @@ namespace CaretakerNET
                         _ = Task.Run(async () => {
                             var msg = await message;
                             (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                            // Caretaker.Log(msg.Content);
-                            await CommandHandler.ParseCommand(msg, command, parameters);
+                            (Command? com, parameters) = CommandHandler.ParseCommand(command, parameters);
+                            if (com != null) {
+                                await CommandHandler.DoCommand(msg, com, parameters);
+                            }
                         });
                     }
                 }
@@ -125,15 +143,16 @@ namespace CaretakerNET
 
         public async Task ClientReady()
         {
-            await Client.DownloadUsersAsync(Client.Guilds);
+            if (!keepRunning) {
+                await Client.DownloadUsersAsync(Client.Guilds);
 
-            Caretaker.LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
-            await Load();
+                LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
+                await Load();
+                License.iConfirmNonCommercialUse("hmmmmm");
 
-
-            talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
-            keepRunning = true;
-            // return Task.CompletedTask;
+                talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
+                keepRunning = true;
+            }
         }
 
         public void Stop() => keepRunning = false;
@@ -158,7 +177,7 @@ namespace CaretakerNET
                         GuildData[key].Init(Client);
                     } catch (System.Exception error) {
                         GuildData[key] = new(key);
-                        Caretaker.LogError(error);
+                        LogError(error);
                         throw;
                     }
                 }
@@ -185,25 +204,24 @@ namespace CaretakerNET
             // }
         }
 
-        // returns null if not in guild, like if you're in dms
-        public bool TryGetGuildData(IUserMessage msg, out GuildPersist? data) 
+
+        public bool TryGetGuildData(IUserMessage msg, out GuildPersist data) 
         {
-            data = GetGuildData(msg.GetGuild()?.Id ?? 0);
+            data = GetGuildData(msg.GetGuild()?.Id ?? 0)!;
             return data != null;
         }
+        // returns null if not in guild, like if you're in dms
         public GuildPersist? GetGuildData(IUserMessage msg) => GetGuildData(msg.GetGuild()?.Id ?? 0);
         public GuildPersist GetGuildData(IGuild guild) => GetGuildData(guild.Id)!;
         public GuildPersist? GetGuildData(ulong id)
         {
-            if (id != 0) { 
-                if (!GuildData.TryGetValue(id, out GuildPersist? value)) {
-                    value = new GuildPersist(id);
-                    GuildData.Add(id, value);
-                }
-                return value;
-            } else {
-                return null;
+            if (id == 0) return null; // return null here, don't wanna try creating a GuildPersist for a null guild
+
+            if (!GuildData.TryGetValue(id, out GuildPersist? value)) {
+                value = new GuildPersist(id);
+                GuildData.Add(id, value);
             }
+            return value;
         }
 
         public UserPersist GetUserData(IUserMessage msg) => GetUserData(msg.Author.Id);
@@ -228,20 +246,28 @@ namespace CaretakerNET
                 if (msg.Author.IsBot) return;
 
                 if (msg.Content.StartsWith(PREFIX)) {
-                    bool banned = BannedUsers.Contains(msg.Author.Id);
-                    bool testing = TestingMode && !TrustedUsers.Contains(msg.Author.Id);
-                    Caretaker.LogDebug(msg.Author.Username + " banned? : " + banned);
-                    Caretaker.LogDebug("testing mode on? : " + TestingMode);
+                    bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
+                    bool testing = TestingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
+                    LogDebug(msg.Author.Username + " banned? : " + banned);
+                    LogDebug("testing mode on? : " + TestingMode);
 
                     (string command, string parameters) = msg.Content[PREFIX.Length..].SplitByFirstChar(' ');
                     if (string.IsNullOrEmpty(command) || banned || testing) return;
+                    (Command? com, parameters) = CommandHandler.ParseCommand(command, parameters);
+
+                    // HasPerms returns true if GetGuild is null! make sure there's no security concerns there
+                    if (com == null) return;
+                    if (!com.HasPerms(msg) && !TrustedUsers.Contains(msg.Author.Id)) {
+                        await msg.Reply("you don't have the perms to do this!");
+                        return;
+                    }
 
                     var u = GetUserData(msg);
-                    if (u.timeout > Caretaker.DateNow()) {
-                        Caretaker.LogDebug("timeout : " + u.timeout);
-                        Caretaker.LogDebug("Caretaker.DateNow() : " + Caretaker.DateNow());
-                        await msg.EmojiReact("🕒");
-                        u.timeout += 500;
+                    if (u.timeout > DateNow()) {
+                        LogDebug("timeout : " + u.timeout);
+                        LogDebug("DateNow() : " + DateNow());
+                        await msg.ReactAsync("🕒");
+                        u.timeout += 1000;
                         return;
                     }
 
@@ -249,10 +275,10 @@ namespace CaretakerNET
                     try {
                         Stopwatch sw = new();
                         sw.Start();
-                        await CommandHandler.ParseCommand(msg, command, parameters);
-                        UserData[msg.Author.Id].timeout = Caretaker.DateNow() + 1000;
+                        await CommandHandler.DoCommand(msg, com, parameters);
+                        u.timeout = DateNow() + 1000;
                         sw.Stop();
-                        Caretaker.LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
+                        LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
                     } catch (Exception error) {
                         await msg.Reply(error.Message, false);
                     }
@@ -262,10 +288,10 @@ namespace CaretakerNET
                         Dictionary<ulong, Func<SocketUser, (string, string)?>> actions = new() {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
                             { talkingChannel?.Id ?? 0, _ => {
-                                Caretaker.LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
+                                LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
                                 return null;
                             } },
-                            { s.count?.Channel?.Id ?? 0, author => {
+                            { s.count?.Channel?.Id ?? 1, author => {
                                 // s.count will not be null here but the compiler doesn't know that 😢
                                 var count = s.count;
                                 // duplicate check
@@ -275,11 +301,14 @@ namespace CaretakerNET
                                 }
                                 
                                 // parse number from message
-                                DataTable dt = new();
-                                int? newNumberTemp = (int?)dt.Compute(msg.Content, null) ?? (int?)dt.Compute(msg.Content.Split(' ')[0], null);
-                                int newNumber = 0;
+                                var math = new Expression(msg.Content);
+                                double newNumberTemp = math.calculate();
+                                if (double.IsNaN(newNumberTemp)){
+                                    math = new Expression(msg.Content.Split(' ')[0]);
+                                    newNumberTemp = math.calculate();
+                                }
 
-                                if (newNumberTemp == null) {
+                                if (double.IsNaN(newNumberTemp)) {
                                     List<char> numbers = [];
                                     bool numberStarted = false;
                                     for (int i = 0; i < msg.Content.Length; i++)
@@ -292,8 +321,8 @@ namespace CaretakerNET
                                         }
                                     }
                                     if (numbers.Count > 0) {
-                                        newNumber = int.Parse(string.Join("", numbers));
-                                    } /* else { // maybe? would need to be reworked.
+                                        newNumberTemp = double.Parse(string.Join("", numbers));
+                                    } /* else { // maybe? would need to be reworked. i probably won't.
                                         List<int?> computes = [];
                                         int lastWorkingIndex = 0;
                                         for (int i = 0; i < msg.Content.Length; i++)
@@ -307,35 +336,38 @@ namespace CaretakerNET
                                             newNumber = (int)newNumberTemp;
                                         }
                                     } */
-                                } else {
-                                    newNumber = (int)newNumberTemp;
                                 }
+
+                                // if (double.IsNaN(newNumberTemp)) return ("", "hmm");
+
+                                int newNumber = (int)newNumberTemp;
 
                                 // is the new number one more than the last?
                                 if (newNumber == count.Current + 1) {
                                     count.Current++;
+                                    s.count.LastCountMsg = msg;
                                     return ("✅", "");
                                 } else {
                                     // if the messages are close together, point that out. happens pretty often
                                     var lastMsg = s.count?.LastCountMsg;
                                     long difference = msg.TimeCreated() - (s.count?.LastCountMsg?.TimeCreated() ?? 0);
                                     count.Reset(false);
-                                    // currently 500 millseconds; tweak if it's too little or too much
-                                    return ("❌", (difference > 500 || lastMsg == null) ?
+                                    // currently 800 millseconds; tweak if it's too little or too much
+                                    return ("❌", (difference > 800 || lastMsg == null) ?
                                         "aw you're not very good at counting, are you?" : 
                                         "too many cooks in the kitchen!!"
                                     );
                                 }
                             } },
-                            { s.chain?.Channel?.Id ?? 0, delegate {
+                            { s.chain?.Channel?.Id ?? 2, delegate {
                                 return null;
                             } },
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                         };
                         // epic tuples 😄😄😄
-                        (string emojiToParse, string reply) = actions[msg.Channel.Id].Invoke(msg.Author) ?? ("", "");
+                        (string emojiToParse, string reply) = actions[msg.Channel.Id]?.Invoke(msg.Author) ?? ("", "");
                         if (!string.IsNullOrEmpty(emojiToParse)) {
-                            await msg.EmojiReact(emojiToParse);
+                            await msg.ReactAsync(emojiToParse);
                         }
                         if (!string.IsNullOrEmpty(reply)) {
                             await msg.Reply(reply);

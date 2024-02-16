@@ -17,9 +17,24 @@ namespace CaretakerNET.Core
         public static string ReplaceAll(this string stringToReplace, string oldStr, string newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
         public static string ReplaceAll(this string stringToReplace, char oldStr, char newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
 
-        public static T? TryGet<T>(this IEnumerable<T> enumerable, int index) => enumerable.IsIndexValid(index) ? enumerable!.ElementAt(index) : default;
+        /// <summary>
+        /// Inline IEnumberable.Get(), where if the value is not found at the index, false is returned.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="enumerable">The IEnumerable to use to get at <paramref name="index"/>.</param>
+        /// <param name="index"></param>
+        /// <returns>The item at <paramref name="index"/>, if <paramref name="enumerable"/> isn't null, and there is a value at that index.</returns>
+        public static T? TryGet<T>(this IEnumerable<T> enumerable, int index) 
+        {
+            return enumerable != null && enumerable.IsIndexValid(index) ? enumerable.ElementAt(index) : default;
+        }
 
-        // Item1 and Item2 look kinda ugly but a tuple makes sense for this method
+        /// <summary>
+        /// Splits a string into two parts using an index.
+        /// </summary>
+        /// <param name="stringToSplit">The string to split into two.</param>
+        /// <param name="index">The index to split at, i.e "Split" at index 2 would become ("Spl", "it")</param>
+        /// <returns>The split string in a tuple form.</returns>
         public static (string, string) SplitByIndex(this string stringToSplit, int index)
         {
             if (stringToSplit.IsIndexValid(index)) {
@@ -29,6 +44,12 @@ namespace CaretakerNET.Core
             }
         }
 
+        /// <summary>
+        /// Splits a string into two parts using a character.
+        /// </summary>
+        /// <param name="stringToSplit">The string to split into two.</param>
+        /// <param name="splitChar">The char to split at, i.e "Split" with 'l' would become ("Sp", "it")</param>
+        /// <returns>The split string in a tuple form.</returns>
         public static (string, string) SplitByFirstChar(this string stringToSplit, char splitChar)
         {
             int index = stringToSplit.IndexOf(splitChar);
@@ -36,29 +57,32 @@ namespace CaretakerNET.Core
 
             return SplitByIndex(stringToSplit, index);
         }
-        // not used currently but i thought it would be interesting to make
+
+        /// <summary>
+        /// Splits a string into mutiple parts using an array of indexes.
+        /// </summary>
+        /// <param name="stringToSplit">The string to split into two.</param>
+        /// <param name="indexes">The indexes to split at. <para/> i.e "Split This" at index 5, and 7 would become ["Split", " T", "his"]</param>
+        /// <returns>A List of the split strings, with Count <paramref name="indexes"/>.Length + 1.</returns>
         public static List<string> SplitByIndexes(this string stringToSplit, params int[] indexes)
         {
-            indexes = [0, ..indexes, stringToSplit.Length];
+            int maxLength = stringToSplit.Length;
+            List<int> newIndexes = [0, ..indexes];
+            newIndexes.RemoveAll(x => x >= maxLength);
+            newIndexes.Add(maxLength);
             List<string> newStrings = [];
-            for (int i = 0; i < indexes.Length - 1; i++) {
-                newStrings.Add(stringToSplit.Substring(indexes[i], indexes[i + 1]));
+            for (int i = 0; i < newIndexes.Count - 1; i++) {
+                newStrings.Add(stringToSplit[newIndexes[i]..newIndexes[i + 1]]);
             }
             return newStrings;
         }
 
-        // public static T? Parse<T>(this string stringToParse)
-        // {
-        //     dynamic? parsed = typeof(T).ToString() switch
-        //     {
-        //         "Int64" => int.Parse(stringToParse),
-        //         "UInt64" => uint.Parse(stringToParse),
-        //         "Double" => double.Parse(stringToParse),
-        //         _ => null,
-        //     };
-        //     return (T?)parsed; // this cast gets around the silly compiler
-        // }
-
+        /// <summary>
+        /// Checks if a string is equal to any in an array of strings.
+        /// </summary>
+        /// <param name="stringToMatch">The string to check against <paramref name="stringsToMatch"/></param>
+        /// <param name="stringsToMatch"> The strings to check against <paramref name="stringToMatch"/></param>
+        /// <returns><i>True</i> if any strings match <paramref name="stringToMatch"/>. <i>False</i> otherwise.</returns>
         public static bool Match(this string stringToMatch, params string[] stringsToMatch)
         {
             for (int i = 0; i < stringsToMatch.Length; i++)
@@ -69,32 +93,36 @@ namespace CaretakerNET.Core
             }
             return false;
         }
-
-        // public static bool TryParse<T>(this string stringToParse, out T parsed)
-        // {
-        //     switch (typeof(T).ToString().ToLower())
-        //     {
-        //         case "":
-        //         break;
-        //         default:
-        //     }
-        //     // parsed = typeof(T) switch
-        //     // {
-
-        //     //     _ => default,
-        //     // };
-        // }
         #endregion
 
         #region List
+        /// <summary>
+        /// Checks if an index is valid.
+        /// </summary>
+        /// <param name="enumerable"></param>
+        /// <param name="index"></param>
+        /// <returns><i>True</i> if index is valid. False otherwise.</returns>
         public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index >= 0 && index < enumerable.Count();
 
-        // ElementAt moment
+        /// <summary>
+        /// Gets an element in a 2D IEnumerable using two indexes.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="enumerable"></param>
+        /// <param name="i">Index 1</param>
+        /// <param name="j">Index 2</param>
+        /// <returns>An element of type <typeparamref name="T"/> from the 2D <paramref name="enumerable"/></returns>
         public static T? GetFromIndexes<T>(this IEnumerable<IEnumerable<T>> enumerable, int i, int j) {
             return enumerable.IsIndexValid(i) && enumerable.ElementAt(i).IsIndexValid(j) ? enumerable.ElementAt(i).ElementAt(j) : default;
         }
 
-        // Item1 and Item2 look kinda ugly but a tuple makes sense for this method
+        /// <summary>
+        /// Splits a list using an index.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="listToSplit"></param>
+        /// <param name="index"></param>
+        /// <returns>Two lists, split from <paramref name="listToSplit"/> using <paramref name="index"/>.</returns>
         public static (List<T>, List<T>?) SplitByIndex<T>(this List<T> listToSplit, int index)
         {
             if (listToSplit.IsIndexValid(index)) {
@@ -104,12 +132,26 @@ namespace CaretakerNET.Core
             }
         }
 
+        /// <summary>
+        /// Gets a random element from <paramref name="enumerable"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="enumerable"></param>
+        /// <returns>An element from <paramref name="enumerable"/>.</returns>
         public static T? GetRandom<T>(this IEnumerable<T> enumerable) {
             var random = new Random();
             int count = enumerable.Count();
             return count > 0 ? enumerable.ElementAt(random.Next(count)) : default;
         }
 
+        /// <summary>
+        /// Inline FindIndex(), with the result being an "out" argument.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="enumerable"></param>
+        /// <param name="match"></param>
+        /// <param name="index"></param>
+        /// <returns><i>True</i> if the index was found. <i>False</i> otherwise.</returns>
         public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> match, out int index) {
             index = -1;
             foreach (T item in enumerable)
@@ -122,8 +164,8 @@ namespace CaretakerNET.Core
         #endregion
 
         #region Enum
-        public static string EnumName(this Enum whichEnum, int index) {
-            Type enumType = whichEnum.GetType();
+        public static string EnumName(this Type enumType, int index) {
+            // Type enumType = whichEnum.GetType();
             int max = Enum.GetNames(enumType).Length - 1;
             int newIndex = Math.Clamp(index, 0, max);
             if (newIndex != index) {
@@ -150,31 +192,61 @@ namespace CaretakerNET.Core
             return await msg.ReplyAsync(embed: embed);
         }
 
+        public static async Task OverwriteMessage(this IUserMessage msg, string newMsg)
+        {
+            var prevContent = msg.Content;
+            await msg.ModifyAsync(x => x.Content = prevContent + "\n" + newMsg);
+        }
+
         public static long TimeCreated(this IUserMessage msg)
         {
             return msg.CreatedAt.ToUnixTimeMilliseconds();
         }
 
+        /// <summary>
+        /// Gets the guild of any message; returns null if not in guild.
+        /// </summary>
+        /// <param name="msg">The message to get the guild from.</param>
+        /// <returns>The guild that the message is in, if it's in a guild. Else returns null.</returns>
         public static SocketGuild? GetGuild(this IUserMessage msg) 
         {
             if (msg.Channel is not SocketGuildChannel chnl) return null;
             return chnl.Guild;
         }
-
-        public async static Task EmojiReact(this IMessage msg, string emojiStr)
+        
+        /// <summary>
+        /// Automatically parses an emoji, then reacts to a message with it.
+        /// </summary>
+        /// <param name="msg">The message to react to.</param>
+        /// <param name="emojiStr">An Emoji in string form.</param>
+        public async static Task ReactAsync(this IMessage msg, string emojiStr)
         {
             await msg.AddReactionAsync(Emoji.Parse(emojiStr));
         }
 
-        private static string? IDFromReference(string reference) {
-            return reference[0] == '<' && reference.Length >= 2 ? reference[2..^1] : null;
+        /// <summary>
+        /// Gets an id from a reference. <br/>
+        /// i.e #general -> 1205328637918707723 or @AstrlJelly -> 438296397452935169
+        /// </summary>
+        /// <param name="reference">The reference to get an ID from.</param>
+        /// <returns>A ulong</returns>
+        private static ulong? IDFromReference(string reference) {
+            return reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
         }
 
+        /// <summary>
+        /// Attempts in multiple ways to get a SocketGuild from a string. <br/>
+        /// This is done by trying to use <paramref name="guildToParse"/> to grab the guild through its ID or its name.
+        /// </summary>
+        /// <param name="c"> The bot client to find the guild from</param>
+        /// <param name="guildToParse"></param>
+        /// <returns></returns>
         public static SocketGuild? ParseGuild(this DiscordSocketClient c, string guildToParse)
         {
             SocketGuild? guild = null;
             Func<string, SocketGuild?>[] actions = [
-                x => c.Guilds.FirstOrDefault(g => Caretaker.Match(guildToParse, g.Name) || g.Id == ulong.Parse(guildToParse)),
+                x => c.GetGuild(ulong.Parse(guildToParse)),
+                x => c.Guilds.FirstOrDefault(g => Caretaker.Match(guildToParse, g.Name)),
                 // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
@@ -194,7 +266,7 @@ namespace CaretakerNET.Core
             ITextChannel? channel = null;
             Func<string, ITextChannel?>[] actions = [
                 x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Match(channelToParse)),
-                x => (ITextChannel)guild.GetChannel(ulong.Parse(IDFromReference(channelToParse) ?? channelToParse)),
+                x => (ITextChannel)guild.GetChannel(IDFromReference(channelToParse) ?? ulong.Parse(channelToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
@@ -212,7 +284,7 @@ namespace CaretakerNET.Core
             IUser? user = null;
             (userToParse, string discriminator) = userToParse.SplitByFirstChar('#');
             Action[] actions = [
-                delegate { user = c.GetUser(ulong.Parse(IDFromReference(userToParse) ?? userToParse)); },
+                delegate { user = c.GetUser(IDFromReference(userToParse) ?? ulong.Parse(userToParse)); },
                 delegate { user = c.GetUser(userToParse, discriminator == "" ? null : discriminator); },
                 delegate { user = guild?.Users.FirstOrDefault(x => userToParse.Match(x.Nickname, x.GlobalName)); },
             ];
