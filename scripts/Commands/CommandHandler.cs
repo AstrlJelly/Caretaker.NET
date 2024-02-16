@@ -98,7 +98,7 @@ namespace CaretakerNET.Commands
                 switch (p["game"])
                 {
                     case "c4" or "connect4": {
-                        var challengeMsg = await msg.Reply($"{Caretaker.UserPingFromID(victim.Id)}, do you accept {Caretaker.UserPingFromID(msg.Author.Id)}'s challenge?");
+                        var challengeMsg = await msg.Reply($"{UserPingFromID(victim.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
                         bool accepted = false;
                         Emoji? checkmark = Emoji.Parse("✅");
                         Emoji? crossmark = Emoji.Parse("❌");
@@ -115,13 +115,13 @@ namespace CaretakerNET.Commands
                                 .First(user => !user.IsBot && user.Id == victim.Id);
                             accepted = true;
                             if (acceptedUser != null) break;
-                            // Caretaker.Log("Hmmmmm " + i);
+                            // Log("Hmmmmm " + i);
                             await Task.Delay(1000);
                         }
                         if (accepted) {
                             if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                             s.connectFour = new(msg.Author.Id, victim.Id);
-                            await msg.Reply($"{Caretaker.UserPingFromID(msg.Author.Id)} and {Caretaker.UserPingFromID(victim.Id)}, begin!");
+                            await msg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
                         } else {
                             var prevContent = challengeMsg.Content;
                             // _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{prevContent}*\ntook too long! oops.");
@@ -206,9 +206,9 @@ namespace CaretakerNET.Commands
 
             new("guilds", "get all guilds", "hidden", async (msg, p) => {
                 var client = MainHook.instance.Client;
-                Caretaker.LogInfo(client.Guilds.Count);
+                LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
-                    Caretaker.LogInfo(guild.Name);
+                    LogInfo(guild.Name);
                 }
             }),
 
@@ -217,7 +217,7 @@ namespace CaretakerNET.Commands
                 if (guild == null) {
                     await msg.Reply("darn. no guild with that name");
                 } else {
-                    // Caretaker.LogTemp(guild.Name);
+                    // LogTemp(guild.Name);
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
@@ -283,8 +283,8 @@ namespace CaretakerNET.Commands
                     splitParams = parameters.Split(' '); // then split it up as parameters
                 }
 
-                Caretaker.LogDebug("splitParams    // " + string.Join(", ", splitParams));
-                Caretaker.LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
+                LogDebug("splitParams    // " + string.Join(", ", splitParams));
+                LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
 
                 var guild = msg.GetGuild();
 
@@ -330,7 +330,7 @@ namespace CaretakerNET.Commands
             }
 
             stopwatch.Stop();
-            Caretaker.LogDebug($"took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters", true);
+            LogDebug($"took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters", true);
             
             try {
                 await com.func.Invoke(msg, paramDict);
@@ -381,7 +381,7 @@ namespace CaretakerNET.Commands
                 }
             }
             sw.Stop();
-            Caretaker.LogDebug($"ListCommands() took {sw.ElapsedMilliseconds} milliseconds to complete");
+            LogDebug($"ListCommands() took {sw.ElapsedMilliseconds} milliseconds to complete");
             return response.Length > 0 ? response.ToString() : "mmm... no.";
         }
 

@@ -169,7 +169,7 @@ namespace CaretakerNET.Core
             int max = Enum.GetNames(enumType).Length - 1;
             int newIndex = Math.Clamp(index, 0, max);
             if (newIndex != index) {
-                Caretaker.LogWarning($"EnumName() had {index} put into it; defaulted to {newIndex} instead.");
+                LogWarning($"EnumName() had {index} put into it; defaulted to {newIndex} instead.");
             }
             return Enum.GetName(enumType, newIndex)!;
         }
@@ -246,7 +246,7 @@ namespace CaretakerNET.Core
             SocketGuild? guild = null;
             Func<string, SocketGuild?>[] actions = [
                 x => c.GetGuild(ulong.Parse(guildToParse)),
-                x => c.Guilds.FirstOrDefault(g => Caretaker.Match(guildToParse, g.Name)),
+                x => c.Guilds.FirstOrDefault(g => Match(guildToParse, g.Name)),
                 // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
@@ -288,7 +288,7 @@ namespace CaretakerNET.Core
                 delegate { user = c.GetUser(userToParse, discriminator == "" ? null : discriminator); },
                 delegate { user = guild?.Users.FirstOrDefault(x => userToParse.Match(x.Nickname, x.GlobalName)); },
             ];
-            Caretaker.InternalLog(userToParse);
+            InternalLog(userToParse);
             for (int i = 0; i < actions.Length; i++) {
                 try {
                     actions[i].Invoke();
