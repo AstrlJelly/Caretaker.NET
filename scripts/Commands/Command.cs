@@ -7,38 +7,55 @@ namespace CaretakerNET.Commands
 {
     public class Command
     {
-        public readonly string name;
-        public readonly string desc;
-        public readonly string genre;
-        public delegate Task RunAsync(IUserMessage msg, Dictionary<string, dynamic> p);
-        // public delegate Task RunInGuildAsync(IUserMessage msg, Dictionary<string, dynamic> p, Dictionary<string, GuildPersist> s);
-        public readonly RunAsync func;
-        public readonly Param[] parameters;
-        public readonly Param? inf;
-        public HashSet<ChannelPermission> limitedToPerms;
-        public HashSet<ulong> limitedToIds;
-        public int timeout;
-        public int currentTimeout;
-        public Command(string name, string desc, string genre, RunAsync func, List<Param>? parameters = null, HashSet<ChannelPermission>? limitedToPerms = null, HashSet<ulong>? limitedToIds = null, int timeout = 500)
+        /// <summary>
+        /// yeah
+        /// </summary>
+        /// <param name="params">parsed params in a dictionary.</param>
+        /// <param name="unparams">unparsed params; the strings that get parsed to the params dictionary.</param>
+        /// <param name="unparamsParams">the "params" input, which is always an array.</param>
+        public class ParsedParams(Dictionary<string, dynamic> @params, Dictionary<string, string?> unparams, string[] unparamsParams)
         {
-            this.name = name;
-            this.desc = desc;
-            this.genre = genre;
-            this.func = func;
-            this.limitedToPerms = limitedToPerms ?? [];
-            this.limitedToIds = limitedToIds ?? [];
-            this.timeout = timeout;
-            currentTimeout = 0;
+            public dynamic this[string key] => Params[key];
 
-            this.inf = null;
+            public readonly Dictionary<string, dynamic> Params = @params;
+            public readonly Dictionary<string, string?> Unparams = unparams;
+            public readonly string[] UnparamsParams = unparamsParams;
+        }
+
+        public readonly string Name;
+        public readonly string Desc;
+        public readonly string Genre;
+        public delegate Task RunAsync(IUserMessage msg, ParsedParams p);
+        public readonly RunAsync Func;
+        // public readonly Dictionary<string, Param> Parameters;
+        public readonly Param[] Params;
+        public readonly Param? Inf = null;
+        public HashSet<ChannelPermission> LimitedToPerms;
+        public HashSet<ulong> LimitedToIds;
+        public int Timeout;
+        public int CurrentTimeout = 0;
+
+        public Command(string name, string desc, string genre, RunAsync? func = null, List<Param>? parameters = null, HashSet<ChannelPermission>? limitedToPerms = null, HashSet<ulong>? limitedToIds = null, int timeout = 500)
+        {
+            this.Name = name;
+            this.Desc = desc;
+            this.Genre = genre;
+            this.Func = func ?? ((_, _) => Task.CompletedTask);
+            this.LimitedToPerms = limitedToPerms ?? [];
+            this.LimitedToIds = limitedToIds ?? [];
+            this.Timeout = timeout;
+            // CurrentTimeout = 0;
+
+            // this.Inf = null;
             if (parameters != null) {
-                if (parameters.TryFindIndex(x => x.name == "params", out int infIndex)) {
-                    this.inf = parameters[infIndex];
+                if (parameters.TryFindIndex(x => x.Name == "params", out int infIndex)) {
+                    this.Inf = parameters[infIndex];
                     parameters.RemoveAt(infIndex);
                 }
-                this.parameters = [..parameters];
+                this.Params = [..parameters];
+                // this.Parameters = parameters.ToDictionary(p => p.Name);
             } else {
-                this.parameters = [];
+                this.Params = [];
             }
         }
 
@@ -48,42 +65,63 @@ namespace CaretakerNET.Commands
         }
         public bool HasPerms(SocketGuildUser user, IGuildChannel chnl)
         {
-            if (limitedToIds.Contains(user.Id)) return true;
+            if (LimitedToPerms.Count <= 0 && LimitedToIds.Count <= 0) return true; // most common case
+            if (LimitedToIds.Contains(user.Id)) return true; // id is easiest to check first
             var userPerms = user.GetPermissions(chnl);
-            foreach (var perm in limitedToPerms) {
+            foreach (var perm in LimitedToPerms) {
                 if (userPerms.Has(perm)) return true;
             }
-            return limitedToPerms.Count <= 0 && limitedToIds.Count <= 0;
+            return false;
         }
     }
 
-    public class Param
+
+    public class Param(string name, string desc, dynamic preset, Param.ParamType? type = null)
     {
+        public enum ParamType
+        {
+            String,
+            Boolean,
+            Double,
+            Integer,
+            UInteger,
+            Guild,
+            Channel,
+            User,
+        }
         public dynamic? ToType(string str, SocketGuild? guild) {
-            return type switch {
-                "int32"       => int.Parse(str),
-                "uint32"      => uint.Parse(str),
-                "double"      => double.Parse(str),
-                "boolean"     => str == "true",
-                "user"        => MainHook.instance.Client.ParseUser(str, guild),
-                "channel"     => guild?.ParseChannel(str),
-                "guild"       => MainHook.instance.Client.ParseGuild(str),
-                "string" or _ => str,
+            return Type switch {
+                ParamType.Integer     => int.Parse(str),
+                ParamType.UInteger    => uint.Parse(str),
+                ParamType.Double      => double.Parse(str),
+                ParamType.Boolean     => str == "true",
+                ParamType.User        => MainHook.instance.Client.ParseUser(str, guild),
+                ParamType.Channel     => guild?.ParseChannel(str),
+                ParamType.Guild       => MainHook.instance.Client.ParseGuild(str),
+                ParamType.String or _ => str, // gotta always have that "or _" :)
             };
         }
 
-        public string name;
-        public string desc;
-        public dynamic preset;
-        public string type;
-        public Param(string name, string desc, dynamic preset, string? type = null)
+        public string Name = name;
+        public string Desc = desc;
+        public dynamic Preset = preset;
+        public ParamType Type = type ?? preset.GetType().ToString() switch
         {
-            this.name = name;
-            this.desc = desc;
-            this.preset = preset;
-            
-            type ??= preset.GetType().Name;
-            this.type = type.ToLower();
-        }
+            "Boolean" => ParamType.Boolean,
+            "Double" => ParamType.Double,
+            "Int32" => ParamType.Integer,
+            "UInt32" => ParamType.UInteger,
+            "String" or _ => ParamType.String,
+        };
     }
 }
+
+
+/*
+```cs
+if (PlayerInput.GetIsAction(InputAction_BasicPress) && isCharging && PlayerInput.CurrentControlStyle == InputController.ControlStyles.Touch)
+{
+  hand.DoScaledAnimationAsync("Charge", 0.5f);
+}
+```
+*/

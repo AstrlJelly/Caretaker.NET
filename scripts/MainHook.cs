@@ -24,16 +24,14 @@ namespace CaretakerNET
         public readonly static MainHook instance = new();
         static Task Main(string[] args) => instance.MainAsync(args);
         private bool keepRunning = true;
+        private bool isReady;
 
         public readonly DiscordSocketClient Client;
-        public ITextChannel? talkingChannel;
+        public ITextChannel? TalkingChannel;
         private Dictionary<ulong, GuildPersist> GuildData = [];
         private Dictionary<ulong, UserPersist> UserData = [];
 
-        private readonly long startTime;
-        // public const char PREFIX = '>';
-        public const char PREFIX_CHAR = '>';
-        public const string PREFIX = ">";
+        public readonly long StartTime;
         public bool DebugMode = false;
         public bool TestingMode = false;
 
@@ -59,12 +57,12 @@ namespace CaretakerNET
             Client.MessageReceived += MessageReceivedAsync;
             Client.Ready += ClientReady;
 
-            AppDomain.CurrentDomain.UnhandledException += async delegate { 
+            AppDomain.CurrentDomain.UnhandledException += async delegate {
                 await Client.StopAsync();
                 await Save();
             };
 
-            startTime = new DateTimeOffset().ToUnixTimeMilliseconds();
+            StartTime = new DateTimeOffset().ToUnixTimeMilliseconds();
         }
 
         private static Task ClientLog(LogMessage message)
@@ -123,7 +121,7 @@ namespace CaretakerNET
                     // }
 
                     Task<IUserMessage>? message = null;
-                    if (talkingChannel != null) message = talkingChannel.SendMessageAsync(readLine);
+                    if (TalkingChannel != null) message = TalkingChannel.SendMessageAsync(readLine);
                     if (readLine.StartsWith(PREFIX) && message != null) {
                         _ = Task.Run(async () => {
                             var msg = await message;
@@ -137,21 +135,22 @@ namespace CaretakerNET
                 }
             }
             await Client.StopAsync();
-            await Save();
+            if (GuildData.Count > 0 && GuildData.Count > 0) await Save();
             // await Task.Delay(Timeout.Infinite);
         }
 
         public async Task ClientReady()
         {
-            if (!keepRunning) {
+            if (!isReady) {
                 await Client.DownloadUsersAsync(Client.Guilds);
 
                 LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
-                await Load();
                 License.iConfirmNonCommercialUse("hmmmmm");
 
-                talkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
-                keepRunning = true;
+                TalkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
+
+                await Load();
+                isReady = true;
             }
         }
 
@@ -168,11 +167,8 @@ namespace CaretakerNET
             GuildData = await Persist.LoadGuilds();
             UserData = await Persist.LoadUsers();
             CheckGuildData();
-            // int i = 0;
             foreach (var key in GuildData.Keys) {
-                if (key <= 0) {
-                    GuildData.Remove(key);
-                } else {
+                if (key > 0) {
                     try {
                         GuildData[key].Init(Client);
                     } catch (System.Exception error) {
@@ -180,9 +176,9 @@ namespace CaretakerNET
                         LogError(error);
                         throw;
                     }
+                } else {
+                    GuildData.Remove(key);
                 }
-                
-                // i++;
             }
         }
 
@@ -271,7 +267,7 @@ namespace CaretakerNET
                         return;
                     }
 
-                    var typing = msg.Channel.EnterTypingState();
+                    // var typing = msg.Channel.EnterTypingState();
                     try {
                         Stopwatch sw = new();
                         sw.Start();
@@ -282,12 +278,12 @@ namespace CaretakerNET
                     } catch (Exception error) {
                         await msg.Reply(error.Message, false);
                     }
-                    typing.Dispose();
+                    // typing.Dispose();
                 } else {
                     if (TryGetGuildData(msg, out GuildPersist? s) && s != null) {
                         Dictionary<ulong, Func<SocketUser, (string, string)?>> actions = new() {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.
-                            { talkingChannel?.Id ?? 0, _ => {
+                            { TalkingChannel?.Id ?? 0, _ => {
                                 LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
                                 return null;
                             } },

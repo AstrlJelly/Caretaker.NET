@@ -1,1 +1,266 @@
-{}
+{
+  "1113913617608355992": {
+    "guildId": 1113913617608355992,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1091542281242279979": {
+    "guildId": 1091542281242279979,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1179439549865271367": {
+    "guildId": 1179439549865271367,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1191816507374715023": {
+    "guildId": 1191816507374715023,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1077367474447716352": {
+    "guildId": 1077367474447716352,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1186486803608375346": {
+    "guildId": 1186486803608375346,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1171209093269180529": {
+    "guildId": 1171209093269180529,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1114601958095986738": {
+    "guildId": 1114601958095986738,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "887502008876167209": {
+    "guildId": 887502008876167209,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "544735840178536458": {
+    "guildId": 544735840178536458,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  },
+  "1145223256056537181": {
+    "guildId": 1145223256056537181,
+    "count": {
+      "channelId": 0,
+      "lastCountMsgChannelId": 0,
+      "lastCountMsgId": 0,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": 0,
+      "replyChannelId": 0
+    },
+    "slowModes": {},
+    "connectFour": null
+  }
+}

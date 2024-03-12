@@ -10,6 +10,7 @@ namespace CaretakerNET.Core
 {
     public static class Caretaker
     {
+        public const string PREFIX = ">";
         public const ulong CARETAKER_ID = 1182009469824139395;
 
         #region String
@@ -95,6 +96,13 @@ namespace CaretakerNET.Core
         }
         #endregion
 
+        #region Boolean
+        public static bool FlipCoin(double chance = 0.5)
+        {
+            return new Random().NextDouble() < chance;
+        }
+        #endregion 
+
         #region List
         /// <summary>
         /// Checks if an index is valid.
@@ -176,15 +184,17 @@ namespace CaretakerNET.Core
         #endregion
 
         #region Discord
-        public static async Task<IUserMessage> Reply(this IUserMessage msg, object reply, bool ping = false)
+        public static async Task<IUserMessage> Reply(this IUserMessage msg, object rp, bool ping = false)
         {
-            return await msg.ReplyAsync(reply.ToString(), allowedMentions: ping ? AllowedMentions.All : AllowedMentions.None);
+            string? reply = rp.ToString();
+            if (FlipCoin(0.01)) reply = reply?.ReplaceAll("l", "I");
+            return await msg.ReplyAsync(reply, allowedMentions: ping ? AllowedMentions.All : AllowedMentions.None);
         }
 
         public static async Task<IUserMessage> RandomReply(this IUserMessage msg, object[] replies, bool ping = false)
         {
             string? reply = (string?)replies.GetRandom();
-            return await msg.Reply(string.IsNullOrEmpty(reply) ? "." : reply, ping);
+            return await msg.Reply(string.IsNullOrEmpty(reply) ? " " : reply, ping);
         }
 
         public static async Task<IUserMessage> EmbedReply(this IUserMessage msg, Embed embed)
@@ -365,6 +375,14 @@ namespace CaretakerNET.Core
         {
             
         } 
+        #endregion
+
+        #region Misc
+        public static bool IsNull<T>(T check, out T result)
+        {
+            result = check;
+            return result == null;
+        }
         #endregion
     }
 }

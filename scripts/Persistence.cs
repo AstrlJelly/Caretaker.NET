@@ -63,7 +63,7 @@ namespace CaretakerNET
 
     public class GuildPersist(ulong guildId)
     {
-        public class Chain()
+        public class ChainPersist()
         {
             [JsonIgnore] public ITextChannel? Channel;
             internal ulong ChannelId;
@@ -79,7 +79,7 @@ namespace CaretakerNET
             }
         }
 
-        public class Convo
+        public class ConvoPersist
         {
             [JsonIgnore] private ITextChannel? convoChannel;
             [JsonIgnore] private ITextChannel? replyChannel;
@@ -105,7 +105,7 @@ namespace CaretakerNET
             }
         }
 
-        public class Count(ITextChannel? channel = null, int current = 0, int prevNumber = 0, int highestNum = 0, IUserMessage? lastCountMsg = null)
+        public class CountPersist(ITextChannel? channel = null, int current = 0, int prevNumber = 0, int highestNum = 0, IUserMessage? lastCountMsg = null)
         {
             public void Reset(bool fullReset)
             {
@@ -152,9 +152,9 @@ namespace CaretakerNET
 
         // public Dictionary<string, dynamic> CommandData;
         public ulong guildId = guildId;
-        public Count count = new();
-        public Chain chain = new();
-        public Convo convo = new();
+        public CountPersist count = new();
+        public ChainPersist chain = new();
+        public ConvoPersist convo = new();
         // public List<SlowMode> slowModes = [];
         public Dictionary<ulong, int> slowModes = []; // channel id and timer
         public ConnectFour? connectFour = null;

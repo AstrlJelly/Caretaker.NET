@@ -10,7 +10,6 @@ using Discord.WebSocket;
 
 using CaretakerNET.ExternalEmojis;
 using CaretakerNET.Games;
-using CaretakerNET.Core;
 
 namespace CaretakerNET.Commands
 {
@@ -24,7 +23,6 @@ namespace CaretakerNET.Commands
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("help", "list all normal commands", "commands", async (msg, p) => {
-                // await msg.Reply((string)p["command"]);
                 string reply = ListCommands(p["command"], p["listParams"]);
                 await msg.Reply(reply, false);
             }, [ 
@@ -33,13 +31,13 @@ namespace CaretakerNET.Commands
             ]),
 
             new("echo", "list all normal commands", "silly", async (msg, p) => {
-                string reply = (string)p["reply"];
+                (string reply, int wait) = (p["reply"], p["wait"]);
                 if (!reply.Contains("@everyone") && !reply.Contains("@here") && reply != "") {
-                    await Task.Delay(int.Abs(p["wait"]));
-                    await msg.Reply((string)p["reply"], false);
+                    await Task.Delay(int.Abs(wait));
+                    await msg.Reply(reply, false);
                 } else {
                     string[] replies = [ "stop that!!!", "hey you can't do that :(", "explode", "why...", Emojis.Sab ];
-                    await msg.Reply(p["reply"] != "" ? replies.GetRandom()! : Emojis.Sab);
+                    await msg.Reply(reply != "" ? replies.GetRandom()! : Emojis.Sab);
                 }
             }, [
                 new Param("reply", "the message to echo", Emojis.Smide),
@@ -47,35 +45,39 @@ namespace CaretakerNET.Commands
             ], timeout: 4000),
 
             new("math", "do math!", "silly", async (msg, p) => {
+                string math = p["math"];
                 string reply = ((string)p["math"]).Replace(" ", "");
-                var math = new Expression(reply);
+                var expression = new Expression(reply);
                 reply = reply switch {
                     "9+10" => "21",
-                    _ => math.calculate().ToString() ?? "null",
+                    _ => expression.calculate().ToString() ?? "null",
                 };
                 await msg.Reply(reply);
             }, [ new Param("math", "the math to do", "NaN"), ]),
 
             new("count", "set the counting channel", "silly", async (msg, p) => {
+                (ITextChannel? channel, bool reset) = (p["channel"], p["reset"]);
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
-                ITextChannel? channel = p["channel"] ?? msg.Channel; // TryGetGuildData makes sure this is done in a guild, so this is 99.9% not null?
-                if (p["reset"]) {
+                ITextChannel? countChannel = channel ?? (ITextChannel?)msg.Channel; // TryGetGuildData makes sure this is done in a guild, so this is 99.9% not null?
+                if (reset) {
                     s.count.Reset(true);
                 }
-                s.count.Channel = channel; 
+                s.count.Channel = countChannel; 
                 await msg.ReactAsync("✅");
             }, [
-                new Param("channel", "the channel to count in", "", "channel"),
+                new Param("channel", "the channel to count in", "", Param.ParamType.Channel),
                 new Param("reset", "reset everything?", true),
             ], [ ChannelPermission.ManageChannels ]),
 
             new("countSet", "set the current count", "silly", async (msg, p) => {
+                int newCount = p["newCount"];
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
                 if (s.count?.Channel != null) {
                     _ = msg.ReactAsync("✅");
-                    
+                    s.count.Current = newCount;
                 } else {
-
+                    _ = msg.ReactAsync("❌");
+                    await msg.Reply("couldn't get the guild data!");
                 }
             }, [
                 new Param("newCount", "the new current count", 0),
@@ -90,7 +92,7 @@ namespace CaretakerNET.Commands
             }),
 
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
-                IUser? victim = p["user"];
+                (string game, IUser? victim) = (p["game"], p["victim"]);
                 if (victim == null) {
                     await msg.Reply($"hmm... seems like the user you tried to challenge is unavailable.");
                     return;
@@ -100,23 +102,35 @@ namespace CaretakerNET.Commands
                     case "c4" or "connect4": {
                         var challengeMsg = await msg.Reply($"{UserPingFromID(victim.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
                         bool accepted = false;
-                        Emoji? checkmark = Emoji.Parse("✅");
-                        Emoji? crossmark = Emoji.Parse("❌");
-                        // var checkmarkReaction = await challengeMsg.AddReactionAsync(checkmark);
+                        Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
+                        // don't use Task.WaitAll, i want these in order
                         await challengeMsg.AddReactionAsync(checkmark);
                         await challengeMsg.AddReactionAsync(crossmark);
-                        for (int i = 0; i < 60; i++)
+                        var stopwatch = new Stopwatch();
+                        stopwatch.Start();
+                        while (true) 
                         {
-                            if (!challengeMsg.Reactions.ContainsKey(checkmark)) continue;
-                            int reactionCount = challengeMsg.Reactions.ContainsKey(checkmark) ? challengeMsg.Reactions[checkmark].ReactionCount : 0;
-                            var acceptedUser = 
-                            (await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
-                                .FlattenAsync())
-                                .First(user => !user.IsBot && user.Id == victim.Id);
-                            accepted = true;
-                            if (acceptedUser != null) break;
-                            // Log("Hmmmmm " + i);
-                            await Task.Delay(1000);
+                            try {
+                                if (!challengeMsg.Reactions.ContainsKey(checkmark)) {
+                                    await challengeMsg.AddReactionAsync(checkmark);
+                                }
+                                if (!challengeMsg.Reactions.ContainsKey(crossmark)) {
+                                    await challengeMsg.AddReactionAsync(crossmark);
+                                }
+                                int reactionCount = challengeMsg.Reactions.ContainsKey(checkmark) ? challengeMsg.Reactions[checkmark].ReactionCount : 0;
+                                IUser acceptedUser = 
+                                    (await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
+                                        .FlattenAsync()) // flatten async :(
+                                        .First(u => !u.IsBot && u.Id == victim.Id);
+                                accepted = true;
+                                if (acceptedUser != null || stopwatch.Elapsed.TotalSeconds >= 60) {
+                                    stopwatch.Stop();
+                                    break;
+                                }
+                                await Task.Delay(1000);
+                            } catch {
+                                break;
+                            }
                         }
                         if (accepted) {
                             if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
@@ -124,7 +138,6 @@ namespace CaretakerNET.Commands
                             await msg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
                         } else {
                             var prevContent = challengeMsg.Content;
-                            // _ = challengeMsg.ModifyAsync(msg => msg.Content = $"*{prevContent}*\ntook too long! oops.");
                             _ = challengeMsg.OverwriteMessage("took too long! oops.");
                         }
                     } break;
@@ -134,33 +147,50 @@ namespace CaretakerNET.Commands
                 }
             }, [
                 new Param("game", "which game would you like to challenge with?", ""),
-                new Param("user", "the username/display name of the person you'd like to challenge", "", "user")
+                new Param("victim", "the username/display name of the person you'd like to challenge", "", Param.ParamType.User)
             ]),
 
             new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
                 IUser user = p["user"];
                 if (user != null) {
-                    if (user.Id == 1182009469824139395) {
+                    if (user.Id == CARETAKER_ID) {
                         await msg.Reply("aw hii :3");
+                    } else if (user.IsBot) {
+                        await msg.RandomReply([
+                            "that's... a bot.", 
+                            "i don't think they'll even know you said hi", 
+                            "bots. aren't. people.", 
+                            "i can't reach that person right now :( maybe just send them a normal hello \n(or DON'T because they're a BOT??)"
+                        ]);
                     } else if (user.Id == msg.Author.Id) {
-                        await msg.RandomReply([":(", "you can just say hello to somebody else..!", Emojis.Sab]);
-                    } else if (msg.Content == ">hello world") { // silly workaround, i wonder if i should improve this
-                        await msg.Reply("Hello, world!");
+                        await msg.RandomReply([
+                            Emojis.Sab,
+                            ":(", 
+                            "you can just say hello to somebody else..!",
+                            "you MUST know other people here, right?",
+                            "why r u like this",
+                        ]);
                     } else {
-                        var msgGuild = msg.GetGuild();
-                        string from = msgGuild != null ? " from " + msgGuild.Name : "";
+                        // var msgGuild = msg.GetGuild();
+                        // string from = msgGuild != null ? " from " + msgGuild.Name : "";
+                        string name = string.IsNullOrEmpty(msg.Author.GlobalName) ? msg.Author.Username : $"{msg.Author.GlobalName} ({msg.Author.Username})";
+                        string from = !IsNull(msg.GetGuild(), out var msgGuild) ? " from " + msgGuild!.Name : "";
                         _ = msg.ReactAsync("✅");
-                        await user.SendMessageAsync($"{msg.Author.GlobalName} ({msg.Author.Username}){from} says hi!");
+                        await user.SendMessageAsync(name + from + " says hi!");
                     }
+                } else if (p.Unparams["user"] is "world" or "world!") { // the entire reason why Unparams exists
+                    await msg.Reply("Hello, world!");
                 } else {
                     await msg.Reply($"i can't reach that person right now :( maybe just send them a normal hello");
                 }
-            }, [new Param("user", "the username of the person you'd like to say hi to", "1182009469824139395", "user")]),
+            }, [ new Param("user", "the username of the person you'd like to say hi to", CARETAKER_ID.ToString(), Param.ParamType.User) ]),
 
-            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal", async (_, _) => {}),
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal"),
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             new("help", "list all cmd commands", "commands", async (msg, p) => {
-                string reply = ListCommands(p["command"], p["listParams"]);
+                string reply = ListCommands(p["command"], p["listParams"], true);
                 await msg.Reply(reply, false);
             }, [
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
@@ -168,7 +198,7 @@ namespace CaretakerNET.Commands
             ]),
 
             new("echo", "list all normal commands", "silly", async (msg, p) => {
-                string reply = (string)p["reply"];
+                string reply = p["reply"];
                 if (!reply.Contains("@everyone") && !reply.Contains("@here") && reply != "") {
                     await Task.Delay(int.Abs(p["wait"]));
                     await msg.Reply((string)p["reply"], false);
@@ -193,18 +223,17 @@ namespace CaretakerNET.Commands
             new("c4get", "GET connect 4", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
                 var c4 = s.connectFour ??= new();
-                await msg.Reply(((int)c4.ElementAt(p["x"], p["y"])).ToString());
+                await msg.Reply((int)c4[p["x"], p["y"]]);
             }, [ new("x", "", 0), new("y", "", 0) ]),
             
             new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
                 var c4 = s.connectFour ??= new();
-                await msg.Reply(c4.DisplayBoard(out _));
-                var win = c4.WinCheck();
+                await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
                 if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
-            new("guilds", "get all guilds", "hidden", async (msg, p) => {
+            new("guilds", "get all guilds", "hidden", async delegate {
                 var client = MainHook.instance.Client;
                 LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
@@ -217,11 +246,10 @@ namespace CaretakerNET.Commands
                 if (guild == null) {
                     await msg.Reply("darn. no guild with that name");
                 } else {
-                    // LogTemp(guild.Name);
                     var invite = await guild.GetInvitesAsync();
                     await msg.Reply(invite.First().Url);
                 }
-            }, [ new("guild", "the name of the guild to make an invite for", "", "guild") ]),
+            }, [ new("guild", "the name of the guild to make an invite for", "", Param.ParamType.Guild) ]),
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
                 SocketGuild? guild = p["guild"] ?? msg.GetGuild();
@@ -229,8 +257,8 @@ namespace CaretakerNET.Commands
                     await msg.Reply("mmm... nope.");
                     return;
                 }
-                MainHook.instance.talkingChannel = (ITextChannel?)(string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : msg.Channel);
-            }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", "guild") ]),
+                MainHook.instance.TalkingChannel = (ITextChannel?)(string.IsNullOrEmpty(p["channel"]) ? guild.ParseChannel((string)p["channel"]) : msg.Channel);
+            }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", Param.ParamType.Guild) ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
                 await Task.Delay(p["delay"]);
@@ -256,7 +284,7 @@ namespace CaretakerNET.Commands
                 (command, parameters) = parameters.SplitByFirstChar(' ');
             }
 
-            return (whichComms[command], parameters);
+            return (whichComms[command.ToLower()], parameters);
         }
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
         public async static Task<bool> DoCommand(IUserMessage msg, Command com, string parameters)
@@ -264,18 +292,20 @@ namespace CaretakerNET.Commands
             var stopwatch = new Stopwatch();
             stopwatch.Start();
             Dictionary<string, dynamic> paramDict = [];
-            if (com.parameters != null && (com.parameters.Length > 0 || com.inf != null)) {
-                const char space = '↭';
+            Dictionary<string, string?> unparamDict = [];
+            string[] unparams = [];
+            if (com.Params != null && (com.Params.Length > 0 || com.Inf != null)) {
+                const char SPACE = '↭';
                 string[] splitParams = [];
                 if (parameters != "") { // only do these checks if there are parameters to check for
                     if (parameters.Contains('"')) {
                         string[] quoteSplit = parameters.Split('"');
                         
-                        for (int j = 1; j < quoteSplit.Length; j += 2) { 
+                        for (int x = 1; x < quoteSplit.Length; x += 2) { 
                             // check every other section (they will always be "in" double quotes) 
                             // and check if it actually has spaces needed to be replaced
-                            if (quoteSplit[j].Contains(' ')) {
-                                quoteSplit[j] = quoteSplit[j].ReplaceAll(' ', space);
+                            if (quoteSplit[x].Contains(' ')) {
+                                quoteSplit[x] = quoteSplit[x].ReplaceAll(' ', SPACE);
                             }
                         }
                         parameters = string.Join("", quoteSplit); // join everything back together
@@ -284,48 +314,53 @@ namespace CaretakerNET.Commands
                 }
 
                 LogDebug("splitParams    // " + string.Join(", ", splitParams));
-                LogDebug("com.parameters // " + string.Join(", ", com.parameters.Select(x => x.name)));
+                LogDebug("com.parameters // " + string.Join(", ", com.Params.Select(x => x.Name)));
 
                 var guild = msg.GetGuild();
 
                 int i = 0; // make i global so it can be used later
-                int l = 0; // second iterator variable
+                int j = 0; // second iterator variable
                 bool paramsAdded = false;
-                for (i = 0; i < com.parameters.Length; i++)
+                for (i = 0; i < com.Params.Length; i++)
                 {
                     Param? setParam; // the Param the name/preset/type are being grabbed from
                     dynamic? value;
                     
                     if (splitParams.IsIndexValid(i) && !paramsAdded) { // will this parameter be set manually?
-                        setParam = com.parameters[i];
-                        int colon = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
-                        string valueStr = splitParams[i].ReplaceAll(space, ' '); // get the spaces back
-                        if (colon != -1) { // if colon exists, attempt to set settingParam to the string before the colon
-                            string paramName = splitParams[i][..colon];
-                            if (paramName == "params" && com.inf != null) { // if it's params, add the rest as the type of params and break the loop
+                        setParam = com.Params[i];
+                        int colonIndex = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
+                        string valueStr = splitParams[i].ReplaceAll(SPACE, ' '); // get the spaces back
+                        if (colonIndex != -1) { // if colon exists, attempt to set settingParam to the string before the colon
+                            string paramName = splitParams[i][..colonIndex];
+                            if (paramName == "params" && com.Inf != null) { // if it's params, add the rest as the type of params and break the loop
                                 // if inf params are needed, grab everything after
-                                var paramsAsInfTypes = splitParams.Skip(i + 1).Select(splitParam => com.inf.ToType(splitParam, guild));
-                                paramDict.TryAdd("params", paramsAsInfTypes.ToArray());
+                                var unparamKeys = splitParams.Skip(i + 1);
+                                unparams = unparamKeys.ToArray();
+                                paramDict.TryAdd("params", unparamKeys.Select(splitParam => com.Inf.ToType(splitParam, guild)).ToArray());
                                 paramsAdded = true;
                                 continue;
                             }
-                            valueStr = splitParams[i][(colon + 1)..];
-                            setParam = Array.Find(com.parameters, x => x.name == paramName);
+                            valueStr = splitParams[i][(colonIndex + 1)..];
+                            setParam = Array.Find(com.Params, x => x.Name == paramName);
                             if (setParam == null) {
-                                await msg.Reply($"incorrect param name! use \"{MainHook.PREFIX}help {com.name}\" to get params for {com.name}.");
+                                await msg.Reply($"incorrect param name! use \"{PREFIX}help {com.Name}\" to get params for {com.Name}.");
                                 return false;
                             }
+                        } else {
+                            j++;
                         }
                         value = setParam.ToType(valueStr, guild);
+                        unparamDict.TryAdd(setParam.Name, valueStr);
                     } else {
-                        setParam = com.parameters[l];
-                        var p = setParam.preset;
+                        setParam = com.Params[j];
+                        var p = setParam.Preset;
                         value = p.GetType() == typeof(string) ? setParam.ToType(p, guild) : p;
-                        l++;
+                        Log(value);
+                        j++;
+                        unparamDict.TryAdd(setParam.Name, null);
                     }
 
-                    // bool success = paramDict.TryAdd(setParam.name, value);
-                    paramDict.TryAdd(setParam.name, value);
+                    paramDict.TryAdd(setParam.Name, value);
                 }
             }
 
@@ -333,9 +368,9 @@ namespace CaretakerNET.Commands
             LogDebug($"took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters", true);
             
             try {
-                await com.func.Invoke(msg, paramDict);
+                await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
                 return true;
-            } catch (System.Exception err) {
+            } catch (Exception err) {
                 await msg.Reply(err.Message);
                 return false;
             }
@@ -350,33 +385,33 @@ namespace CaretakerNET.Commands
                 return $"{singleCom} is NOT a command. try again :/";
             }
             StringBuilder response = new();
-            string[] commandKeys = singleCom != "" ? [ singleCom ] : commandDict.Keys.ToArray();
+            string[] commandKeys = singleCom != "" ? [ singleCom ] : [ ..commandDict.Keys ];
             for (int i = 0; i < commandKeys.Length; i++)
             {
                 var com = commandDict[commandKeys[i]];
-                if ((commandKeys.IsIndexValid(i - 1) && commandDict[commandKeys[i - 1]].name == com.name) || 
-                    (com.genre == "hidden" && !showHidden)) {
+                if ((commandKeys.IsIndexValid(i - 1) && commandDict[commandKeys[i - 1]].Name == com.Name) || 
+                    (com.Genre == "hidden" && !showHidden)) {
                     continue;
                 }
-                response.Append(MainHook.PREFIX_CHAR);
-                response.Append(com.name);
-                if (com.parameters != null && !listParams) {
-                    IEnumerable<string> paramNames = com.parameters.Select(x => x.name);
+                response.Append(PREFIX);
+                response.Append(com.Name);
+                if (com.Params != null && !listParams) {
+                    IEnumerable<string> paramNames = com.Params.Select(x => x.Name);
                     response.Append(" (");
                     response.Append(string.Join(", ", paramNames));
-                    if (com.inf != null) response.Append(", params");
+                    if (com.Inf != null) response.Append(", params");
                     response.Append(')');
                 }
 
                 response.Append(" : ");
-                response.AppendLine(com.desc);
+                response.AppendLine(com.Desc);
 
-                if (com.parameters != null && listParams) {
-                    foreach (var param in com.parameters) {
+                if (com.Params != null && listParams) {
+                    foreach (var param in com.Params) {
                         response.Append("\t-");
-                        response.Append(param.name);
+                        response.Append(param.Name);
                         response.Append(" : ");
-                        response.AppendLine(param.desc);
+                        response.AppendLine(param.Desc);
                     }
                 }
             }
@@ -389,15 +424,17 @@ namespace CaretakerNET.Commands
         // i.e just put the logic that would need an instance in a different script
         public static void Init()
         {
+            // commands = ;
             var whichComms = Commands;
             foreach (var command in commands) {
-                var commandNames = command.name.Split(", ");
-                // if (commandNames.Length > 1) command.name = commandNames[0];
+                var commandNames = command.Name.Split(", ");
                 foreach (var commandName in commandNames) {
-                    whichComms.Add(commandName, command);
+                    whichComms.Add(commandName.ToLower(), command);
                 }
                 
-                if (command.name == "cmd") whichComms = CmdCommands;
+                if (command.Name == "cmd") {
+                    whichComms = CmdCommands;
+                }
             }
         }
     }
