@@ -217,7 +217,9 @@ namespace CaretakerNET.Commands
             new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
                 var c4 = s.connectFour ??= new();
-                c4.AddToColumn(p["column"], p["player"]);
+                c4.AddToColumn(p["column"], (int)p["player"]);
+                await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
+                if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
             }, [ new("column", "", 0), new("player", "", 1) ]),
             
             new("c4get", "GET connect 4", "games", async (msg, p) => {
@@ -231,6 +233,7 @@ namespace CaretakerNET.Commands
                 var c4 = s.connectFour ??= new();
                 await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
                 if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
+                // await msg.Reply(c4[0, 0]);
             }, [ new("x", "", 0), new("y", "", 0) ]),
 
             new("guilds", "get all guilds", "hidden", async delegate {
@@ -371,7 +374,8 @@ namespace CaretakerNET.Commands
                 await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
                 return true;
             } catch (Exception err) {
-                await msg.Reply(err.Message);
+                LogError(err);
+                await msg.Reply(err.Message, false);
                 return false;
             }
         }

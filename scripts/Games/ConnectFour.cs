@@ -5,42 +5,39 @@ using System.Text;
 namespace CaretakerNET.Games
 {
     /*
-    {0, 0, 0, 0, 0, 0}
-    {1, 0, 0, 0, 0, 0}
-    {2, 1, 2, 0, 0, 0}
-    {1, 2, 0, 0, 0, 0}
-    {1, 1, 0, 0, 0, 0}
-    {2, 0, 0, 0, 0, 0}
-    {0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 2, 0, 0, 0}
+    {0, 0, 0, 1, 1, 0, 0}
+    {2, 2, 0, 1, 2, 1, 0}
     */
 
     public class ConnectFour : Game
     {
-        // this[MAXWIDTH, MAXHEIGHT]
-        public int this[int index1, int index2] => board[index1].IsIndexValid(index2) ? board[index1][index2] : 0;
+        public int this[int x, int y] { get => board[x, y]; set => board[x, y] = value; }
         public struct Win(Player winningPlayer, Vector2[] winPoints) {
             public Player winningPlayer = winningPlayer;
             public Vector2[] winPoints = winPoints;
         }
 
-        private readonly List<List<int>> board; // list of a list of ints
-        public const int MAXWIDTH = 7; // width of the board
-        public const int MAXHEIGHT = 6; // height of the board
+        private readonly int[,] board; // list of a list of ints
+        public const int W = 7; // width of the board
+        public const int H = 6; // height of the board
 
         public bool AddToColumn(int column, Player player) => AddToColumn(column, (int)player);
         public bool AddToColumn(int column, int player)
-        {   // technically don't need the else but i think it makes it look nicer
-            if (column > MAXWIDTH -1 || board[column].Count > MAXHEIGHT - 1) {
-                return false;
-            } else {
-                board[column].Add(player);
-                return true;
-            }
-        }
-        
-        public int ElementAt(int x, int y)
         {
-            return board[y].IsIndexValid(x) ? board[y][x] : 0;
+            if (column < W) {
+                for (int i = 0; i < H; i++) {
+                    if (this[column, i] == 0) {
+                        this[column, i] = player;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         // private void IterateBoard(Action<int, int> action)
@@ -99,18 +96,18 @@ namespace CaretakerNET.Games
             //     }
             // }
 
-            bool isP1 = false;
-            int i = 0;
-            for (int x = 0; x < MAXWIDTH; x++)
-            {
-                i = 0;
-                for (int y = 0; y < MAXHEIGHT; y++)
-                {
-                    i++;
-                    Log(this[x, y]);
-                    // if (i == 4) return new Win(isP1 ? Player.One : Player.Two, []);
-                }
-            }
+            // bool isP1 = false;
+            // int i = 0;
+            // for (int x = 0; x < W; x++)
+            // {
+            //     i = 0;
+            //     for (int y = 0; y < H; y++)
+            //     {
+            //         i++;
+            //         Log(this[x, y]);
+            //         // if (i == 4) return new Win(isP1 ? Player.One : Player.Two, []);
+            //     }
+            // }
 
             return new Win(Player.None, []);
         }
@@ -124,11 +121,11 @@ namespace CaretakerNET.Games
             bool anyWin = win.winningPlayer != Player.None;
             // List<string> joinedRows = [];
             StringBuilder joinedRows = new();
-            for (int i = MAXHEIGHT - 1; i >= 0; i--) {
+            for (int i = 0; i < H; i++) {
                 // List<string> joinedChars = [];
                 StringBuilder joinedChars = new();
-                for (int j = 0; j < MAXWIDTH; j++) {
-                    bool isWin = anyWin && win.winPoints.Contains(new(i, j)); // the vector2 in this uses x, y, while this displays using y, x
+                for (int j = 0; j < W; j++) {
+                    bool isWin = anyWin && win.winPoints.Contains(new(j, i)); // the vector2 in this uses x, y, while this displays using y, x
                     joinedChars.Append((Player)this[j, i] switch {
                         Player.One => isWin ? "❤" : "🔴",  // red circle/heart (p1)
                         Player.Two => isWin ? "💛" : "🟡", // yellow circle/heart (p2)
@@ -141,10 +138,12 @@ namespace CaretakerNET.Games
         }
         public ConnectFour(ulong player1 = 0, ulong player2 = 0)
         {
-            board = new List<List<int>>(MAXWIDTH);
-            for (int i = 0; i < MAXWIDTH; i++) { // make sure all the lists are initialized
-                board.Add([]);
-            }
+            board = new int[W, H];
+            // for (int i = 0; i < W; i++) { // make sure all the lists are initialized
+            //     board.Add([]);
+            // }
+            Log(board[0, 0]);
+            Log(board[W - 1, H - 1]);
             this.player1 = player1;
             this.player2 = player2;
         }

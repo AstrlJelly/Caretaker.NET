@@ -89,7 +89,8 @@ namespace CaretakerNET.Commands
             Channel,
             User,
         }
-        public dynamic? ToType(string str, SocketGuild? guild) {
+        public dynamic? ToType(string str, SocketGuild? guild) 
+        {
             return Type switch {
                 ParamType.Integer     => int.Parse(str),
                 ParamType.UInteger    => uint.Parse(str),
@@ -105,13 +106,14 @@ namespace CaretakerNET.Commands
         public string Name = name;
         public string Desc = desc;
         public dynamic Preset = preset;
+        
         public ParamType Type = type ?? preset.GetType().ToString() switch
         {
-            "Boolean" => ParamType.Boolean,
-            "Double" => ParamType.Double,
-            "Int32" => ParamType.Integer,
-            "UInt32" => ParamType.UInteger,
-            "String" or _ => ParamType.String,
+            "System.Boolean" => ParamType.Boolean,
+            "System.Double" => ParamType.Double,
+            "System.Int32" => ParamType.Integer,
+            "System.UInt32" => ParamType.UInteger,
+            "System.String" or _ => ParamType.String,
         };
     }
 }

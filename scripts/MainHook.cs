@@ -3,16 +3,13 @@ global using CaretakerNET.Core;
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Data;
 
 using Discord;
 using Discord.WebSocket;
 using Discord.Webhook;
 
 using CaretakerNET.Commands;
-using CaretakerNET.Games;
 using CaretakerNET.ExternalEmojis;
 using org.mariuszgromada.math.mxparser;
 
@@ -276,6 +273,7 @@ namespace CaretakerNET
                         sw.Stop();
                         LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
                     } catch (Exception error) {
+                        LogError(error);
                         await msg.Reply(error.Message, false);
                     }
                     // typing.Dispose();

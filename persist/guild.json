@@ -21,7 +21,10 @@
       "replyChannelId": 0
     },
     "slowModes": {},
-    "connectFour": null
+    "connectFour": {
+      "player1": 0,
+      "player2": 0
+    }
   },
   "1091542281242279979": {
     "guildId": 1091542281242279979,
