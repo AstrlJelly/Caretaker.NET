@@ -9,6 +9,7 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Webhook;
 
+using CaretakerNET.Games;
 using CaretakerNET.Commands;
 using CaretakerNET.ExternalEmojis;
 using org.mariuszgromada.math.mxparser;
@@ -187,14 +188,6 @@ namespace CaretakerNET
                     GuildData.Add(guild.Id, new GuildPersist(guild.Id));
                 }
             });
-            // foreach (var guild in Client.Guilds)
-            // {
-            //     if (guildData.TryGetValue(guild.Id, out GuildPersist? value) && value != null) {
-            //         value!.CheckClassVariables(value);
-            //     } else {
-            //         guildData.Add(guild.Id, new GuildPersist());
-            //     }
-            // }
         }
 
 
@@ -227,6 +220,16 @@ namespace CaretakerNET
             }
             return value;
         }
+
+        // public async Task MyButtonHandler(SocketMessageComponent component)
+        // {
+        //     switch (component.Data.CustomId)
+        //     {
+        //         case "game-prompt":
+        //             await component.RespondAsync($"{component.User.Mention} has clicked the button!");
+        //         break;
+        //     }
+        // }
 
         private async Task MessageReceivedAsync(SocketMessage message)
         {
@@ -356,10 +359,31 @@ namespace CaretakerNET
                             { s.chain?.Channel?.Id ?? 2, delegate {
                                 return null;
                             } },
+                            { s.currentGame?.playingChannelId ?? 3, delegate {
+                                if (s.currentGame.player1 != msg.Author.Id && s.currentGame.player2 != msg.Author.Id) {
+                                    return null;
+                                }
+                                BoardGame.Player player = s.currentGame.player1 == msg.Author.Id ? BoardGame.Player.One : BoardGame.Player.Two;
+                                switch (s.currentGame)
+                                {
+                                    case ConnectFour c4:
+                                        string[] move = msg.Content.Split(' ');
+                                        if (move[0] is "go") {
+                                            c4.AddToColumn(int.Parse(move[1]), player);
+                                            var win = c4.WinCheck(player);
+                                            var board = c4.DisplayBoard(win);
+                                            return ("✅", board);
+                                        } else {
+                                            return null;
+                                        }
+                                    default: return null;
+                                }
+                            } },
 #pragma warning restore CS8602 // Dereference of a possibly null reference.
                         };
                         // epic tuples 😄😄😄
                         (string emojiToParse, string reply) = actions[msg.Channel.Id]?.Invoke(msg.Author) ?? ("", "");
+                        Log(reply);
                         if (!string.IsNullOrEmpty(emojiToParse)) {
                             await msg.ReactAsync(emojiToParse);
                         }

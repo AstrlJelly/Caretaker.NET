@@ -94,7 +94,11 @@ namespace CaretakerNET.Commands
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
                 (string game, IUser? victim) = (p["game"], p["victim"]);
                 if (victim == null) {
-                    await msg.Reply($"hmm... seems like the user you tried to challenge is unavailable.");
+                    await msg.Reply("hmm... seems like the user you tried to challenge is unavailable.");
+                    return;
+                }
+                if (victim.IsBot) {
+                    await msg.Reply("dude. that's a bot.");
                     return;
                 }
                 switch (p["game"])
@@ -111,30 +115,33 @@ namespace CaretakerNET.Commands
                         while (true) 
                         {
                             try {
-                                if (!challengeMsg.Reactions.ContainsKey(checkmark)) {
+                                var reactions = challengeMsg.Reactions;
+                                if (!reactions.ContainsKey(checkmark)) {
                                     await challengeMsg.AddReactionAsync(checkmark);
                                 }
-                                if (!challengeMsg.Reactions.ContainsKey(crossmark)) {
+                                if (!reactions.ContainsKey(crossmark)) {
                                     await challengeMsg.AddReactionAsync(crossmark);
                                 }
-                                int reactionCount = challengeMsg.Reactions.ContainsKey(checkmark) ? challengeMsg.Reactions[checkmark].ReactionCount : 0;
-                                IUser acceptedUser = 
+                                int reactionCount = 10;
+                                IUser? acceptedUser = 
                                     (await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
                                         .FlattenAsync()) // flatten async :(
-                                        .First(u => !u.IsBot && u.Id == victim.Id);
-                                accepted = true;
+                                        .FirstOrDefault(u => !u.IsBot && u.Id == victim.Id);
+                                accepted = acceptedUser != null;
                                 if (acceptedUser != null || stopwatch.Elapsed.TotalSeconds >= 60) {
+                                    // Log(stopwatch.Elapsed.TotalSeconds);
                                     stopwatch.Stop();
                                     break;
                                 }
-                                await Task.Delay(1000);
-                            } catch {
+                                await Task.Delay(500);
+                            } catch (Exception err) {
+                                LogError(err);
                                 break;
                             }
                         }
                         if (accepted) {
                             if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
-                            s.connectFour = new(msg.Author.Id, victim.Id);
+                            s.currentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, victim.Id);
                             await msg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
                         } else {
                             var prevContent = challengeMsg.Content;
@@ -146,8 +153,8 @@ namespace CaretakerNET.Commands
                     } break;
                 }
             }, [
-                new Param("game", "which game would you like to challenge with?", ""),
-                new Param("victim", "the username/display name of the person you'd like to challenge", "", Param.ParamType.User)
+                new Param("victim", "the username/display name of the person you'd like to challenge", "", Param.ParamType.User),
+                new Param("game", "which game would you like to challenge with?", "c4"),
             ]),
 
             new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
@@ -214,27 +221,27 @@ namespace CaretakerNET.Commands
             new("save", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Save()),
             new("load", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Load()),
 
-            new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-                var c4 = s.connectFour ??= new();
-                c4.AddToColumn(p["column"], (int)p["player"]);
-                await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
-                if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
-            }, [ new("column", "", 0), new("player", "", 1) ]),
+            // new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
+            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+            //     var c4 = s.connectFour ??= new();
+            //     c4.AddToColumn(p["column"], (int)p["player"]);
+            //     await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
+            //     if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
+            // }, [ new("column", "", 0), new("player", "", 1) ]),
             
-            new("c4get", "GET connect 4", "games", async (msg, p) => {
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-                var c4 = s.connectFour ??= new();
-                await msg.Reply((int)c4[p["x"], p["y"]]);
-            }, [ new("x", "", 0), new("y", "", 0) ]),
+            // new("c4get", "GET connect 4", "games", async (msg, p) => {
+            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+            //     var c4 = s.connectFour ??= new();
+            //     await msg.Reply((int)c4[p["x"], p["y"]]);
+            // }, [ new("x", "", 0), new("y", "", 0) ]),
             
-            new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-                var c4 = s.connectFour ??= new();
-                await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
-                if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
-                // await msg.Reply(c4[0, 0]);
-            }, [ new("x", "", 0), new("y", "", 0) ]),
+            // new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
+            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+            //     var c4 = s.connectFour ??= new();
+            //     await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
+            //     if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
+            //     // await msg.Reply(c4[0, 0]);
+            // }, [ new("x", "", 0), new("y", "", 0) ]),
 
             new("guilds", "get all guilds", "hidden", async delegate {
                 var client = MainHook.instance.Client;

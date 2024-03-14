@@ -19,28 +19,24 @@ namespace CaretakerNET
         public static async Task SaveGuilds(this Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
         public static async Task SaveUsers(this Dictionary<ulong, UserPersist> dictionary)   => await Save(USER_PATH, dictionary);
 
-        public static async Task<Dictionary<ulong, GuildPersist>> LoadGuilds() => await Load<Dictionary<ulong, GuildPersist>>(GUILD_PATH);
-        public static async Task<Dictionary<ulong, UserPersist>>  LoadUsers()  => await Load<Dictionary<ulong, UserPersist>>(USER_PATH);
-
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
             LogInfo($"Start saving to {path}...", true);
-            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented
-            , new JsonSerializerSettings 
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            }
+            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented, 
+                new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
             );
             await File.WriteAllTextAsync(path, serializedDict);
             LogInfo("Saved!", true);
         }
+
+        public static async Task<Dictionary<ulong, GuildPersist>> LoadGuilds() => await Load<Dictionary<ulong, GuildPersist>>(GUILD_PATH);
+        public static async Task<Dictionary<ulong, UserPersist>>  LoadUsers()  => await Load<Dictionary<ulong, UserPersist>>(USER_PATH);
 
         // tells the compiler that T always implements new(), so that i can construct a default dictionary. i love C#
         private static async Task<T> Load<T>(string path) where T : new()
         {
             LogInfo($"Start loading from {path}...", true);
             var jsonFileStr = await File.ReadAllTextAsync(path);
-            // LogDebug("jsonFileStr : " + jsonFileStr);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
                 try {
                     var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr);
@@ -51,7 +47,7 @@ namespace CaretakerNET
                     } else {
                         throw new Exception($"Load (\"{path}\") failed!");
                     }
-                } catch (System.Exception err) {
+                } catch (Exception err) {
                     LogError(err, true);
                     throw;
                 }
@@ -81,27 +77,24 @@ namespace CaretakerNET
 
         public class ConvoPersist
         {
-            [JsonIgnore] private ITextChannel? convoChannel;
-            [JsonIgnore] private ITextChannel? replyChannel;
-            [JsonProperty] internal ulong convoChannelId;
-            [JsonProperty] internal ulong replyChannelId;
+            [JsonIgnore] private ITextChannel? convoChannel = null;
+            [JsonIgnore] private ITextChannel? replyChannel = null;
+            [JsonProperty] internal ulong? convoChannelId;
+            [JsonProperty] internal ulong? replyChannelId;
             [JsonIgnore] internal ITextChannel? ConvoChannel { get => convoChannel; set {
                 convoChannel = value;
-                if (value != null) {
-                    convoChannelId = value.Id;
-                }
+                convoChannelId = value?.Id;
             }}
             [JsonIgnore] internal ITextChannel? ReplyChannel { get => replyChannel; set {
                 replyChannel = value;
-                if (value != null) {
-                    replyChannelId = value.Id;
-                }
+                replyChannelId = value?.Id;
             }}
 
             public void Init(SocketGuild guild)
             {
-                ConvoChannel = (ITextChannel?)guild.GetChannel(convoChannelId);
-                ReplyChannel = (ITextChannel?)guild.GetChannel(replyChannelId);
+                // null checks
+                if (convoChannelId is ulong id1) ConvoChannel = (ITextChannel?)guild.GetChannel(id1);
+                if (replyChannelId is ulong id2) ReplyChannel = (ITextChannel?)guild.GetChannel(id2);
             }
         }
 
@@ -116,20 +109,16 @@ namespace CaretakerNET
             }
             [JsonIgnore] internal ITextChannel? channel = channel;
             [JsonIgnore] internal IUserMessage? lastCountMsg = lastCountMsg;
-            [JsonProperty] internal ulong channelId;
-            [JsonProperty] internal ulong lastCountMsgChannelId, lastCountMsgId;
+            [JsonProperty] internal ulong? channelId;
+            [JsonProperty] internal ulong? lastCountMsgChannelId, lastCountMsgId;
             [JsonIgnore] public ITextChannel? Channel { get => channel; set {
                 channel = value;
-                if (value != null) {
-                    channelId = value.Id;
-                }
+                channelId = value?.Id;
             }}
             [JsonIgnore] public IUserMessage? LastCountMsg { get => lastCountMsg; set {
                 lastCountMsg = value;
-                if (value != null) {
-                    lastCountMsgChannelId = value.Channel.Id;
-                    lastCountMsgId = value.Id;
-                }
+                lastCountMsgId = value?.Id;
+                lastCountMsgChannelId = value?.Channel.Id;
             }}
             public int Current = current;
             public int PrevNumber = prevNumber;
@@ -137,9 +126,12 @@ namespace CaretakerNET
 
             public async void Init(SocketGuild guild)
             {
-                Channel = (ITextChannel?)guild.GetChannel(channelId);
-                if (guild.GetChannel(lastCountMsgChannelId) is ITextChannel channel && channel != null) {
-                    LastCountMsg = (IUserMessage?)await channel.GetMessageAsync(lastCountMsgId);
+                if (channelId is ulong chanId) Channel = (ITextChannel?)guild.GetChannel(chanId);
+                if (lastCountMsgChannelId is not ulong msgChanId) return;
+                if (guild.GetChannel(msgChanId) is ITextChannel channel && channel != null) {
+                    if (lastCountMsgId is ulong msgId) {
+                        LastCountMsg = (IUserMessage?)await channel.GetMessageAsync(msgId);
+                    }
                 }
             }
         }
@@ -157,7 +149,8 @@ namespace CaretakerNET
         public ConvoPersist convo = new();
         // public List<SlowMode> slowModes = [];
         public Dictionary<ulong, int> slowModes = []; // channel id and timer
-        public ConnectFour? connectFour = null;
+        // public ConnectFour? connectFour = null;
+        public BoardGame? currentGame = null;
 
         public void Init(DiscordSocketClient client)
         {

@@ -9,7 +9,7 @@ using CaretakerNET.Core;
 
 namespace CaretakerNET.Games
 {
-    public abstract class Game
+    public abstract class BoardGame
     {
         public enum Player : int
         {
@@ -20,7 +20,10 @@ namespace CaretakerNET.Games
             // Four,
         }
 
+        public Player currentPlayer;
         public ulong player1;
         public ulong player2;
+
+        public ulong playingChannelId;
     }
 }

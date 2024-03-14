@@ -13,12 +13,12 @@ namespace CaretakerNET.Games
     {2, 2, 0, 1, 2, 1, 0}
     */
 
-    public class ConnectFour : Game
+    public class ConnectFour : BoardGame
     {
         public int this[int x, int y] { get => board[x, y]; set => board[x, y] = value; }
-        public struct Win(Player winningPlayer, Vector2[] winPoints) {
+        public struct Win(Player winningPlayer = Player.None, List<Vector2>? winPoints = null) {
             public Player winningPlayer = winningPlayer;
-            public Vector2[] winPoints = winPoints;
+            public List<Vector2> winPoints = winPoints ?? [];
         }
 
         private readonly int[,] board; // list of a list of ints
@@ -40,88 +40,93 @@ namespace CaretakerNET.Games
             return false;
         }
 
-        // private void IterateBoard(Action<int, int> action)
-        // {
-        //     for (int i = MAXHEIGHT - 1; i >= 0; i--) {
-        //         for (int j = 0; j < MAXWIDTH; j++) {
-        //             action.Invoke(j, i);
-        //         }
-        //     }
-        // }
-
-        // CURRENTLY THIS IS WRITTEN BY BING AI, REPLACE SOON :3 
         public Win WinCheck()
         {
-            // // Check horizontal lines
-            // for (int i = 0; i < MAXHEIGHT; i++) {
-            //     for (int j = 0; j < MAXWIDTH; j++) {
-            //         int p = ElementAt(i, j);
-            //         if (p != 0 && p == ElementAt(i, j + 1) && p == ElementAt(i, j + 2) && p == ElementAt(i, j + 3))
-            //         {
-            //             return new Win((Player)p, [ new(i, j), new(i, j + 1), new(i, j + 2), new(i, j + 3) ]);
-            //         }
-            //     }
-            // }
+            foreach (var player in new Player[] { Player.One, Player.Two }) {
+                var win = WinCheck(player);
+                if (win.winningPlayer != Player.None) return win;
+            }
+            return new Win();
+        }
+        public Win WinCheck(Player player) => WinCheck((int)player);
+        public Win WinCheck(int pl)
+        {
+            Player player = (Player)pl;
+            Win? win = null;
 
-            // // Check vertical lines
-            // for (int j = 0; j < 7; j++) {
-            //     for (int i = 0; i < 3; i++) {
-            //         int p = ElementAt(i, j);
-            //         if (p != 0 && p == ElementAt(i + 1, j) && p == ElementAt(i + 2, j) && p == ElementAt(i + 3, j))
-            //         {
-            //             return new Win((Player)p, [ new(i, j), new(i + 1, j), new(i + 2, j), new(i + 3, j) ]);
-            //         }
-            //     }
-            // }
+            Log(1);
+            // horizontal check
+            Parallel.For(0, W, (x, state) => {
+                Parallel.For(0, H - 4, y => {
+                    List<Vector2> checks = [ new(x, y), new(x, y + 1), new(x, y + 2), new(x, y + 3) ];
+                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                        win = new Win(player, checks);
+                        state.Stop();
+                    }
+                });
+            });
+            if (win != null) return (Win)win;
 
-            // // Check diagonal lines (top-left to bottom-right)
-            // for (int i = 0; i < 3; i++) {
-            //     for (int j = 0; j < 4; j++) {
-            //         int p = ElementAt(i, j);
-            //         if (p != 0 && p == ElementAt(i + 1, j + 1) && p == ElementAt(i + 2, j + 2) && p == ElementAt(i + 3, j + 3))
-            //         {
-            //             return new Win((Player)p, [ new(i, j), new(i + 1, j + 1), new(i + 2, j + 2), new(i + 3, j + 3) ]);
-            //         }
-            //     }
-            // }
+            Log(2);
+            // vertical check
+            Parallel.For(0, W - 4, (x, state) => {
+                Parallel.For(0, H, y => {
+                    List<Vector2> checks = [ new(x, y), new(x + 1, y), new(x + 2, y), new(x + 3, y) ];
+                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                        win = new Win(player, checks);
+                        state.Stop();
+                        return;
+                    }
+                });
+            });
+            if (win != null) return (Win)win;
 
-            // // Check diagonal lines (bottom-left to top-right)
-            // for (int i = 3; i < 6; i++) {
-            //     for (int j = 0; j < 4; j++) {
-            //         int p = ElementAt(i, j);
-            //         if (p != 0 && p == ElementAt(i - 1, j + 1) && p == ElementAt(i - 2, j + 2) && p == ElementAt(i - 3, j + 3))
-            //         {
-            //             return new Win((Player)p, [ new(i, j), new(i - 1, j + 1), new(i - 2, j + 2), new(i - 3, j + 3) ]);
-            //         }
-            //     }
-            // }
+            Log(3);
+            // horizontal check (top left to bottom right, i.e bottom left to top right)
+            Parallel.For(0, W - 4, (x, state) => {
+                Parallel.For(0, H - 4, y => {
+                    List<Vector2> checks = [ new(x, y), new(x + 1, y + 1), new(x + 2, y + 2), new(x + 3, y + 3) ];
+                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                        win = new Win(player, checks);
+                        state.Stop();
+                        return;
+                    }
+                });
+            });
+            if (win != null) return (Win)win;
 
-            // bool isP1 = false;
-            // int i = 0;
-            // for (int x = 0; x < W; x++)
-            // {
-            //     i = 0;
-            //     for (int y = 0; y < H; y++)
-            //     {
-            //         i++;
-            //         Log(this[x, y]);
-            //         // if (i == 4) return new Win(isP1 ? Player.One : Player.Two, []);
-            //     }
-            // }
+            Log(4);
+            // horizontal check (top left to bottom right, i.e bottom left to top right)
+            Parallel.For(3, W, (x, state) => {
+                Parallel.For(0, H - 4, y => {
+                    List<Vector2> checks = [ new(x, y), new(x - 1, y + 1), new(x - 2, y + 2), new(x - 3, y + 3) ];
+                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                        win = new Win(player, checks);
+                        state.Stop();
+                        return;
+                    }
+                });
+            });
+            if (win != null) return (Win)win;
 
-            return new Win(Player.None, []);
+            Log(5);
+            return new Win();
         }
 
         public string DisplayBoard() => DisplayBoard(out _);
 
         public string DisplayBoard(out Win win)
-        {
-            // useful if you want win data outside of the method call, like if you want to reset after a winning move
+        {   // useful if you want win data outside of the method call, like if you want to reset after a winning move
             win = WinCheck();
+            return DisplayBoard(win);
+        }
+        public string DisplayBoard(Win win)
+        {
             bool anyWin = win.winningPlayer != Player.None;
             // List<string> joinedRows = [];
             StringBuilder joinedRows = new();
-            for (int i = 0; i < H; i++) {
+            for (int i = H; i >= 0; i--) {
+                // Log(i);
                 // List<string> joinedChars = [];
                 StringBuilder joinedChars = new();
                 for (int j = 0; j < W; j++) {
@@ -136,14 +141,15 @@ namespace CaretakerNET.Games
             }
             return joinedRows.ToString();
         }
-        public ConnectFour(ulong player1 = 0, ulong player2 = 0)
+        public ConnectFour(ulong channelId, ulong player1 = 0, ulong player2 = 0)
         {
             board = new int[W, H];
             // for (int i = 0; i < W; i++) { // make sure all the lists are initialized
             //     board.Add([]);
             // }
-            Log(board[0, 0]);
-            Log(board[W - 1, H - 1]);
+            // Log(board[0, 0]);
+            // Log(board[W - 1, H - 1]);
+            this.playingChannelId = channelId;
             this.player1 = player1;
             this.player2 = player2;
         }
