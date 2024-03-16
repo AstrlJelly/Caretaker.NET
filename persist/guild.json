@@ -1,6 +1,6 @@
 {
-  "887502008876167209": {
-    "guildId": 887502008876167209,
+  "1218330896407462079": {
+    "guildId": 1218330896407462079,
     "count": {
       "channelId": null,
       "lastCountMsgChannelId": null,
@@ -21,10 +21,54 @@
       "replyChannelId": null
     },
     "slowModes": {},
-    "currentGame": {
-      "player1": 752589264398712834,
-      "player2": 438296397452935169,
-      "playingChannelId": 887502008876167212
-    }
+    "currentGame": null
+  },
+  "1091542281242279979": {
+    "guildId": 1091542281242279979,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "currentGame": null
+  },
+  "1113913617608355992": {
+    "guildId": 1113913617608355992,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "currentGame": null
   }
 }

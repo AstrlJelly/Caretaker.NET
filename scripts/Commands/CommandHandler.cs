@@ -92,59 +92,73 @@ namespace CaretakerNET.Commands
             }),
 
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                 (string game, IUser? victim) = (p["game"], p["victim"]);
-                if (victim == null) {
-                    await msg.Reply("hmm... seems like the user you tried to challenge is unavailable.");
-                    return;
+                string? thrown = null; //BannedUsers
+                if (s.currentGame != null) {
+                    thrown = "there's a game already in play!!";
+                } else if (victim.Id == msg.Author.Id) {
+                    thrown = "MainHook.BannedUsers.Add(msg.Author.Id); " + Emojis.Smide;
+                    MainHook.BannedUsers.Add(msg.Author.Id);
+                } else if (victim == null) {
+                    thrown = "hmm... seems like the user you tried to challenge is unavailable.";
+                } else if (victim.IsBot) {
+                    thrown = "dude. that's a bot.";
                 }
-                if (victim.IsBot) {
-                    await msg.Reply("dude. that's a bot.");
+                if (thrown != null) {
+                    _ = msg.Reply(thrown);
                     return;
                 }
                 switch (p["game"])
                 {
                     case "c4" or "connect4": {
-                        var challengeMsg = await msg.Reply($"{UserPingFromID(victim.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
-                        bool accepted = false;
+                        var challengeMsg = await msg.Reply($"{UserPingFromID(victim!.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
+                        bool accepted = false, denied = false;
                         Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
-                        // don't use Task.WaitAll, i want these in order
-                        await challengeMsg.AddReactionAsync(checkmark);
-                        await challengeMsg.AddReactionAsync(crossmark);
+                        _ = challengeMsg.AddReactionAsync(checkmark);
+                        _ = challengeMsg.AddReactionAsync(crossmark);
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
                         while (true) 
                         {
                             try {
-                                var reactions = challengeMsg.Reactions;
-                                if (!reactions.ContainsKey(checkmark)) {
-                                    await challengeMsg.AddReactionAsync(checkmark);
-                                }
-                                if (!reactions.ContainsKey(crossmark)) {
-                                    await challengeMsg.AddReactionAsync(crossmark);
-                                }
                                 int reactionCount = 10;
-                                IUser? acceptedUser = 
-                                    (await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount)
-                                        .FlattenAsync()) // flatten async :(
-                                        .FirstOrDefault(u => !u.IsBot && u.Id == victim.Id);
-                                accepted = acceptedUser != null;
-                                if (acceptedUser != null || stopwatch.Elapsed.TotalSeconds >= 60) {
-                                    // Log(stopwatch.Elapsed.TotalSeconds);
+                                foreach (var user in await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount).FlattenAsync())
+                                {
+                                    if (!user.IsBot && user.Id == victim.Id) {
+                                        accepted = true;
+                                        break;
+                                    } else if (user.Id != CARETAKER_ID) {
+                                        _ = msg.RemoveReactionAsync(checkmark, user);
+                                    }
+                                }
+                                foreach (var user in await challengeMsg.GetReactionUsersAsync(crossmark, reactionCount).FlattenAsync())
+                                {
+                                    if (!user.IsBot && user.Id == victim.Id) {
+                                        denied = true;
+                                        break;
+                                    } else if (user.Id != CARETAKER_ID) {
+                                        _ = msg.RemoveReactionAsync(crossmark, user);
+                                    }
+                                }
+                                if (accepted || denied || stopwatch.Elapsed.TotalSeconds >= 60) {
                                     stopwatch.Stop();
                                     break;
                                 }
+                                // consider removing the delay? it used to be one second but that was way too slow.
                                 await Task.Delay(500);
                             } catch (Exception err) {
                                 LogError(err);
                                 break;
                             }
                         }
-                        if (accepted) {
-                            if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                        if (denied) { // keep denied first because it's more common to accidentally accept than it is to accidentally deny
+                            await challengeMsg.Reply("awww... they denied. 😢");
+                        } else if (accepted) {
                             s.currentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, victim.Id);
-                            await msg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
+                            await challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
                         } else {
-                            var prevContent = challengeMsg.Content;
+                            _ = challengeMsg.RemoveAllReactionsAsync();
                             _ = challengeMsg.OverwriteMessage("took too long! oops.");
                         }
                     } break;

@@ -143,7 +143,8 @@ namespace CaretakerNET
                 await Client.DownloadUsersAsync(Client.Guilds);
 
                 LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
-                License.iConfirmNonCommercialUse("hmmmmm");
+                // long ass namespace
+                org.mariuszgromada.math.mxparser.License.iConfirmNonCommercialUse("hmmmmm");
 
                 TalkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1113944754460315759");
 
@@ -190,10 +191,10 @@ namespace CaretakerNET
             });
         }
 
-
+        // data can very much so be null, but i trust any user (basically just me) to never use data if it's null.
         public bool TryGetGuildData(IUserMessage msg, out GuildPersist data) 
         {
-            data = GetGuildData(msg.GetGuild()?.Id ?? 0)!;
+            data = GetGuildData(msg)!;
             return data != null;
         }
         // returns null if not in guild, like if you're in dms
@@ -221,21 +222,22 @@ namespace CaretakerNET
             return value;
         }
 
-        // public async Task MyButtonHandler(SocketMessageComponent component)
-        // {
-        //     switch (component.Data.CustomId)
-        //     {
-        //         case "game-prompt":
-        //             await component.RespondAsync($"{component.User.Mention} has clicked the button!");
-        //         break;
-        //     }
-        // }
+        public async Task MyButtonHandler(SocketMessageComponent component)
+        {
+            switch (component.Data.CustomId)
+            {
+                case "game-prompt":
+                    await component.RespondAsync($"{component.User.Mention} has clicked the button!");
+                break;
+            }
+        }
 
         private async Task MessageReceivedAsync(SocketMessage message)
         {
             // wrap in Task.Run() so that multiple commands can be handled at the same time
             _ = Task.Run(async () => {
                 if (message is not SocketUserMessage msg) return;
+                // Log(msg.Content);
 
                 // make sure the message is a user sent message, and output a new msg variable
                 // also make sure it's not a bot/not banned
@@ -272,7 +274,7 @@ namespace CaretakerNET
                         Stopwatch sw = new();
                         sw.Start();
                         await CommandHandler.DoCommand(msg, com, parameters);
-                        u.timeout = DateNow() + 1000;
+                        u.timeout = DateNow() + com.Timeout;
                         sw.Stop();
                         LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
                     } catch (Exception error) {
@@ -282,108 +284,125 @@ namespace CaretakerNET
                     // typing.Dispose();
                 } else {
                     if (TryGetGuildData(msg, out GuildPersist? s) && s != null) {
-                        Dictionary<ulong, Func<SocketUser, (string, string)?>> actions = new() {
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-                            { TalkingChannel?.Id ?? 0, _ => {
+                        Dictionary<ulong, Func<SocketUser, (string, string)?>> actions;
+                        try
+                        {
+                            if (msg.Channel.Id == TalkingChannel?.Id) {
                                 LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
-                                return null;
-                            } },
-                            { s.count?.Channel?.Id ?? 1, author => {
-                                // s.count will not be null here but the compiler doesn't know that 😢
-                                var count = s.count;
-                                // duplicate check
-                                if (s.count?.LastCountMsg?.Author.Id == author.Id) {
-                                    s.count.Reset(false);
-                                    return ("💀", "you can't count twice in a row! try again");
-                                }
-                                
-                                // parse number from message
-                                var math = new Expression(msg.Content);
-                                double newNumberTemp = math.calculate();
-                                if (double.IsNaN(newNumberTemp)){
-                                    math = new Expression(msg.Content.Split(' ')[0]);
-                                    newNumberTemp = math.calculate();
-                                }
-
-                                if (double.IsNaN(newNumberTemp)) {
-                                    List<char> numbers = [];
-                                    bool numberStarted = false;
-                                    for (int i = 0; i < msg.Content.Length; i++)
-                                    {
-                                        if (char.IsNumber(msg.Content[i])) {
-                                            numberStarted = true;
-                                            numbers.Add(msg.Content[i]);
-                                        } else {
-                                            if (numberStarted) break;
-                                        }
+                            }
+                            actions = new() {
+    #pragma warning disable CS8602 // Dereference of a possibly null reference.
+                                { s.count?.Channel?.Id ?? 1, author => {
+                                    // s.count will not be null here but the compiler doesn't know that 😢
+                                    var count = s.count;
+                                    // duplicate check
+                                    if (s.count?.LastCountMsg?.Author.Id == author.Id) {
+                                        s.count.Reset(false);
+                                        return ("💀", "you can't count twice in a row! try again");
                                     }
-                                    if (numbers.Count > 0) {
-                                        newNumberTemp = double.Parse(string.Join("", numbers));
-                                    } /* else { // maybe? would need to be reworked. i probably won't.
-                                        List<int?> computes = [];
-                                        int lastWorkingIndex = 0;
+                                    
+                                    // parse number from message
+                                    var math = new Expression(msg.Content);
+                                    double newNumberTemp = math.calculate();
+                                    if (double.IsNaN(newNumberTemp)){
+                                        math = new Expression(msg.Content.Split(' ')[0]);
+                                        newNumberTemp = math.calculate();
+                                    }
+
+                                    if (double.IsNaN(newNumberTemp)) {
+                                        List<char> numbers = [];
+                                        bool numberStarted = false;
                                         for (int i = 0; i < msg.Content.Length; i++)
                                         {
-                                            int? tempNumber = (int?)dt.Compute(msg.Content[..i], null);
-                                            if (tempNumber != null) lastWorkingIndex = i;
-                                            computes.Add(tempNumber);
+                                            if (char.IsNumber(msg.Content[i])) {
+                                                numberStarted = true;
+                                                numbers.Add(msg.Content[i]);
+                                            } else {
+                                                if (numberStarted) break;
+                                            }
                                         }
-                                        newNumberTemp = computes[lastWorkingIndex];
-                                        if (newNumberTemp != null) {
-                                            newNumber = (int)newNumberTemp;
-                                        }
-                                    } */
-                                }
+                                        if (numbers.Count > 0) {
+                                            newNumberTemp = double.Parse(string.Join("", numbers));
+                                        } /* else { // maybe? would need to be reworked. i probably won't.
+                                            List<int?> computes = [];
+                                            int lastWorkingIndex = 0;
+                                            for (int i = 0; i < msg.Content.Length; i++)
+                                            {
+                                                int? tempNumber = (int?)dt.Compute(msg.Content[..i], null);
+                                                if (tempNumber != null) lastWorkingIndex = i;
+                                                computes.Add(tempNumber);
+                                            }
+                                            newNumberTemp = computes[lastWorkingIndex];
+                                            if (newNumberTemp != null) {
+                                                newNumber = (int)newNumberTemp;
+                                            }
+                                        } */
+                                    }
 
-                                // if (double.IsNaN(newNumberTemp)) return ("", "hmm");
+                                    // if (double.IsNaN(newNumberTemp)) return ("", "hmm");
 
-                                int newNumber = (int)newNumberTemp;
+                                    int newNumber = (int)newNumberTemp;
 
-                                // is the new number one more than the last?
-                                if (newNumber == count.Current + 1) {
-                                    count.Current++;
-                                    s.count.LastCountMsg = msg;
-                                    return ("✅", "");
-                                } else {
-                                    // if the messages are close together, point that out. happens pretty often
-                                    var lastMsg = s.count?.LastCountMsg;
-                                    long difference = msg.TimeCreated() - (s.count?.LastCountMsg?.TimeCreated() ?? 0);
-                                    count.Reset(false);
-                                    // currently 800 millseconds; tweak if it's too little or too much
-                                    return ("❌", (difference > 800 || lastMsg == null) ?
-                                        "aw you're not very good at counting, are you?" : 
-                                        "too many cooks in the kitchen!!"
-                                    );
-                                }
-                            } },
-                            { s.chain?.Channel?.Id ?? 2, delegate {
-                                return null;
-                            } },
-                            { s.currentGame?.playingChannelId ?? 3, delegate {
-                                if (s.currentGame.player1 != msg.Author.Id && s.currentGame.player2 != msg.Author.Id) {
+                                    // is the new number one more than the last?
+                                    if (newNumber == count.Current + 1) {
+                                        count.Current++;
+                                        s.count.LastCountMsg = msg;
+                                        return ("✅", "");
+                                    } else {
+                                        // if the messages are close together, point that out. happens pretty often
+                                        var lastMsg = s.count?.LastCountMsg;
+                                        long difference = msg.TimeCreated() - (s.count?.LastCountMsg?.TimeCreated() ?? 0);
+                                        count.Reset(false);
+                                        // currently 800 millseconds; tweak if it's too little or too much
+                                        return ("❌", (difference > 800 || lastMsg == null) ?
+                                            "aw you're not very good at counting, are you?" : 
+                                            "too many cooks in the kitchen!!"
+                                        );
+                                    }
+                                } },
+                                { s.chain?.Channel?.Id ?? 2, delegate {
                                     return null;
-                                }
-                                BoardGame.Player player = s.currentGame.player1 == msg.Author.Id ? BoardGame.Player.One : BoardGame.Player.Two;
-                                switch (s.currentGame)
-                                {
-                                    case ConnectFour c4:
-                                        string[] move = msg.Content.Split(' ');
-                                        if (move[0] is "go") {
-                                            c4.AddToColumn(int.Parse(move[1]), player);
-                                            var win = c4.WinCheck(player);
-                                            var board = c4.DisplayBoard(win);
-                                            return ("✅", board);
-                                        } else {
-                                            return null;
-                                        }
-                                    default: return null;
-                                }
-                            } },
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-                        };
+                                } },
+                                { s.currentGame?.PlayingChannelId ?? 3, delegate {
+                                    var game = s.currentGame;
+                                    var player = game.GetWhichPlayer(msg.Author.Id);
+                                    if (!game.IsCurrentPlayer(player)) {
+                                        return null;
+                                    }
+
+                                    switch (s.currentGame)
+                                    {
+                                        case ConnectFour c4:
+                                            string[] move = msg.Content.Split(' ');
+                                            int column = int.Parse(move[1][0].ToString()) - 1;
+                                            if (move[0] is "go" && ConnectFour.IsValidMove(column)) {
+                                                c4.AddToColumn(column, player);
+                                                var win = c4.WinCheck(player);
+                                                string board = c4.DisplayBoard(win);
+                                                c4.SwitchPlayers(msg.Author.Id);
+                                                if (win.winningPlayer != BoardGame.Player.None) {
+                                                    board += $"player {player.ToString().ToLower()} won!";
+                                                    s.currentGame = null;
+                                                }
+                                                return ("✅", board);
+                                            } else {
+                                                return null;
+                                            }
+                                        default: return null;
+                                    }
+                                } },
+    #pragma warning restore CS8602 // Dereference of a possibly null reference.
+                            };
+                        }
+                        catch (System.Exception err)
+                        {
+                            LogError(err);
+                            throw;
+                        }
+                        // Log("---"  + s.currentGame?.PlayingChannelId + "---");
+                        // Log("this should work "  + msg.Channel.Id);
                         // epic tuples 😄😄😄
                         (string emojiToParse, string reply) = actions[msg.Channel.Id]?.Invoke(msg.Author) ?? ("", "");
-                        Log(reply);
                         if (!string.IsNullOrEmpty(emojiToParse)) {
                             await msg.ReactAsync(emojiToParse);
                         }
