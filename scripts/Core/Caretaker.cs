@@ -120,7 +120,8 @@ namespace CaretakerNET.Core
         /// <param name="i">Index 1</param>
         /// <param name="j">Index 2</param>
         /// <returns>An element of type <typeparamref name="T"/> from the 2D <paramref name="enumerable"/></returns>
-        public static T? GetFromIndexes<T>(this IEnumerable<IEnumerable<T>> enumerable, int i, int j) {
+        public static T? GetFromIndexes<T>(this IEnumerable<IEnumerable<T>> enumerable, int i, int j)
+        {
             return enumerable.IsIndexValid(i) && enumerable.ElementAt(i).IsIndexValid(j) ? enumerable.ElementAt(i).ElementAt(j) : default;
         }
 
@@ -146,7 +147,8 @@ namespace CaretakerNET.Core
         /// <typeparam name="T"></typeparam>
         /// <param name="enumerable"></param>
         /// <returns>An element from <paramref name="enumerable"/>.</returns>
-        public static T? GetRandom<T>(this IEnumerable<T> enumerable) {
+        public static T? GetRandom<T>(this IEnumerable<T> enumerable) 
+        {
             var random = new Random();
             int count = enumerable.Count();
             return count > 0 ? enumerable.ElementAt(random.Next(count)) : default;
@@ -160,7 +162,8 @@ namespace CaretakerNET.Core
         /// <param name="match"></param>
         /// <param name="index"></param>
         /// <returns><i>True</i> if the index was found. <i>False</i> otherwise.</returns>
-        public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> match, out int index) {
+        public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> match, out int index) 
+        {
             index = -1;
             foreach (T item in enumerable)
             {
@@ -169,10 +172,24 @@ namespace CaretakerNET.Core
             }
             return false;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <param name="match"></param>
+        /// <param name="index"></param>
+        /// <returns><i>True</i> if the index was found. <i>False</i> otherwise.</returns>
+        public static IEnumerable<T> GetEnumerableFromDimension<T>(this T[,] array, int dimension) 
+        {
+            return Enumerable.Range(dimension, array.GetLength(1)).Select(i => array[dimension, i]);
+        }
         #endregion
 
         #region Enum
-        public static string EnumName(this Type enumType, int index) {
+        public static string EnumName(this Type enumType, int index)
+        {
             // Type enumType = whichEnum.GetType();
             int max = Enum.GetNames(enumType).Length - 1;
             int newIndex = Math.Clamp(index, 0, max);
@@ -240,7 +257,8 @@ namespace CaretakerNET.Core
         /// </summary>
         /// <param name="reference">The reference to get an ID from.</param>
         /// <returns>A ulong</returns>
-        private static ulong? IDFromReference(string reference) {
+        private static ulong? IDFromReference(string reference)
+        {
             return reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
         }
 
@@ -350,7 +368,8 @@ namespace CaretakerNET.Core
         public enum Time { ms, sec, min, hr, day, week };
         
         // converts from seconds to minutes, hours to ms, minutes to days, etc.
-        public static double ConvertTime(double time, Time typeFromTemp = Time.ms, Time typeToTemp = Time.ms) {
+        public static double ConvertTime(double time, Time typeFromTemp = Time.ms, Time typeToTemp = Time.ms)
+        {
             if (typeToTemp == typeFromTemp) return time;
             var typeFrom = (int)typeFromTemp;
             var typeTo = (int)typeToTemp;

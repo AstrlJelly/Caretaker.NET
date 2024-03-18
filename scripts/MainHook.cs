@@ -363,30 +363,46 @@ namespace CaretakerNET
                                 { s.chain?.Channel?.Id ?? 2, delegate {
                                     return null;
                                 } },
-                                { s.currentGame?.PlayingChannelId ?? 3, delegate {
-                                    var game = s.currentGame;
-                                    var player = game.GetWhichPlayer(msg.Author.Id);
+                                { s.CurrentGame?.PlayingChannelId ?? 3, delegate {
+                                    BoardGame? game = s.CurrentGame;
+                                    BoardGame.Player player = game.GetWhichPlayer(msg.Author.Id);
                                     if (!game.IsCurrentPlayer(player)) {
                                         return null;
                                     }
-
-                                    switch (s.currentGame)
+                                    ulong otherPlayer = game.Players[player == BoardGame.Player.Two ? 0 : 1];
+                                    switch (s.CurrentGame)
                                     {
                                         case ConnectFour c4:
                                             string[] move = msg.Content.Split(' ');
                                             int column = int.Parse(move[1][0].ToString()) - 1;
-                                            if (move[0] is "go" && ConnectFour.IsValidMove(column)) {
-                                                c4.AddToColumn(column, player);
-                                                var win = c4.WinCheck(player);
-                                                string board = c4.DisplayBoard(win);
-                                                c4.SwitchPlayers(msg.Author.Id);
-                                                if (win.winningPlayer != BoardGame.Player.None) {
-                                                    board += $"player {player.ToString().ToLower()} won!";
-                                                    s.currentGame = null;
+                                            switch (move[0].ToLower())
+                                            {
+                                                case "go": {
+                                                    if (!c4.AddToColumn(column, player)) return ("❌", "");
+                                                    c4.SwitchPlayers();
+                                                    var win = c4.WinCheck(player);
+                                                    string board = c4.DisplayBoard(win);
+                                                    if (!win.Tie) {
+                                                        if (win.WinningPlayer == BoardGame.Player.None) {
+                                                            board += $"{UserPingFromID(otherPlayer)}, it's your turn!";
+                                                        } else {
+                                                            board += $"{UserPingFromID(msg.Author.Id)} won!";
+                                                            s.CurrentGame = null;
+                                                        }
+                                                    } else {
+                                                        board += $"it's a tie...";
+                                                        s.CurrentGame = null;
+                                                    }
+                                                    return ("✅", board);
                                                 }
-                                                return ("✅", board);
-                                            } else {
-                                                return null;
+                                                case "refresh": {
+                                                    return ("✅", c4.DisplayBoard() + $"here you go :) it's {c4.GetEmoji(player)}{UserPingFromID(msg.Author.Id)}'s turn right now");
+                                                }
+                                                case "forfeit": {
+                                                    s.CurrentGame = null;
+                                                    return ("✅", c4.DisplayBoard() + $"wowwww looks like {UserPingFromID(msg.Author.Id)} gives up...");
+                                                }
+                                                default: return null;
                                             }
                                         default: return null;
                                     }
@@ -394,7 +410,7 @@ namespace CaretakerNET
     #pragma warning restore CS8602 // Dereference of a possibly null reference.
                             };
                         }
-                        catch (System.Exception err)
+                        catch (Exception err)
                         {
                             LogError(err);
                             throw;

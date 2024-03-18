@@ -95,7 +95,7 @@ namespace CaretakerNET.Commands
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                 (string game, IUser? victim) = (p["game"], p["victim"]);
                 string? thrown = null; //BannedUsers
-                if (s.currentGame != null) {
+                if (s.CurrentGame != null) {
                     thrown = "there's a game already in play!!";
                 } else if (victim.Id == msg.Author.Id) {
                     thrown = "MainHook.BannedUsers.Add(msg.Author.Id); " + Emojis.Smide;
@@ -155,7 +155,7 @@ namespace CaretakerNET.Commands
                         if (denied) { // keep denied first because it's more common to accidentally accept than it is to accidentally deny
                             await challengeMsg.Reply("awww... they denied. 😢");
                         } else if (accepted) {
-                            s.currentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, victim.Id);
+                            s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, victim.Id);
                             await challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
                         } else {
                             _ = challengeMsg.RemoveAllReactionsAsync();

@@ -21,25 +21,32 @@ namespace CaretakerNET.Games
         }
 
         public ulong PlayingChannelId;
-        public ulong Player1;
-        public ulong Player2;
+        public List<ulong>? Players;
+        // public ulong Player1;
+        // public ulong Player2;
         // public Player CurrentPlayer = Player.None;
         public int turns = 0;
 
-        public void SwitchPlayers(ulong player)
+        public void SwitchPlayers()
         {
             turns++;
         }
 
         public Player GetWhichPlayer(ulong playerId)
         {
-            if (playerId == Player1) {
-                return Player.One;
-            } else if (playerId == Player2) {
-                return Player.Two;
-            } else {
-                return Player.None;
+            if (Players != null) {
+                if (playerId == Players[0]) {
+                    return Player.One;
+                } else if (playerId == Players[1]) {
+                    if (turns == 0) {
+                        Players.Reverse();
+                        return Player.One;
+                    }
+                    return Player.Two;
+                }
             }
+
+            return Player.None;
         }
 
         public bool IsCurrentPlayer(Player player)

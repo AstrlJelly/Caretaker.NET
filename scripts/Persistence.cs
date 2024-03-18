@@ -150,7 +150,7 @@ namespace CaretakerNET
         // public List<SlowMode> slowModes = [];
         public Dictionary<ulong, int> slowModes = []; // channel id and timer
         // public ConnectFour? connectFour = null;
-        public BoardGame? currentGame = null;
+        public BoardGame? CurrentGame = null;
 
         public void Init(DiscordSocketClient client)
         {
