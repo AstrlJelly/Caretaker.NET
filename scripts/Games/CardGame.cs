@@ -6,24 +6,22 @@ using System.Text;
 using Discord.WebSocket;
 
 using CaretakerNET.Core;
-using System.Text.Json.Serialization;
 
 namespace CaretakerNET.Games
 {
-    // weird. but it works
-    [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "connect4")]
-    [JsonDerivedType(typeof(Checkers), typeDiscriminator: "checkers")]
-    public abstract class BoardGame
+    public abstract class CardGame
     {
         public enum Player : int
         {
             None,
             One,
             Two,
+            Three,
+            Four,
         }
 
         public ulong PlayingChannelId;
-        // internal ulong[]? allPlayers;
+        public ulong[] allPlayers;
         public List<ulong>? Players;
         public int turns = 0;
 
@@ -34,15 +32,20 @@ namespace CaretakerNET.Games
 
         public Player GetWhichPlayer(ulong playerId)
         {
-            if (/* allPlayers != null &&  */Players != null) {
-                if (playerId == Players[0]) {
-                    return Player.One;
-                } else if (playerId == Players[1]) {
-                    if (turns == 0) {
-                        Players.Reverse();
-                        return Player.One;
+            // not working rn
+            if (allPlayers != null && Players != null) {
+                int max = Math.Min(allPlayers.Length, Players.Count + 1);
+                Log("max : " + max);
+                for (int i = 0; i < max; i++) {
+                    Log("i : " + i);
+                    if (i == Players.Count + 1) {
+                        Log("ADD");
+                        Players.Add(playerId);
                     }
-                    return Player.Two;
+                    if (i == max) {
+                        Log("RETURN");
+                        return (Player)(i + 1);
+                    }
                 }
             }
 

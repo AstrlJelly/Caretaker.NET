@@ -3,13 +3,15 @@ using System.Diagnostics;
 using System.Linq;
 using System.Data;
 using System.Text;
-using org.mariuszgromada.math.mxparser;
 
 using Discord;
 using Discord.WebSocket;
 
 using CaretakerNET.ExternalEmojis;
 using CaretakerNET.Games;
+
+using org.mariuszgromada.math.mxparser;
+using Renci.SshNet;
 
 namespace CaretakerNET.Commands
 {
@@ -84,24 +86,24 @@ namespace CaretakerNET.Commands
             ], [ ChannelPermission.ManageChannels ]),
 
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
-
+                var connectionInfo = new ConnectionInfo("150.230.169.222", "opc", new PasswordAuthenticationMethod("opc", "pwd"), new PrivateKeyAuthenticationMethod("rsa.key"));
+                using (var client = new SftpClient(connectionInfo))
+                {
+                    client.Connect();
+                }
             }, [new Param("fileName", "what the file will be renamed to", "")]),
-
-            new("c4go", "play connect 4 using this command!", "hidden", async (msg, p) => {
-
-            }),
 
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                 (string game, IUser? victim) = (p["game"], p["victim"]);
-                string? thrown = null; //BannedUsers
+                string? thrown = null;
                 if (s.CurrentGame != null) {
                     thrown = "there's a game already in play!!";
+                } else if (victim == null) {
+                    thrown = "hmm... seems like the user you tried to challenge is unavailable.";
                 } else if (victim.Id == msg.Author.Id) {
                     thrown = "MainHook.BannedUsers.Add(msg.Author.Id); " + Emojis.Smide;
                     MainHook.BannedUsers.Add(msg.Author.Id);
-                } else if (victim == null) {
-                    thrown = "hmm... seems like the user you tried to challenge is unavailable.";
                 } else if (victim.IsBot) {
                     thrown = "dude. that's a bot.";
                 }
@@ -109,9 +111,9 @@ namespace CaretakerNET.Commands
                     _ = msg.Reply(thrown);
                     return;
                 }
-                switch (p["game"])
+                switch (game)
                 {
-                    case "c4" or "connect4": {
+                    case "c4" or "connect" or "connect4": {
                         var challengeMsg = await msg.Reply($"{UserPingFromID(victim!.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
                         bool accepted = false, denied = false;
                         Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
@@ -161,6 +163,12 @@ namespace CaretakerNET.Commands
                             _ = challengeMsg.RemoveAllReactionsAsync();
                             _ = challengeMsg.OverwriteMessage("took too long! oops.");
                         }
+                    } break;
+                    case "checkers": {
+                        await msg.Reply("not implemented yet! soon tho");
+                    } break;
+                    case "uno": {
+                        await msg.Reply("not implemented yet! soon tho");
                     } break;
                     default: {
                         await msg.Reply("that's not a game!");

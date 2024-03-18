@@ -168,12 +168,8 @@ namespace CaretakerNET
             CheckGuildData();
             foreach (var key in GuildData.Keys) {
                 if (key > 0) {
-                    try {
-                        GuildData[key].Init(Client);
-                    } catch (System.Exception error) {
+                    if (GuildData[key] == null) {
                         GuildData[key] = new(key);
-                        LogError(error);
-                        throw;
                     }
                 } else {
                     GuildData.Remove(key);

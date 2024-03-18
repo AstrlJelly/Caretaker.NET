@@ -12,6 +12,7 @@ namespace CaretakerNET.Core
     {
         public const string PREFIX = ">";
         public const ulong CARETAKER_ID = 1182009469824139395;
+        public const string PRIVATES_PATH = "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates";
 
         #region String
         // don't wanna type this every time lol (and i swear it performs ever so slightly better)

@@ -23,7 +23,10 @@ namespace CaretakerNET
         {
             LogInfo($"Start saving to {path}...", true);
             string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented, 
-                new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
+                new JsonSerializerSettings {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Error,
+                    TypeNameHandling = TypeNameHandling.Auto,
+                }
             );
             await File.WriteAllTextAsync(path, serializedDict);
             LogInfo("Saved!", true);
@@ -39,7 +42,12 @@ namespace CaretakerNET
             var jsonFileStr = await File.ReadAllTextAsync(path);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
                 try {
-                    var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr);
+                    var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr, 
+                        new JsonSerializerSettings {
+                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                            TypeNameHandling = TypeNameHandling.All,
+                        }
+                    );
                     if (deserializedDict != null) {
                         // LogTemp("deserializedDict : " + deserializedDict);
                         LogInfo("Loaded!", true);
