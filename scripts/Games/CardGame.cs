@@ -21,7 +21,7 @@ namespace CaretakerNET.Games
         }
 
         public ulong PlayingChannelId;
-        public ulong[] allPlayers;
+        public required ulong[] allPlayers;
         public List<ulong>? Players;
         public int turns = 0;
 
@@ -32,20 +32,14 @@ namespace CaretakerNET.Games
 
         public Player GetWhichPlayer(ulong playerId)
         {
-            // not working rn
+            // might be working? hasn't been tested
             if (allPlayers != null && Players != null) {
-                int max = Math.Min(allPlayers.Length, Players.Count + 1);
-                Log("max : " + max);
-                for (int i = 0; i < max; i++) {
-                    Log("i : " + i);
-                    if (i == Players.Count + 1) {
-                        Log("ADD");
-                        Players.Add(playerId);
-                    }
-                    if (i == max) {
-                        Log("RETURN");
-                        return (Player)(i + 1);
-                    }
+                int playerIndex = Players.FindIndex(id => id == playerId);
+                if (playerIndex == -1) {
+                    Players.Add(playerId);
+                    return (Player)(Players.Count + 1);
+                } else {
+                    return (Player)(playerIndex + 1);
                 }
             }
 

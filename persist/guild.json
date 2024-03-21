@@ -2,14 +2,15 @@
   "1091542281242279979": {
     "guildId": 1091542281242279979,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -17,8 +18,33 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1191816507374715023": {
+    "guildId": 1191816507374715023,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "ChannelId": 0,
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null
@@ -26,14 +52,15 @@
   "1113913617608355992": {
     "guildId": 1113913617608355992,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -41,55 +68,34 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": {
-      "$type": "CaretakerNET.Games.ConnectFour, PointyCaretakerBot",
+      "$type": "CaretakerNET.Games.ConnectFour, CaretakerNET",
       "PlayingChannelId": 1113944754460315759,
       "Players": [
-        391459218034786304,
-        438296397452935169
+        468933965110312980,
+        391459218034786304
       ],
-      "turns": 5
+      "Turns": 0,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647
     }
-  },
-  "1191816507374715023": {
-    "guildId": 1191816507374715023,
-    "count": {
-      "Channel": null,
-      "LastCountMsg": null,
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Channel": null,
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
-    },
-    "slowModes": {},
-    "CurrentGame": null
   },
   "1179439549865271367": {
     "guildId": 1179439549865271367,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -97,8 +103,8 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null
@@ -106,14 +112,15 @@
   "1077367474447716352": {
     "guildId": 1077367474447716352,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -121,8 +128,8 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null
@@ -130,14 +137,15 @@
   "1186486803608375346": {
     "guildId": 1186486803608375346,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -145,8 +153,43 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "CurrentGame": {
+      "$type": "CaretakerNET.Games.ConnectFour, CaretakerNET",
+      "PlayingChannelId": 1189820692569538641,
+      "Players": [
+        391459218034786304,
+        438296397452935169
+      ],
+      "Turns": 0,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647
+    }
+  },
+  "1171209093269180529": {
+    "guildId": 1171209093269180529,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "ChannelId": 0,
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null
@@ -154,14 +197,15 @@
   "1114601958095986738": {
     "guildId": 1114601958095986738,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -169,104 +213,8 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
-    },
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "1171209093269180529": {
-    "guildId": 1171209093269180529,
-    "count": {
-      "Channel": null,
-      "LastCountMsg": null,
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Channel": null,
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
-    },
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "1145223256056537181": {
-    "guildId": 1218330896407462079,
-    "count": {
-      "Channel": null,
-      "LastCountMsg": null,
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Channel": null,
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
-    },
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "544735840178536458": {
-    "guildId": 544735840178536458,
-    "count": {
-      "Channel": null,
-      "LastCountMsg": null,
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Channel": null,
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
-    },
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "887502008876167209": {
-    "guildId": 887502008876167209,
-    "count": {
-      "Channel": null,
-      "LastCountMsg": null,
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Channel": null,
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null
@@ -274,14 +222,15 @@
   "1218330896407462079": {
     "guildId": 1218330896407462079,
     "count": {
-      "Channel": null,
-      "LastCountMsg": null,
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
       "Current": 0,
       "PrevNumber": 0,
       "HighestNum": 0
     },
     "chain": {
-      "Channel": null,
+      "ChannelId": 0,
       "Current": null,
       "ChainLength": 0,
       "PrevChain": null,
@@ -289,8 +238,83 @@
       "AutoChain": 0
     },
     "convo": {
-      "ConvoChannel": null,
-      "ReplyChannel": null
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1145223256056537181": {
+    "guildId": 1145223256056537181,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "ChannelId": 0,
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "887502008876167209": {
+    "guildId": 887502008876167209,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "ChannelId": 0,
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
+    },
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "544735840178536458": {
+    "guildId": 544735840178536458,
+    "count": {
+      "channelId": null,
+      "lastCountMsgChannelId": null,
+      "lastCountMsgId": null,
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "ChannelId": 0,
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {
+      "convoChannelId": null,
+      "replyChannelId": null
     },
     "slowModes": {},
     "CurrentGame": null

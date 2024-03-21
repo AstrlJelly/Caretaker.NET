@@ -13,6 +13,7 @@ namespace CaretakerNET.Games
     {2, 2, 0, 1, 2, 1, 0}
     */
 
+    // [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "ConnectFour")]
     public class ConnectFour : BoardGame
     {
         public int this[int x, int y] { get => board[x, y]; set => board[x, y] = value; }
@@ -23,8 +24,10 @@ namespace CaretakerNET.Games
         }
 
         private readonly int[,] board; // list of a list of ints
-        public const int W = 7; // width of the board
-        public const int H = 6; // height of the board
+        // public const int W = 7; // width of the board
+        // public const int H = 6; // height of the board
+        public const int W = 6; // width of the board
+        public const int H = 8; // height of the board
 
         // public static bool IsValidMove(int column) => column is < W and >= 0;
         public bool AddToColumn(int column, Player player) => AddToColumn(column, (int)player);
@@ -40,6 +43,11 @@ namespace CaretakerNET.Games
             }
             return false;
         }
+
+        // public Win WinCheckFromPoint(Vector2 point, Player player)
+        // {
+            
+        // }
 
         public Win WinCheck()
         {
@@ -61,7 +69,7 @@ namespace CaretakerNET.Games
 
             // horizontal check
             for (int x = 0; x < W; x++) {
-                for (int y = 0; y < H - 4; y++) {
+                for (int y = 0; y < H - 3; y++) {
                     if (board[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x, y + 1), new(x, y + 2), new(x, y + 3) ];
                     if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
@@ -71,7 +79,7 @@ namespace CaretakerNET.Games
             }
 
             // vertical check
-            for (int x = 0; x < W - 4; x++) {
+            for (int x = 0; x < W - 3; x++) {
                 for (int y = 0; y < H; y++) {
                     if (board[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x + 1, y), new(x + 2, y), new(x + 3, y) ];
@@ -82,8 +90,8 @@ namespace CaretakerNET.Games
             }
 
             // horizontal check (top left to bottom right, i.e bottom left to top right)
-            for (int x = 0; x < W - 4; x++) {
-                for (int y = 0; y < H - 4; y++) {
+            for (int x = 0; x < W - 3; x++) {
+                for (int y = 0; y < H - 3; y++) {
                     if (board[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x + 1, y + 1), new(x + 2, y + 2), new(x + 3, y + 3) ];
                     if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
@@ -94,7 +102,7 @@ namespace CaretakerNET.Games
 
             // horizontal check (top left to bottom right, i.e bottom left to top right)
             for (int x = 3; x < W; x++) {
-                for (int y = 0; y < H - 4; y++) {
+                for (int y = 0; y < H - 3; y++) {
                     if (board[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x - 1, y + 1), new(x - 2, y + 2), new(x - 3, y + 3) ];
                     if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
@@ -126,9 +134,9 @@ namespace CaretakerNET.Games
         {
             bool anyWin = win.WinningPlayer != Player.None;
             StringBuilder joinedRows = new();
-            for (int i = H - 1; i >= 0; i--) {
+            for (int i = H - 1; i >= 0; i--) { // display upside down i guess
                 for (int j = 0; j < W; j++) {
-                    bool isWin = anyWin && win.winPoints.Contains(new(j, i)); // the vector2 in this uses x, y, while this displays using y, x
+                    bool isWin = anyWin && win.winPoints.Contains(new(j, i));
                     joinedRows.Append((Player)this[j, i] switch {
                         Player.One => isWin ? "❤" : "🔴",  // red circle/heart (p1)
                         Player.Two => isWin ? "💛" : "🟡", // yellow circle/heart (p2)
@@ -147,5 +155,6 @@ namespace CaretakerNET.Games
             PlayingChannelId = playingChannelId;
             Players = [ ..players ];
         }
+        // public ConnectFour() { }
     }
 }

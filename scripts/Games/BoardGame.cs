@@ -3,16 +3,12 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Text;
 
-using Discord.WebSocket;
-
 using CaretakerNET.Core;
-using System.Text.Json.Serialization;
 
 namespace CaretakerNET.Games
 {
-    // weird. but it works
-    [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "connect4")]
-    [JsonDerivedType(typeof(Checkers), typeDiscriminator: "checkers")]
+    // // weird. but it works... maybe?
+    // [JsonDerivedType(typeof(BoardGame), typeDiscriminator: "BoardGame")]
     public abstract class BoardGame
     {
         public enum Player : int
@@ -24,12 +20,15 @@ namespace CaretakerNET.Games
 
         public ulong PlayingChannelId;
         // internal ulong[]? allPlayers;
-        public List<ulong>? Players;
-        public int turns = 0;
+        public List<ulong>? Players { get; internal set; }
+        public int Turns { get; internal set; } = 0;
+        public ulong ForfeitPlayer { get; internal set; }
+        public int EndAt { get; internal set; } = int.MaxValue;
+        public const int FORFEIT_TURNS = 3;
 
         public void SwitchPlayers()
         {
-            turns++;
+            Turns++;
         }
 
         public Player GetWhichPlayer(ulong playerId)
@@ -38,7 +37,7 @@ namespace CaretakerNET.Games
                 if (playerId == Players[0]) {
                     return Player.One;
                 } else if (playerId == Players[1]) {
-                    if (turns == 0) {
+                    if (Turns == 0) {
                         Players.Reverse();
                         return Player.One;
                     }
@@ -49,10 +48,24 @@ namespace CaretakerNET.Games
             return Player.None;
         }
 
+        public bool IsAnyPlayer(ulong id)
+        {
+            return Players?.Contains(id) ?? false;
+        }
+
         public bool IsCurrentPlayer(Player player)
         {
-            var whichPlayer = (turns % 2) + 1;
-            return turns == 0 || (int)player == whichPlayer;
+            var whichPlayer = (Turns % 2) + 1;
+            return Turns == 0 || (int)player == whichPlayer;
+        }
+
+        public bool StartForfeit(ulong playerId)
+        {
+            if (EndAt < int.MaxValue) return false;
+
+            EndAt = Turns + 3;
+            ForfeitPlayer = playerId;
+            return true;
         }
     }
 }

@@ -11,8 +11,10 @@ namespace CaretakerNET.Core
     public static class Caretaker
     {
         public const string PREFIX = ">";
+        public const ulong ASTRL_ID = 438296397452935169;
         public const ulong CARETAKER_ID = 1182009469824139395;
-        public const string PRIVATES_PATH = "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates";
+        public const ulong CARETAKER_CENTRAL_ID = 1186486803608375346;
+        public const string PRIVATES_PATH = "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/";
 
         #region String
         // don't wanna type this every time lol (and i swear it performs ever so slightly better)
@@ -39,7 +41,7 @@ namespace CaretakerNET.Core
         /// <returns>The split string in a tuple form.</returns>
         public static (string, string) SplitByIndex(this string stringToSplit, int index)
         {
-            if (stringToSplit.IsIndexValid(index)) {
+            if (stringToSplit.IsIndexValid(index) || index > -1) {
                 return (stringToSplit[..index], stringToSplit[(index + 1)..]);
             } else {
                 return (stringToSplit, "");
@@ -47,7 +49,7 @@ namespace CaretakerNET.Core
         }
 
         /// <summary>
-        /// Splits a string into two parts using a character.
+        /// Splits a string into two parts using the first instance of a character. 
         /// </summary>
         /// <param name="stringToSplit">The string to split into two.</param>
         /// <param name="splitChar">The char to split at, i.e "Split" with 'l' would become ("Sp", "it")</param>
@@ -55,7 +57,19 @@ namespace CaretakerNET.Core
         public static (string, string) SplitByFirstChar(this string stringToSplit, char splitChar)
         {
             int index = stringToSplit.IndexOf(splitChar);
-            if (index == -1) index = stringToSplit.Length;
+
+            return SplitByIndex(stringToSplit, index);
+        }
+
+        /// <summary>
+        /// Splits a string into two parts using the last instance of a character.
+        /// </summary>
+        /// <param name="stringToSplit">The string to split into two.</param>
+        /// <param name="splitChar">The char to split at, i.e "Split This" with 'i' would become ("Split thi", "s")</param>
+        /// <returns>The split string in a tuple form.</returns>
+        public static (string, string) SplitByLastChar(this string stringToSplit, char splitChar)
+        {
+            int index = stringToSplit.LastIndexOf(splitChar);
 
             return SplitByIndex(stringToSplit, index);
         }
@@ -257,10 +271,10 @@ namespace CaretakerNET.Core
         /// i.e #general -> 1205328637918707723 or @AstrlJelly -> 438296397452935169
         /// </summary>
         /// <param name="reference">The reference to get an ID from.</param>
-        /// <returns>A ulong</returns>
+        /// <returns>A ulong id of a channel/user</returns>
         private static ulong? IDFromReference(string reference)
         {
-            return reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
+            return reference.Length > 0 && reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
         }
 
         /// <summary>

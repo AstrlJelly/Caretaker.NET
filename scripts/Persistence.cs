@@ -13,8 +13,13 @@ namespace CaretakerNET
 {
     public static class Persist
     {
-        const string GUILD_PATH = "./persist/guild.json";
-        const string USER_PATH  = "./persist/user.json";
+        private const string GUILD_PATH = "./persist/guild.json";
+        private const string USER_PATH  = "./persist/user.json";
+        private readonly static JsonSerializerSettings serializerSettings = 
+            new() {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                TypeNameHandling = TypeNameHandling.Auto,
+            };
 
         public static async Task SaveGuilds(this Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
         public static async Task SaveUsers(this Dictionary<ulong, UserPersist> dictionary)   => await Save(USER_PATH, dictionary);
@@ -22,12 +27,7 @@ namespace CaretakerNET
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
             LogInfo($"Start saving to {path}...", true);
-            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented, 
-                new JsonSerializerSettings {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Error,
-                    TypeNameHandling = TypeNameHandling.Auto,
-                }
-            );
+            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented, serializerSettings);
             await File.WriteAllTextAsync(path, serializedDict);
             LogInfo("Saved!", true);
         }
@@ -39,15 +39,11 @@ namespace CaretakerNET
         private static async Task<T> Load<T>(string path) where T : new()
         {
             LogInfo($"Start loading from {path}...", true);
+            if (!File.Exists(path)) File.Create(path);
             var jsonFileStr = await File.ReadAllTextAsync(path);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
                 try {
-                    var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr, 
-                        new JsonSerializerSettings {
-                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                            TypeNameHandling = TypeNameHandling.All,
-                        }
-                    );
+                    var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr, serializerSettings);
                     if (deserializedDict != null) {
                         // LogTemp("deserializedDict : " + deserializedDict);
                         LogInfo("Loaded!", true);
@@ -70,7 +66,7 @@ namespace CaretakerNET
         public class ChainPersist()
         {
             [JsonIgnore] public ITextChannel? Channel;
-            internal ulong ChannelId;
+            [JsonProperty] internal ulong ChannelId;
             public string? Current;
             public int ChainLength;
             public string? PrevChain;
@@ -79,6 +75,7 @@ namespace CaretakerNET
 
             public void Init(SocketGuild guild)
             {
+                // Log("GUILD : " + guild);
                 Channel = (ITextChannel?)guild.GetChannel(ChannelId);
             }
         }

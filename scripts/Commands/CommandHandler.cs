@@ -12,6 +12,7 @@ using CaretakerNET.Games;
 
 using org.mariuszgromada.math.mxparser;
 using Renci.SshNet;
+using FuzzySharp;
 
 namespace CaretakerNET.Commands
 {
@@ -85,95 +86,161 @@ namespace CaretakerNET.Commands
                 new Param("newCount", "the new current count", 0),
             ], [ ChannelPermission.ManageChannels ]),
 
-            new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
-                var connectionInfo = new ConnectionInfo("150.230.169.222", "opc", new PasswordAuthenticationMethod("opc", "pwd"), new PrivateKeyAuthenticationMethod("rsa.key"));
+            new("jerma", "Okay, if I... if I chop you up in a meat grinder, and the only thing that comes out, that's left of you, is your eyeball, you'r- you're PROBABLY DEAD!", "silly", async (msg, p) => {
+                string fileName = p["fileName"];
+                var connectionInfo = new ConnectionInfo(
+                    "150.230.169.222", "opc",
+                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
+                );
+                // using (var client = new ScpClient(connectionInfo))
                 using (var client = new SftpClient(connectionInfo))
                 {
-                    client.Connect();
+                    await msg.ReactAsync("✅");
+                    try {
+                        client.Connect();
+                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
+                        var files = client.ListDirectory(remoteDirectory);
+                        if (files == null) {
+                            LogError("\"files\" was null.");
+                            _ = msg.RemoveAllReactionsAsync();
+                            _ = msg.ReactAsync("❌");
+                            return;
+                        }
+                        var randomFile = files.GetRandom()!;
+                        string path = randomFile.FullName.SplitByLastChar('/').Item1 + fileName;
+                        // Log(path);
+                        Stream newFile = File.Create(path);
+                        client.DownloadFile(randomFile.FullName, newFile, async id => {
+                            newFile.Dispose();
+                            await msg.Channel.SendFileAsync(path, messageReference: msg.Reference);
+                            File.Delete(path);
+                        });
+                    } catch (Exception err) {
+                        _ = msg.RemoveAllReactionsAsync();
+                        _ = msg.ReactAsync("❌");
+                        LogError(err);
+                        throw;
+                    }
+                }
+            }, [new Param("fileName", "what the file will be renamed to", "")]),
+
+            new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
+                var connectionInfo = new ConnectionInfo(
+                    "150.230.169.222", "opc",
+                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
+                );
+                // using (var client = new ScpClient(connectionInfo))
+                using (var client = new SftpClient(connectionInfo))
+                {
+                    await msg.ReactAsync("✅");
+                    try {
+                        client.Connect();
+                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
+                        var files = client.ListDirectory(remoteDirectory);
+                        if (files == null) {
+                            await msg.ReactAsync("❌");
+                            return;
+                        }
+                        var randomFile = files.GetRandom()!;
+                        Stream newFile = File.OpenRead(randomFile.Name);
+                        client.DownloadFile(randomFile.FullName, newFile);
+                        await msg.Reply(files.Count());
+                        await msg.Channel.SendFileAsync(randomFile.Name);
+                    } catch (Exception err) {
+                        await msg.ReactAsync("❌");
+                        LogError(err);
+                        throw;
+                    }
                 }
             }, [new Param("fileName", "what the file will be renamed to", "")]),
 
             new("challenge", "challenge another user to a game", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
-                (string game, IUser? victim) = (p["game"], p["victim"]);
+                (string game, IUser? victim) = (p["game"], (p["victim"] ?? msg.ReferencedMessage?.Author));
+                bool anyone = p.Unparams["victim"]?.Contains("anyone") ?? false;
                 string? thrown = null;
                 if (s.CurrentGame != null) {
                     thrown = "there's a game already in play!!";
-                } else if (victim == null) {
+                } else if (victim == null && !anyone) {
                     thrown = "hmm... seems like the user you tried to challenge is unavailable.";
-                } else if (victim.Id == msg.Author.Id) {
+                } else if (victim?.Id == msg.Author.Id) {
                     thrown = "MainHook.BannedUsers.Add(msg.Author.Id); " + Emojis.Smide;
                     MainHook.BannedUsers.Add(msg.Author.Id);
-                } else if (victim.IsBot) {
+                } else if (victim?.IsBot ?? false) {
                     thrown = "dude. that's a bot.";
                 }
                 if (thrown != null) {
                     _ = msg.Reply(thrown);
                     return;
                 }
-                switch (game)
+                var challengeMsg = await msg.Reply($"{(victim != null ? UserPingFromID(victim.Id) : "anybody here")}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
+                ulong acceptedId = 0;
+                bool denied = false; // this can be a bool because the only time a user will deny is if they're specified
+                Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
+                _ = challengeMsg.AddReactionAsync(checkmark);
+                _ = challengeMsg.AddReactionAsync(crossmark);
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                int cFourChance =    Fuzz.WeightedRatio(game, "connect 4");
+                int checkersChance = Fuzz.WeightedRatio(game, "checkers");
+                int unoChance =      Fuzz.WeightedRatio(game, "uno");
+                if (!(new int[] {cFourChance, checkersChance, unoChance}).Any(c => c > 60)) { // if none of them are valid
+                    await msg.Reply("that's not a game!");
+                    return;
+                }
+                while (true) 
                 {
-                    case "c4" or "connect" or "connect4": {
-                        var challengeMsg = await msg.Reply($"{UserPingFromID(victim!.Id)}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
-                        bool accepted = false, denied = false;
-                        Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
-                        _ = challengeMsg.AddReactionAsync(checkmark);
-                        _ = challengeMsg.AddReactionAsync(crossmark);
-                        var stopwatch = new Stopwatch();
-                        stopwatch.Start();
-                        while (true) 
+                    try {
+                        int reactionCount = 10;
+                        foreach (var user in await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount).FlattenAsync())
                         {
-                            try {
-                                int reactionCount = 10;
-                                foreach (var user in await challengeMsg.GetReactionUsersAsync(checkmark, reactionCount).FlattenAsync())
-                                {
-                                    if (!user.IsBot && user.Id == victim.Id) {
-                                        accepted = true;
-                                        break;
-                                    } else if (user.Id != CARETAKER_ID) {
-                                        _ = msg.RemoveReactionAsync(checkmark, user);
-                                    }
-                                }
-                                foreach (var user in await challengeMsg.GetReactionUsersAsync(crossmark, reactionCount).FlattenAsync())
-                                {
-                                    if (!user.IsBot && user.Id == victim.Id) {
-                                        denied = true;
-                                        break;
-                                    } else if (user.Id != CARETAKER_ID) {
-                                        _ = msg.RemoveReactionAsync(crossmark, user);
-                                    }
-                                }
-                                if (accepted || denied || stopwatch.Elapsed.TotalSeconds >= 60) {
-                                    stopwatch.Stop();
-                                    break;
-                                }
-                                // consider removing the delay? it used to be one second but that was way too slow.
-                                await Task.Delay(500);
-                            } catch (Exception err) {
-                                LogError(err);
+                            if (!user.IsBot && (user.Id == victim?.Id || anyone)) {
+                                acceptedId = user.Id;
                                 break;
+                            } else if (user.Id != CARETAKER_ID) {
+                                _ = msg.RemoveReactionAsync(checkmark, user);
                             }
                         }
-                        if (denied) { // keep denied first because it's more common to accidentally accept than it is to accidentally deny
-                            await challengeMsg.Reply("awww... they denied. 😢");
-                        } else if (accepted) {
-                            s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, victim.Id);
-                            await challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(victim.Id)}, begin!");
-                        } else {
-                            _ = challengeMsg.RemoveAllReactionsAsync();
-                            _ = challengeMsg.OverwriteMessage("took too long! oops.");
+                        if (!anyone) {
+                            foreach (var user in await challengeMsg.GetReactionUsersAsync(crossmark, reactionCount).FlattenAsync())
+                            {
+                                if (!user.IsBot && user.Id == victim?.Id) {
+                                    denied = true;
+                                    break;
+                                } else if (user.Id != CARETAKER_ID) {
+                                    _ = msg.RemoveReactionAsync(crossmark, user);
+                                }
+                            }
                         }
-                    } break;
-                    case "checkers": {
-                        await msg.Reply("not implemented yet! soon tho");
-                    } break;
-                    case "uno": {
-                        await msg.Reply("not implemented yet! soon tho");
-                    } break;
-                    default: {
-                        await msg.Reply("that's not a game!");
-                    } break;
+                        if ((acceptedId != 0) || denied || stopwatch.Elapsed.TotalSeconds >= 60) {
+                            stopwatch.Stop();
+                            break;
+                        }
+                        // no delay makes the timeout worse
+                        await Task.Delay(1000);
+                    } catch (Exception err) {
+                        LogError(err);
+                        break;
+                    }
                 }
+                if (denied) { // keep denied first because it's more common to accidentally accept than it is to accidentally deny
+                    await challengeMsg.Reply("awww... they denied. 😢");
+                } else if (acceptedId != 0) {
+                    if (cFourChance > 60) {
+                        s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, acceptedId);
+                    } else if (checkersChance > 60) {
+                        await msg.Reply("not implemented yet! soon tho");
+                    } else if (unoChance > 60) {
+                        await msg.Reply("not implemented yet! soon tho");
+                    } else {
+                        _ = msg.Reply("okay this error should literally never happen. " + UserPingFromID(ASTRL_ID));
+                    }
+                    await challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(acceptedId)}, begin!");
+                } else {
+                    _ = challengeMsg.RemoveAllReactionsAsync();
+                    _ = challengeMsg.OverwriteMessage("took too long! oops.");
+                }
+                
             }, [
                 new Param("victim", "the username/display name of the person you'd like to challenge", "", Param.ParamType.User),
                 new Param("game", "which game would you like to challenge with?", "c4"),
@@ -214,6 +281,48 @@ namespace CaretakerNET.Commands
                 }
             }, [ new Param("user", "the username of the person you'd like to say hi to", CARETAKER_ID.ToString(), Param.ParamType.User) ]),
 
+            new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
+                var guild = msg.GetGuild(); // remember, returns null in dms
+                // this will always get an infinite invite! very cool
+                var invite = (await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID).GetInvitesAsync())?.FirstOrDefault(x => x.ExpiresAt == null);
+                if (invite == null && guild?.Id != CARETAKER_CENTRAL_ID) { // handle no invite being found but only if you need it
+                    _ = msg.Reply("okay so apparently there's no invite for the caretaker central server. oops");
+                    return;
+                }
+                switch (guild?.Id)
+                {
+                    case CARETAKER_CENTRAL_ID: { // caretaker server
+                        IGuildUser user = (IGuildUser)msg.Author;
+                        var role = guild.Roles.FirstOrDefault(x => x.Name == "Playtester");
+                        if (user.RoleIds.Any(x => x == role?.Id)) {
+                            // _ = user.RemoveRoleAsync(role);
+                            // _ = msg.ReactAsync("❌");
+                            // _ = msg.Reply("okay... :(");
+                            _ = msg.Reply("You're stuck here now.");
+                        } else {
+                            _ = user.AddRoleAsync(role);
+                            _ = msg.ReactAsync("✅");
+                            _ = msg.Reply("thanks :3");
+                        }
+                    } break;
+                    case null: { // dms
+                        _ = msg.Channel.SendMessageAsync("ermm " + invite!.Url);
+                    } break;
+                    default: { // any other server
+                        _ = msg.AddReactionAsync(ParsedEmojis.Smide);
+                        _ = msg.Reply("Check your dms.");
+                        _ = msg.Author.SendMessageAsync("here's where you can ACTUALLY use that command! :3\n" + invite!.Url);
+                    } break;
+                }
+            }),
+
+            new("test", "for testing :)", "silly", async (msg, p) => {
+                var builder = new ComponentBuilder()
+                    .WithButton("label", "show-cards");
+
+                await msg.ReplyAsync("button", components: builder.Build());
+            }),
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             new("cmd", "run more internal commands, will probably just be limited to astrl", "internal"),
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,28 +351,6 @@ namespace CaretakerNET.Commands
 
             new("save", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Save()),
             new("load", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Load()),
-
-            // new("c4", "MANIPULATE connect 4", "games", async (msg, p) => {
-            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-            //     var c4 = s.connectFour ??= new();
-            //     c4.AddToColumn(p["column"], (int)p["player"]);
-            //     await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
-            //     if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
-            // }, [ new("column", "", 0), new("player", "", 1) ]),
-            
-            // new("c4get", "GET connect 4", "games", async (msg, p) => {
-            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-            //     var c4 = s.connectFour ??= new();
-            //     await msg.Reply((int)c4[p["x"], p["y"]]);
-            // }, [ new("x", "", 0), new("y", "", 0) ]),
-            
-            // new("c4display", "DISPLAY connect 4", "games", async (msg, p) => {
-            //     if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-            //     var c4 = s.connectFour ??= new();
-            //     await msg.Reply(c4.DisplayBoard(out ConnectFour.Win win));
-            //     if (win.winningPlayer != ConnectFour.Player.None) await msg.Reply(win.winningPlayer);
-            //     // await msg.Reply(c4[0, 0]);
-            // }, [ new("x", "", 0), new("y", "", 0) ]),
 
             new("guilds", "get all guilds", "hidden", async delegate {
                 var client = MainHook.instance.Client;
@@ -360,7 +447,7 @@ namespace CaretakerNET.Commands
                     
                     if (splitParams.IsIndexValid(i) && !paramsAdded) { // will this parameter be set manually?
                         setParam = com.Params[i];
-                        int colonIndex = splitParams[i].IndexOf(';'); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
+                        int colonIndex = splitParams[i].IndexOf('='); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
                         string valueStr = splitParams[i].ReplaceAll(SPACE, ' '); // get the spaces back
                         if (colonIndex != -1) { // if colon exists, attempt to set settingParam to the string before the colon
                             string paramName = splitParams[i][..colonIndex];
@@ -408,7 +495,7 @@ namespace CaretakerNET.Commands
                 return false;
             }
         }
-        
+
         public static string ListCommands(string singleCom, bool listParams, bool cmd = false, bool showHidden = false)
         {
             var sw = new Stopwatch();

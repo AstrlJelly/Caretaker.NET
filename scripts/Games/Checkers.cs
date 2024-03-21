@@ -13,6 +13,7 @@ namespace CaretakerNET.Games
     {2, 2, 0, 1, 2, 1, 0}
     */
 
+    // [JsonDerivedType(typeof(Checkers), typeDiscriminator: "Checkers")]
     public class Checkers : BoardGame
     {
         public int this[int x, int y] { get => board[x, y]; set => board[x, y] = value; }
