@@ -1,5 +1,5 @@
 ﻿using System;
-using CaretakerNET.Core;
+
 using Discord;
 using Discord.WebSocket;
 

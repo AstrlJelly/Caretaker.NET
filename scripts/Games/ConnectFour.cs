@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace CaretakerNET.Games
 {
@@ -13,21 +14,21 @@ namespace CaretakerNET.Games
     {2, 2, 0, 1, 2, 1, 0}
     */
 
-    // [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "ConnectFour")]
+    [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "ConnectFour")]
     public class ConnectFour : BoardGame
     {
-        public int this[int x, int y] { get => board[x, y]; set => board[x, y] = value; }
+        public int this[int x, int y] { get => board[x][y]; set => board[x][y] = value; }
         public struct Win(Player winningPlayer = Player.None, List<Vector2>? winPoints = null, bool tie = false) {
             public Player WinningPlayer = winningPlayer;
             public List<Vector2> winPoints = winPoints ?? [];
             public bool Tie = tie;
         }
 
-        private readonly int[,] board; // list of a list of ints
-        // public const int W = 7; // width of the board
-        // public const int H = 6; // height of the board
-        public const int W = 6; // width of the board
-        public const int H = 8; // height of the board
+        [JsonInclude] private readonly int[][] board; // list of a list of ints
+        public const int W = 7; // width of the board
+        public const int H = 6; // height of the board
+        // public const int W = 6; // width of the board
+        // public const int H = 8; // height of the board
 
         // public static bool IsValidMove(int column) => column is < W and >= 0;
         public bool AddToColumn(int column, Player player) => AddToColumn(column, (int)player);
@@ -63,16 +64,16 @@ namespace CaretakerNET.Games
             Player player = (Player)pl;
 
             // tie check
-            if (!board.GetEnumerableFromDimension(H - 1).Any(x => x == 0)) {
+            if (!board[H - 1].Any(x => x == 0)) {
                 return new Win(tie: true);
             }
 
             // horizontal check
             for (int x = 0; x < W; x++) {
                 for (int y = 0; y < H - 3; y++) {
-                    if (board[x, y] == 0) continue;
+                    if (this[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x, y + 1), new(x, y + 2), new(x, y + 3) ];
-                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                    if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
                         return new Win(player, checks);
                     }
                 }
@@ -81,9 +82,9 @@ namespace CaretakerNET.Games
             // vertical check
             for (int x = 0; x < W - 3; x++) {
                 for (int y = 0; y < H; y++) {
-                    if (board[x, y] == 0) continue;
+                    if (this[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x + 1, y), new(x + 2, y), new(x + 3, y) ];
-                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                    if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
                         return new Win(player, checks);
                     }
                 }
@@ -92,9 +93,9 @@ namespace CaretakerNET.Games
             // horizontal check (top left to bottom right, i.e bottom left to top right)
             for (int x = 0; x < W - 3; x++) {
                 for (int y = 0; y < H - 3; y++) {
-                    if (board[x, y] == 0) continue;
+                    if (this[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x + 1, y + 1), new(x + 2, y + 2), new(x + 3, y + 3) ];
-                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                    if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
                         return new Win(player, checks);
                     }
                 }
@@ -103,9 +104,9 @@ namespace CaretakerNET.Games
             // horizontal check (top left to bottom right, i.e bottom left to top right)
             for (int x = 3; x < W; x++) {
                 for (int y = 0; y < H - 3; y++) {
-                    if (board[x, y] == 0) continue;
+                    if (this[x, y] == 0) continue;
                     List<Vector2> checks = [ new(x, y), new(x - 1, y + 1), new(x - 2, y + 2), new(x - 3, y + 3) ];
-                    if (checks.All(vec => board[(int)vec.X, (int)vec.Y] == pl)) {
+                    if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
                         return new Win(player, checks);
                     }
                 }
@@ -114,6 +115,7 @@ namespace CaretakerNET.Games
             return new Win();
         }
 
+        public string GetEmoji(ulong playerId) => GetEmoji(GetWhichPlayer(playerId));
         public string GetEmoji(Player player)
         {
             return player switch {
@@ -148,13 +150,23 @@ namespace CaretakerNET.Games
             joinedRows.AppendLine("1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣");
             return joinedRows.ToString();
         }
+
         public ConnectFour(ulong playingChannelId, params ulong[] players)
         {
-            board = new int[W, H];
+            board = new int[W][];
+            for (int i = 0; i < W; i++) {
+                board[i] = new int[H];
+            }
 
             PlayingChannelId = playingChannelId;
             Players = [ ..players ];
         }
-        // public ConnectFour() { }
+
+        [JsonConstructor]
+        public ConnectFour(List<ulong> Players, int[][] board)
+        {
+            this.Players = Players;
+            this.board = board;
+        }
     }
 }

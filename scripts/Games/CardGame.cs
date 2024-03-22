@@ -5,7 +5,7 @@ using System.Text;
 
 using Discord.WebSocket;
 
-using CaretakerNET.Core;
+
 
 namespace CaretakerNET.Games
 {

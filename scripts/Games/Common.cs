@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using CaretakerNET.Core;
+
 using Discord.WebSocket;
 
 namespace CaretakerNET.Common

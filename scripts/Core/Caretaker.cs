@@ -350,6 +350,12 @@ namespace CaretakerNET.Core
 
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
         public static string UserPingFromID(ulong id) => $"<@{id}>";
+
+
+        public static void SubscribeToReactions()
+        {
+            
+        }
         #endregion
 
         #region Console

@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 using Discord;
-using Discord.Commands;
 using Discord.WebSocket;
-using Newtonsoft.Json;
 
 using CaretakerNET.Games;
-using CaretakerNET.Core;
+
 
 namespace CaretakerNET
 {
@@ -15,10 +14,10 @@ namespace CaretakerNET
     {
         private const string GUILD_PATH = "./persist/guild.json";
         private const string USER_PATH  = "./persist/user.json";
-        private readonly static JsonSerializerSettings serializerSettings = 
+        private readonly static JsonSerializerOptions serializerSettings = 
             new() {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                TypeNameHandling = TypeNameHandling.Auto,
+                WriteIndented = true,
+                IncludeFields = true,
             };
 
         public static async Task SaveGuilds(this Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
@@ -27,7 +26,7 @@ namespace CaretakerNET
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
             LogInfo($"Start saving to {path}...", true);
-            string? serializedDict = JsonConvert.SerializeObject(objectToSave, Formatting.Indented, serializerSettings);
+            string? serializedDict = JsonSerializer.Serialize(objectToSave, serializerSettings);
             await File.WriteAllTextAsync(path, serializedDict);
             LogInfo("Saved!", true);
         }
@@ -43,7 +42,7 @@ namespace CaretakerNET
             var jsonFileStr = await File.ReadAllTextAsync(path);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
                 try {
-                    var deserializedDict = JsonConvert.DeserializeObject<T>(jsonFileStr, serializerSettings);
+                    var deserializedDict = JsonSerializer.Deserialize<T>(jsonFileStr, serializerSettings);
                     if (deserializedDict != null) {
                         // LogTemp("deserializedDict : " + deserializedDict);
                         LogInfo("Loaded!", true);
@@ -66,7 +65,8 @@ namespace CaretakerNET
         public class ChainPersist()
         {
             [JsonIgnore] public ITextChannel? Channel;
-            [JsonProperty] internal ulong ChannelId;
+            // [JsonProperty] internal ulong ChannelId;
+            internal ulong ChannelId;
             public string? Current;
             public int ChainLength;
             public string? PrevChain;
@@ -84,8 +84,10 @@ namespace CaretakerNET
         {
             [JsonIgnore] private ITextChannel? convoChannel = null;
             [JsonIgnore] private ITextChannel? replyChannel = null;
-            [JsonProperty] internal ulong? convoChannelId;
-            [JsonProperty] internal ulong? replyChannelId;
+            // [JsonProperty] internal ulong? convoChannelId;
+            // [JsonProperty] internal ulong? replyChannelId;
+            internal ulong? convoChannelId;
+            internal ulong? replyChannelId;
             [JsonIgnore] internal ITextChannel? ConvoChannel { get => convoChannel; set {
                 convoChannel = value;
                 convoChannelId = value?.Id;
@@ -114,8 +116,10 @@ namespace CaretakerNET
             }
             [JsonIgnore] internal ITextChannel? channel = channel;
             [JsonIgnore] internal IUserMessage? lastCountMsg = lastCountMsg;
-            [JsonProperty] internal ulong? channelId;
-            [JsonProperty] internal ulong? lastCountMsgChannelId, lastCountMsgId;
+            // [JsonProperty] internal ulong? channelId;
+            // [JsonProperty] internal ulong? lastCountMsgChannelId, lastCountMsgId;
+            internal ulong? channelId;
+            internal ulong? lastCountMsgChannelId, lastCountMsgId;
             [JsonIgnore] public ITextChannel? Channel { get => channel; set {
                 channel = value;
                 channelId = value?.Id;

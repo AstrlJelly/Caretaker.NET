@@ -2,13 +2,16 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using System.Text;
+using System.Text.Json.Serialization;
 
-using CaretakerNET.Core;
+
 
 namespace CaretakerNET.Games
 {
-    // // weird. but it works... maybe?
+    // weird. but it works... maybe?
     // [JsonDerivedType(typeof(BoardGame), typeDiscriminator: "BoardGame")]
+    [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "ConnectFour")]
+    [JsonDerivedType(typeof(Checkers), typeDiscriminator: "Checkers")]
     public abstract class BoardGame
     {
         public enum Player : int
@@ -20,11 +23,12 @@ namespace CaretakerNET.Games
 
         public ulong PlayingChannelId;
         // internal ulong[]? allPlayers;
-        public List<ulong>? Players { get; internal set; }
+        public List<ulong> Players { get; internal set; } = [];
+        
+        // public int PlayerTurns { get; internal set; } = 0;
         public int Turns { get; internal set; } = 0;
         public ulong ForfeitPlayer { get; internal set; }
         public int EndAt { get; internal set; } = int.MaxValue;
-        public const int FORFEIT_TURNS = 3;
 
         public void SwitchPlayers()
         {
@@ -48,9 +52,24 @@ namespace CaretakerNET.Games
             return Player.None;
         }
 
+        public ulong OtherPlayerId()
+        {
+            return Players[Turns % 2];
+        }
+
+        public (ulong, ulong) GetPlayerIds(ulong sentId)
+        {
+            if (Turns == 0) {
+                int which = sentId == Players[1] ? 0 : 1;
+                return (sentId, Players[which]);
+            } else {
+                return (Players[(Turns) % 2], Players[(Turns + 1) % 2]);
+            }
+        }
+
         public bool IsAnyPlayer(ulong id)
         {
-            return Players?.Contains(id) ?? false;
+            return Players.Contains(id);
         }
 
         public bool IsCurrentPlayer(Player player)

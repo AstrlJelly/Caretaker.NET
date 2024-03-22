@@ -376,12 +376,10 @@ namespace CaretakerNET
                             BoardGame? game = s.CurrentGame;
                             if (game == null || game.Players == null) return null;
 
-                            ulong playerId = msg.Author.Id;
-                            BoardGame.Player player = game.GetWhichPlayer(msg.Author.Id);
+                            (ulong playerId, ulong otherPlayerId) = game.GetPlayerIds(msg.Author.Id);
+                            BoardGame.Player player = game.GetWhichPlayer(playerId);
                             if (player == BoardGame.Player.None) return null;
 
-                            ulong otherPlayerId = game.Players[player == BoardGame.Player.Two ? 0 : 1];
-                            BoardGame.Player otherPlayer = game.GetWhichPlayer(otherPlayerId);
                             (string move, string columnStr) = msg.Content.SplitByFirstChar(' ');
                             move = move.ToLower();
                             if (move is "forfeit") {
@@ -390,8 +388,8 @@ namespace CaretakerNET
                             // forfeit stuff
                             string forfeit = "";
                             if (game.Turns >= game.EndAt) {
-                                forfeit = $"wowwww looks like {UserPingFromID(game.ForfeitPlayer)} gives up... and {UserPingFromID(game.ForfeitPlayer == playerId ? otherPlayerId : playerId)}";
-                            } else if (game.EndAt < int.MaxValue) {
+                                forfeit = $"wowwww looks like {UserPingFromID(game.ForfeitPlayer)} gives up... and {UserPingFromID(game.ForfeitPlayer == playerId ? otherPlayerId : playerId)} wins!";
+                            } else if (game.EndAt < int.MaxValue && game.EndAt > game.EndAt - game.Turns) {
                                 forfeit = $" ({(game.EndAt - game.Turns)} turns left.)";
                             }
 
@@ -406,30 +404,31 @@ namespace CaretakerNET
                                     switch (move.ToLower())
                                     {
                                         case "go": {
-                                            if (!game.IsCurrentPlayer(player)) return null;
+                                            if (playerId != msg.Author.Id) return null;
                                             int column = int.Parse(columnStr[0].ToString()) - 1;
                                             if (!c4.AddToColumn(column, player)) {
                                                 return ("❌", "");
                                             }
                                             c4.SwitchPlayers();
-                                            var win = c4.WinCheck(player);
-                                            string board = c4.DisplayBoard(win);
-                                            if (!win.Tie) {
-                                                if (win.WinningPlayer == BoardGame.Player.None) {
-                                                    board += $"{c4.GetEmoji(game.GetWhichPlayer(otherPlayerId))}{UserPingFromID(otherPlayerId)}, it's your turn!" + forfeit;
-                                                } else {
-                                                    board += $"{c4.GetEmoji(player)}{UserPingFromID(msg.Author.Id)} won!";
-                                                    s.CurrentGame = null;
-                                                }
-                                            } else {
+                                            // var win = c4.WinCheck(player);
+                                            string board = c4.DisplayBoard(out var win);
+                                            if (win.Tie) {
                                                 board += $"it's a tie...";
                                                 s.CurrentGame = null;
+                                            } else {
+                                                if (win.WinningPlayer == BoardGame.Player.None) {
+                                                    // if (!string.IsNullOrEmpty(forfeit)) board += forfeit;
+                                                    board += $"{c4.GetEmoji(otherPlayerId)}{UserPingFromID(otherPlayerId)}, it's your turn!" + forfeit;
+                                                } else {
+                                                    board += $"{c4.GetEmoji(player)}{UserPingFromID(playerId)} won!";
+                                                    s.CurrentGame = null;
+                                                }
                                             }
-                                            if (!string.IsNullOrEmpty(forfeit)) board += forfeit;
+                                            // if (!string.IsNullOrEmpty(forfeit)) board += forfeit;
                                             return ("✅", board);
                                         }
                                         case "refresh": {
-                                            return ("✅", c4.DisplayBoard() + $"here you go :) it's {c4.GetEmoji(player)}{UserPingFromID(msg.Author.Id)}'s turn right now");
+                                            return ("✅", c4.DisplayBoard() + $"here you go :) it's {c4.GetEmoji(player)}{UserPingFromID(playerId)}'s turn right now");
                                         }
                                         default: return null;
                                     }
