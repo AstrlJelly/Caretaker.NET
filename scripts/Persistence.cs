@@ -182,13 +182,23 @@ namespace CaretakerNET
     {
         public class Item(string name, string desc, float price)
         {
-            public string name = name;
-            public string desc = desc;
-            public float price = price;
+            public string Name = name;
+            public string Desc = desc;
+            public float Price = price;
         }
 
-        public List<Item> inventory = [];
-        public long timeout = 0;
+        public List<Item> Inventory = [];
+        public long Timeout = 0;
+        // the name of the game won or lost
+        public List<string> Wins = [];
+        public List<string> Losses = [];
+
+        public void AddWin(Type whichGame) => Wins.Add(whichGame.ToString());
+        public void AddLoss(Type whichGame) => Losses.Add(whichGame.ToString());
+        public float WinLossRatio()
+        {
+            return Wins.Count / Losses.Count;
+        }
     }
 }
 

@@ -12,6 +12,7 @@ using Discord.Webhook;
 using CaretakerNET.Games;
 using CaretakerNET.Commands;
 using CaretakerNET.ExternalEmojis;
+
 using org.mariuszgromada.math.mxparser;
 
 namespace CaretakerNET
@@ -26,8 +27,8 @@ namespace CaretakerNET
 
         public readonly DiscordSocketClient Client;
         public ITextChannel? TalkingChannel;
-        private Dictionary<ulong, GuildPersist> GuildData = [];
-        private Dictionary<ulong, UserPersist> UserData = [];
+        public Dictionary<ulong, GuildPersist> GuildData { get; private set; } = [];
+        public Dictionary<ulong, UserPersist> UserData { get; private set; } = [];
 
         public readonly long StartTime;
         public bool DebugMode = false;
@@ -44,12 +45,13 @@ namespace CaretakerNET
 
         private MainHook()
         {
-            Client = new DiscordSocketClient(new DiscordSocketConfig
-            {
-                GatewayIntents = GatewayIntents.All,
-                LogLevel = LogSeverity.Info,
-                MessageCacheSize = 50,
-            });
+            Client = new DiscordSocketClient(
+                new DiscordSocketConfig {
+                    GatewayIntents = GatewayIntents.All,
+                    LogLevel = LogSeverity.Info,
+                    MessageCacheSize = 50,
+                }
+            );
 
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
@@ -249,6 +251,8 @@ namespace CaretakerNET
             // also make sure it's not a bot/not banned
             if (msg.Author.IsBot) return;
 
+            var u = GetUserData(msg);
+
             if (msg.Content.StartsWith(PREFIX)) {
                 bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
                 bool testing = TestingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
@@ -266,12 +270,11 @@ namespace CaretakerNET
                     return;
                 }
 
-                var u = GetUserData(msg);
-                if (u.timeout > DateNow()) {
-                    LogDebug("timeout : " + u.timeout);
+                if (u.Timeout > DateNow()) {
+                    LogDebug("timeout : " + u.Timeout);
                     LogDebug("DateNow() : " + DateNow());
                     await msg.ReactAsync("🕒");
-                    u.timeout += 1000;
+                    u.Timeout += 1000;
                     return;
                 }
 
@@ -280,12 +283,12 @@ namespace CaretakerNET
                     Stopwatch sw = new();
                     sw.Start();
                     await CommandHandler.DoCommand(msg, com, parameters);
-                    u.timeout = DateNow() + com.Timeout;
+                    u.Timeout = DateNow() + com.Timeout;
                     sw.Stop();
                     LogDebug($"parsing {PREFIX}{command} command took {sw.ElapsedMilliseconds} ms");
                 } catch (Exception error) {
-                    LogError(error);
                     await msg.Reply(error.Message, false);
+                    LogError(error);
                 }
                 // typing.Dispose();
             } else {
@@ -374,7 +377,7 @@ namespace CaretakerNET
                         // board game stuff
                         () => {
                             BoardGame? game = s.CurrentGame;
-                            if (game == null || game.Players == null) return null;
+                            if (game == null || game.Players == null || cId != game.PlayingChannelId) return null;
 
                             (ulong playerId, ulong otherPlayerId) = game.GetPlayerIds(msg.Author.Id);
                             BoardGame.Player player = game.GetWhichPlayer(playerId);
@@ -420,6 +423,8 @@ namespace CaretakerNET
                                                     // if (!string.IsNullOrEmpty(forfeit)) board += forfeit;
                                                     board += $"{c4.GetEmoji(otherPlayerId)}{UserPingFromID(otherPlayerId)}, it's your turn!" + forfeit;
                                                 } else {
+                                                    u.AddWin(typeof(ConnectFour));
+                                                    GetUserData(otherPlayerId).AddLoss(typeof(ConnectFour));
                                                     board += $"{c4.GetEmoji(player)}{UserPingFromID(playerId)} won!";
                                                     s.CurrentGame = null;
                                                 }

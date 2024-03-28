@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 
 using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 
 namespace CaretakerNET.Core
@@ -237,7 +238,7 @@ namespace CaretakerNET.Core
         public static async Task OverwriteMessage(this IUserMessage msg, string newMsg)
         {
             var prevContent = msg.Content;
-            await msg.ModifyAsync(x => x.Content = prevContent + "\n" + newMsg);
+            await msg.ModifyAsync(x => x.Content = $"*{prevContent}*\n{newMsg}");
         }
 
         public static long TimeCreated(this IUserMessage msg)
@@ -275,6 +276,25 @@ namespace CaretakerNET.Core
         private static ulong? IDFromReference(string reference)
         {
             return reference.Length > 0 && reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
+        }
+
+        /// <summary>
+        /// Gets the first vanity invite from a guild. <br/>
+        /// Tries to get an unlimited invite first.
+        /// </summary>
+        /// <param name="guild">The guild to find an invite in.</param>
+        /// <returns>
+        /// RestInviteMetadata if invite is found, otherwise null. <br/> 
+        /// The invite will be the longest available, if unlimited invite isn't found.
+        /// </returns>
+        public static async Task<RestInviteMetadata?> GetBestInvite(this SocketGuild guild)
+        {
+            // await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID)
+            var tempInvites = await guild.GetInvitesAsync();
+            if (tempInvites.Count <= 0) return null;
+            var invites = tempInvites.OrderBy(i => i.ExpiresAt?.ToUnixTimeMilliseconds());
+            var firstInvite = invites.ElementAt(0);
+            return firstInvite.ExpiresAt == null ? firstInvite : invites.Last();
         }
 
         /// <summary>
@@ -351,10 +371,9 @@ namespace CaretakerNET.Core
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
         public static string UserPingFromID(ulong id) => $"<@{id}>";
 
-
         public static void SubscribeToReactions()
         {
-            
+
         }
         #endregion
 

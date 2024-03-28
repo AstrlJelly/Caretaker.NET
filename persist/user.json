@@ -1,22 +1,184 @@
 {
   "752589264398712834": {
-    "inventory": [],
-    "timeout": 1711113572095
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
   },
   "438296397452935169": {
-    "inventory": [],
-    "timeout": 1711129296354
+    "Inventory": [],
+    "Timeout": 1711466665096,
+    "Wins": [
+      "ConnectFour"
+    ],
+    "Losses": []
   },
   "476021507420586014": {
-    "inventory": [],
-    "timeout": 1711127818329
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
   },
   "391459218034786304": {
-    "inventory": [],
-    "timeout": 1711128466988
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
   },
   "705120334705197076": {
-    "inventory": [],
-    "timeout": 1711127894521
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "355135135349473282": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "490899776724926471": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "799722471027900437": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "468933965110312980": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "686222324860715014": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "899484883347472416": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "944461715909795841": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "669358478602797076": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "339066907242004481": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "521819907331981324": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "339521745692131331": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "397628759626350592": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "896469677193191436": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "412110038358818828": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "492158012060860417": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "755575254985736222": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "411496909505560578": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "943631226756010026": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "821496070407323668": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "298939166060838912": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "791331823123955752": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "951239749417451520": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "854449129467805761": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "725029603164553227": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "736278761401745449": {
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
   }
 }

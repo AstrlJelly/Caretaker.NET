@@ -33,7 +33,6 @@ namespace CaretakerNET.Commands
         public HashSet<ChannelPermission> LimitedToPerms;
         public HashSet<ulong> LimitedToIds;
         public int Timeout;
-        public int CurrentTimeout = 0;
 
         public Command(string name, string desc, string genre, RunAsync? func = null, List<Param>? parameters = null, HashSet<ChannelPermission>? limitedToPerms = null, HashSet<ulong>? limitedToIds = null, int timeout = 500)
         {

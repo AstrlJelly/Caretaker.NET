@@ -93,34 +93,32 @@ namespace CaretakerNET.Commands
                     new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
                 );
                 // using (var client = new ScpClient(connectionInfo))
-                using (var client = new SftpClient(connectionInfo))
-                {
-                    await msg.ReactAsync("✅");
-                    try {
-                        client.Connect();
-                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
-                        var files = client.ListDirectory(remoteDirectory);
-                        if (files == null) {
-                            LogError("\"files\" was null.");
-                            _ = msg.RemoveAllReactionsAsync();
-                            _ = msg.ReactAsync("❌");
-                            return;
-                        }
-                        var randomFile = files.GetRandom()!;
-                        string path = randomFile.FullName.SplitByLastChar('/').Item1 + fileName;
-                        // Log(path);
-                        Stream newFile = File.Create(path);
-                        client.DownloadFile(randomFile.FullName, newFile, async id => {
-                            newFile.Dispose();
-                            await msg.Channel.SendFileAsync(path, messageReference: msg.Reference);
-                            File.Delete(path);
-                        });
-                    } catch (Exception err) {
+                using var client = new SftpClient(connectionInfo);
+                await msg.ReactAsync("✅");
+                try {
+                    client.Connect();
+                    const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
+                    var files = client.ListDirectory(remoteDirectory);
+                    if (files == null) {
+                        LogError("\"files\" was null.");
                         _ = msg.RemoveAllReactionsAsync();
                         _ = msg.ReactAsync("❌");
-                        LogError(err);
-                        throw;
+                        return;
                     }
+                    var randomFile = files.GetRandom()!;
+                    string path = randomFile.FullName.SplitByLastChar('/').Item1 + fileName;
+                    // Log(path);
+                    Stream newFile = File.Create(path);
+                    client.DownloadFile(randomFile.FullName, newFile, async id => {
+                        newFile.Dispose();
+                        await msg.Channel.SendFileAsync(path, messageReference: msg.Reference);
+                        File.Delete(path);
+                    });
+                } catch (Exception err) {
+                    _ = msg.RemoveAllReactionsAsync();
+                    _ = msg.ReactAsync("❌");
+                    LogError(err);
+                    throw;
                 }
             }, [new Param("fileName", "what the file will be renamed to", "")]),
 
@@ -130,27 +128,25 @@ namespace CaretakerNET.Commands
                     new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
                 );
                 // using (var client = new ScpClient(connectionInfo))
-                using (var client = new SftpClient(connectionInfo))
-                {
-                    await msg.ReactAsync("✅");
-                    try {
-                        client.Connect();
-                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
-                        var files = client.ListDirectory(remoteDirectory);
-                        if (files == null) {
-                            await msg.ReactAsync("❌");
-                            return;
-                        }
-                        var randomFile = files.GetRandom()!;
-                        Stream newFile = File.OpenRead(randomFile.Name);
-                        client.DownloadFile(randomFile.FullName, newFile);
-                        await msg.Reply(files.Count());
-                        await msg.Channel.SendFileAsync(randomFile.Name);
-                    } catch (Exception err) {
+                using var client = new SftpClient(connectionInfo);
+                await msg.ReactAsync("✅");
+                try {
+                    client.Connect();
+                    const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
+                    var files = client.ListDirectory(remoteDirectory);
+                    if (files == null) {
                         await msg.ReactAsync("❌");
-                        LogError(err);
-                        throw;
+                        return;
                     }
+                    var randomFile = files.GetRandom()!;
+                    Stream newFile = File.OpenRead(randomFile.Name);
+                    client.DownloadFile(randomFile.FullName, newFile);
+                    await msg.Reply(files.Count());
+                    await msg.Channel.SendFileAsync(randomFile.Name);
+                } catch (Exception err) {
+                    await msg.ReactAsync("❌");
+                    LogError(err);
+                    throw;
                 }
             }, [new Param("fileName", "what the file will be renamed to", "")]),
 
@@ -206,11 +202,12 @@ namespace CaretakerNET.Commands
                                 if (cFourChance > 60) {
                                     s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, ruId);
                                 } else if (checkersChance > 60) {
+                                    s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
                                     await msg.Reply("not implemented yet! soon tho");
                                 } else if (unoChance > 60) {
                                     await msg.Reply("not implemented yet! soon tho");
                                 } else {
-                                    _ = msg.Reply("okay this error should literally never happen. " + UserPingFromID(ASTRL_ID));
+                                    _ = msg.Reply("okay this error should literally never happen. " + UserPingFromID(ASTRL_ID), true);
                                 }
                                 await challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(ruId)}, begin!");
                                 DestroySelf();
@@ -223,19 +220,11 @@ namespace CaretakerNET.Commands
                         }
                     }
                 }
-                try
-                {
-                    MainHook.instance.Client.ReactionAdded += ReactionCheck;
-                }
-                catch (System.Exception err)
-                {
-                    LogError(err);
-                    throw;
-                }
-                
+                MainHook.instance.Client.ReactionAdded += ReactionCheck;
 
                 void DestroySelf()
                 {
+                    if (destroyed) return;
                     destroyed = true;
                     MainHook.instance.Client.ReactionAdded -= ReactionCheck;
                 }
@@ -255,10 +244,34 @@ namespace CaretakerNET.Commands
                     }
                     await Task.Delay(1000);
                 }
-                MainHook.instance.Client.ReactionAdded -= ReactionCheck;
+                DestroySelf();
             }, [
                 new Param("victim", "the username/display name of the person you'd like to challenge", "anyone", Param.ParamType.User),
                 new Param("game", "which game would you like to challenge with?", "connect4"),
+            ]),
+
+            new("leaderboard", "see the top ranking individuals on this bot", "games", async (msg, p) => {
+                (int amount, bool loserboard) = (p["amount"], p["loserboard"]);
+                var topUsers = MainHook.instance.UserData.OrderByDescending((x) => !loserboard ? x.Value.Wins.Count : x.Value.Losses.Count).Take(amount);
+                StringBuilder desc = new();
+                int i = 0;
+                foreach ((ulong id, var u) in topUsers)
+                {
+                    desc.Append(i + 1);
+                    desc.Append(". ");
+                    desc.Append(UserPingFromID(id));
+                    desc.Append(" - ");
+                    desc.AppendLine((!loserboard ? u.Wins.Count : u.Losses.Count).ToString());
+                    i++;
+                }
+                var leaderboard = new EmbedBuilder {
+                    Title = !loserboard ? "Leaderboard" : "Loserboard",
+                    Description = desc.ToString(),
+                };
+                await msg.ReplyAsync(embed: leaderboard.Build());
+            }, [
+                new Param("loserboard", "get the people who have LOST the most instead", false),
+                new Param("amount", "the amount of people to grab for the leaderboard", 10),
             ]),
 
             new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
@@ -271,7 +284,7 @@ namespace CaretakerNET.Commands
                             "that's... a bot.", 
                             "i don't think they'll even know you said hi", 
                             "bots. aren't. people.", 
-                            "i can't reach that person right now :( maybe just send them a normal hello \n(or DON'T because they're a BOT??)"
+                            "i can't reach that person right now :( maybe just send them a normal hello\n(or DON'T because they're a BOT??)"
                         ]);
                     } else if (user.Id == msg.Author.Id) {
                         await msg.RandomReply([
@@ -282,8 +295,6 @@ namespace CaretakerNET.Commands
                             "why r u like this",
                         ]);
                     } else {
-                        // var msgGuild = msg.GetGuild();
-                        // string from = msgGuild != null ? " from " + msgGuild.Name : "";
                         string name = string.IsNullOrEmpty(msg.Author.GlobalName) ? msg.Author.Username : $"{msg.Author.GlobalName} ({msg.Author.Username})";
                         string from = !IsNull(msg.GetGuild(), out var msgGuild) ? " from " + msgGuild!.Name : "";
                         _ = msg.ReactAsync("✅");
@@ -298,15 +309,15 @@ namespace CaretakerNET.Commands
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
                 var guild = msg.GetGuild(); // remember, returns null in dms
-                // this will always get an infinite invite! very cool
-                var invite = (await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID).GetInvitesAsync())?.FirstOrDefault(x => x.ExpiresAt == null);
+                var invite = await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID).GetBestInvite();
                 if (invite == null && guild?.Id != CARETAKER_CENTRAL_ID) { // handle no invite being found but only if you need it
                     _ = msg.Reply("okay so apparently there's no invite for the caretaker central server. oops");
                     return;
                 }
                 switch (guild?.Id)
                 {
-                    case CARETAKER_CENTRAL_ID: { // caretaker server
+                    // caretaker server
+                    case CARETAKER_CENTRAL_ID: {
                         IGuildUser user = (IGuildUser)msg.Author;
                         var role = guild.Roles.FirstOrDefault(x => x.Name == "Playtester");
                         if (user.RoleIds.Any(x => x == role?.Id)) {
@@ -320,13 +331,15 @@ namespace CaretakerNET.Commands
                             _ = msg.Reply("thanks :3");
                         }
                     } break;
-                    case null: { // dms
+                    // dms
+                    case null: {
                         _ = msg.Channel.SendMessageAsync("ermm " + invite!.Url);
                     } break;
-                    default: { // any other server
-                        _ = msg.AddReactionAsync(ParsedEmojis.Smide);
+                    // any other server
+                    default: {
+                        _ = msg.ReactAsync(Emojis.Smide);
                         _ = msg.Reply("Check your dms.");
-                        _ = msg.Author.SendMessageAsync("here's where you can ACTUALLY use that command! :3\n" + invite!.Url);
+                        _ = msg.Author.SendMessageAsync("here's where you can ACTUALLY use that command! :D\n" + invite!.Url);
                     } break;
                 }
             }),
@@ -401,7 +414,7 @@ namespace CaretakerNET.Commands
             }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", Param.ParamType.Guild) ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
-                await Task.Delay(p["delay"]);
+                await Task.Delay((int)p["delay"]);
                 MainHook.instance.Stop();
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
@@ -507,14 +520,16 @@ namespace CaretakerNET.Commands
             stopwatch.Stop();
             LogDebug($"took {stopwatch.Elapsed.TotalMilliseconds} ms to parse parameters", true);
             
-            try {
-                await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
-                return true;
-            } catch (Exception err) {
-                LogError(err);
-                await msg.Reply(err.Message, false);
-                return false;
-            }
+            await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
+            return true;
+            // try {
+            //     await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
+            //     return true;
+            // } catch (Exception err) {
+            //     LogError(err);
+            //     await msg.Reply(err.Message, false);
+            //     return false;
+            // }
         }
 
         public static string ListCommands(string singleCom, bool listParams, bool cmd = false, bool showHidden = false)
