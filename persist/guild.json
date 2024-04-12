@@ -1,6 +1,8 @@
 {
   "1091542281242279979": {
-    "guildId": 1091542281242279979,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -18,7 +20,69 @@
     "CurrentGame": null
   },
   "887502008876167209": {
-    "guildId": 887502008876167209,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1191816507374715023": {
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1179439549865271367": {
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1077367474447716352": {
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -37,10 +101,18 @@
       "$type": "ConnectFour",
       "board": [
         [
+          2,
+          2,
+          2,
+          1,
           0,
-          0,
-          0,
-          0,
+          0
+        ],
+        [
+          1,
+          2,
+          1,
+          2,
           0,
           0
         ],
@@ -51,43 +123,35 @@
           0,
           0,
           0
+        ],
+        [
+          1,
+          2,
+          1,
+          1,
+          2,
+          2
         ],
         [
           2,
           1,
+          1,
+          2,
           0,
+          0
+        ],
+        [
+          1,
+          1,
+          2,
           0,
           0,
           0
         ],
         [
           1,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
+          2,
+          1,
           0,
           0,
           0
@@ -95,70 +159,18 @@
       ],
       "Players": [
         438296397452935169,
-        752589264398712834
+        521819907331981324
       ],
-      "Turns": 0,
+      "Turns": 24,
       "ForfeitPlayer": 0,
       "EndAt": 2147483647,
-      "PlayingChannelId": 887502008876167212
+      "PlayingChannelId": 1077385447870844971
     }
   },
-  "1191816507374715023": {
-    "guildId": 1191816507374715023,
-    "count": {
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {},
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "1179439549865271367": {
-    "guildId": 1179439549865271367,
-    "count": {
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {},
-    "slowModes": {},
-    "CurrentGame": null
-  },
-  "1077367474447716352": {
-    "guildId": 1077367474447716352,
-    "count": {
-      "Current": 0,
-      "PrevNumber": 0,
-      "HighestNum": 0
-    },
-    "chain": {
-      "Current": null,
-      "ChainLength": 0,
-      "PrevChain": null,
-      "LastChainer": 0,
-      "AutoChain": 0
-    },
-    "convo": {},
-    "slowModes": {},
-    "CurrentGame": null
-  },
   "1186486803608375346": {
-    "guildId": 1186486803608375346,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -176,7 +188,9 @@
     "CurrentGame": null
   },
   "1171209093269180529": {
-    "guildId": 1171209093269180529,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -194,7 +208,9 @@
     "CurrentGame": null
   },
   "1114601958095986738": {
-    "guildId": 1114601958095986738,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -212,7 +228,9 @@
     "CurrentGame": null
   },
   "544735840178536458": {
-    "guildId": 544735840178536458,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -230,7 +248,9 @@
     "CurrentGame": null
   },
   "1113913617608355992": {
-    "guildId": 1113913617608355992,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -248,7 +268,9 @@
     "CurrentGame": null
   },
   "1218330896407462079": {
-    "guildId": 1218330896407462079,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,
@@ -266,7 +288,29 @@
     "CurrentGame": null
   },
   "1145223256056537181": {
-    "guildId": 1145223256056537181,
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1216253612464799786": {
+    "GuildId": 0,
+    "GuildName": "",
+    "Prefix": "\u003E",
     "count": {
       "Current": 0,
       "PrevNumber": 0,

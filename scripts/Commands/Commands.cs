@@ -16,8 +16,8 @@ using FuzzySharp;
 
 namespace CaretakerNET.Commands
 {
-    public static class CommandHandler
-    {
+    public static class Commands
+    {/*
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("prefix", "set the prefix for the current guild", "commands", async (msg, p) => {
@@ -38,13 +38,6 @@ namespace CaretakerNET.Commands
                     );
                     return;
                 }
-                List<Embed> commandEmbeds = commandLists.Select(genreAndCom => {
-                    (string genre, string com) = genreAndCom;
-                    return (new EmbedBuilder {
-                        Title = genre,
-                        Description = com
-                    }).Build();
-                }).ToList();
             }, [ 
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
                 new Param("listParams", "list parameters?", false)
@@ -283,7 +276,7 @@ namespace CaretakerNET.Commands
                     desc.AppendLine(count.ToString());
                     i++;
                 }
-                EmbedBuilder leaderboard = new() {
+                var leaderboard = new EmbedBuilder {
                     Title = !loserboard ? "Leaderboard" : "Loserboard",
                     Description = desc.ToString(),
                 };
@@ -371,13 +364,12 @@ namespace CaretakerNET.Commands
             }),
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            new("cmd", "run more internal commands, will probably just be limited to astrl", "caretaker"),
+            new("cmd", "run more internal commands, will probably just be limited to astrl", "internal"),
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             new("help", "list all cmd commands", "commands", async (msg, p) => {
-                // string reply = ListCommands(msg, p["command"] ?? "", p["listParams"], true);
-                // await msg.Reply(reply, false);
-                await msg.Reply("implementing this later", false);
+                string reply = ListCommands(msg, p["command"] ?? "", p["listParams"], true);
+                await msg.Reply(reply, false);
             }, [
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
                 new Param("listParams", "list parameters?", false)
@@ -589,7 +581,7 @@ namespace CaretakerNET.Commands
             StringBuilder tempCommandList = new();
 
             // StringBuilder response = new();
-            // string[] commandKeys = singleCom != "" ? [ singleCom ] : [ ..commandDict.Keys ];
+            string[] commandKeys = singleCom != "" ? [ singleCom ] : [ ..commandDict.Keys ];
             Dictionary<string, List<Command>> comsSortedByGenre = [];
             foreach (Command command in commandDict.Values)
             {
@@ -604,16 +596,13 @@ namespace CaretakerNET.Commands
             List<(string, string)> listedCommands = [];
             foreach ((string key, List<Command> coms) in comsSortedByGenre)
             {
-                tempCommandList.Clear();
                 for (int i = 0; i < coms.Count; i++)
                 {
-                    var com = coms[i];
-                    if ((coms.IsIndexValid(i - 1) && coms[i - 1].Name == com.Name) || 
-                        (com.Genre == "hidden" && !showHidden))
-                    {
+                    var com = commandDict[commandKeys[i]];
+                    if ((commandKeys.IsIndexValid(i - 1) && commandDict[commandKeys[i - 1]].Name == com.Name) || 
+                        (com.Genre == "hidden" && !showHidden)) {
                         continue;
                     }
-
                     tempCommandList.Append(prefix);
                     tempCommandList.Append(com.Name);
                     if (com.Params != null && !listParams) {
@@ -640,7 +629,7 @@ namespace CaretakerNET.Commands
             }
             sw.Stop();
             LogDebug($"ListCommands() took {sw.ElapsedMilliseconds} milliseconds to complete");
-            return listedCommands.Count > 0 ? [.. listedCommands] : null;
+            return listedCommands.Count > 0 ? listedCommands.ToArray() : null;
         }
 
         // currently an instance isn't needed; try avoiding one?
@@ -659,6 +648,6 @@ namespace CaretakerNET.Commands
                     whichComms = CmdCommands;
                 }
             }
-        }
+        }*/
     }
 }

@@ -13,11 +13,12 @@ namespace CaretakerNET.Commands
         /// <param name="params">parsed params in a dictionary.</param>
         /// <param name="unparams">unparsed params; the strings that get parsed to the params dictionary.</param>
         /// <param name="unparamsParams">the "params" input, which is always an array.</param>
-        public class ParsedParams(Dictionary<string, dynamic> @params, Dictionary<string, string?> unparams, string[] unparamsParams)
+        public class ParsedParams(string command, Dictionary<string, dynamic?> @params, Dictionary<string, string?> unparams, string[] unparamsParams)
         {
-            public dynamic this[string key] => Params[key];
+            public dynamic? this[string key] => Params[key];
 
-            public readonly Dictionary<string, dynamic> Params = @params;
+            public readonly string Command = command;
+            public readonly Dictionary<string, dynamic?> Params = @params;
             public readonly Dictionary<string, string?> Unparams = unparams;
             public readonly string[] UnparamsParams = unparamsParams;
         }

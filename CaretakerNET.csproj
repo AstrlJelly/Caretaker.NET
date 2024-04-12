@@ -17,4 +17,13 @@
     <PackageReference Include="SSH.NET" Version="2024.0.0" />
   </ItemGroup>
 
+  <!-- <ItemGroup>
+    <None Include="shaders/*">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="textures/*">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup> -->
+
 </Project>

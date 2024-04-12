@@ -37,15 +37,13 @@ namespace CaretakerNET.Games
 
         public Player GetWhichPlayer(ulong playerId)
         {
-            if (/* allPlayers != null &&  */Players != null) {
-                if (playerId == Players[0]) {
+            if (Players != null) {
+                var pIndex = Players.FindIndex(x => x == playerId);
+                if (Turns == 0 && pIndex != 0) {
+                    Players.Reverse();
                     return Player.One;
-                } else if (playerId == Players[1]) {
-                    if (Turns == 0) {
-                        Players.Reverse();
-                        return Player.One;
-                    }
-                    return Player.Two;
+                } else {
+                    return (Player)(pIndex + 1);
                 }
             }
 
@@ -65,17 +63,6 @@ namespace CaretakerNET.Games
             } else {
                 return (Players[(Turns) % 2], Players[(Turns + 1) % 2]);
             }
-        }
-
-        public bool IsAnyPlayer(ulong id)
-        {
-            return Players.Contains(id);
-        }
-
-        public bool IsCurrentPlayer(Player player)
-        {
-            var whichPlayer = (Turns % 2) + 1;
-            return Turns == 0 || (int)player == whichPlayer;
         }
 
         public bool StartForfeit(ulong playerId)

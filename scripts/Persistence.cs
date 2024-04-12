@@ -10,12 +10,12 @@ using CaretakerNET.Games;
 
 namespace CaretakerNET
 {
-    public static class Persist
+    public static class Voorhees
     {
         private const string GUILD_PATH = "./persist/guild.json";
         private const string USER_PATH  = "./persist/user.json";
         private readonly static JsonSerializerOptions serializerSettings = 
-            new() {
+            new JsonSerializerOptions {
                 WriteIndented = true,
                 IncludeFields = true,
             };
@@ -26,6 +26,7 @@ namespace CaretakerNET
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
             LogInfo($"Start saving to {path}...", true);
+            if (!Directory.Exists("./persist")) Directory.CreateDirectory("./persist");
             string? serializedDict = JsonSerializer.Serialize(objectToSave, serializerSettings);
             await File.WriteAllTextAsync(path, serializedDict);
             LogInfo("Saved!", true);
@@ -38,6 +39,7 @@ namespace CaretakerNET
         private static async Task<T> Load<T>(string path) where T : new()
         {
             LogInfo($"Start loading from {path}...", true);
+            if (!Directory.Exists("./persist")) Directory.CreateDirectory("./persist");
             if (!File.Exists(path)) File.Create(path);
             var jsonFileStr = await File.ReadAllTextAsync(path);
             if (!string.IsNullOrEmpty(jsonFileStr)) {
@@ -152,18 +154,20 @@ namespace CaretakerNET
         // }
 
         // public Dictionary<string, dynamic> CommandData;
-        public ulong guildId = guildId;
+        public ulong GuildId = guildId;
+        public string GuildName = "";
+        public string Prefix = DEFAULT_PREFIX;
         public CountPersist count = new();
         public ChainPersist chain = new();
         public ConvoPersist convo = new();
-        // public List<SlowMode> slowModes = [];
         public Dictionary<ulong, int> slowModes = []; // channel id and timer
         // public ConnectFour? connectFour = null;
         public BoardGame? CurrentGame = null;
 
         public void Init(DiscordSocketClient client)
         {
-            var guild = client.GetGuild(guildId);
+            var guild = client.GetGuild(GuildId);
+            GuildName = guild.Name;
             count.Init(guild);
             chain.Init(guild);
             convo.Init(guild);
@@ -187,14 +191,15 @@ namespace CaretakerNET
             public float Price = price;
         }
 
+        public long Balance = 0;
         public List<Item> Inventory = [];
         public long Timeout = 0;
         // the name of the game won or lost
         public List<string> Wins = [];
         public List<string> Losses = [];
 
-        public void AddWin(Type whichGame) => Wins.Add(whichGame.ToString());
-        public void AddLoss(Type whichGame) => Losses.Add(whichGame.ToString());
+        public void AddWin(Type whichGame) => Wins.Add(whichGame.Name);
+        public void AddLoss(Type whichGame) => Losses.Add(whichGame.Name);
         public float WinLossRatio()
         {
             return Wins.Count / Losses.Count;
