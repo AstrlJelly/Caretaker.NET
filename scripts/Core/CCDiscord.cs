@@ -13,6 +13,13 @@ namespace CaretakerCore
 {
     public static class Discord
     {
+        private static DiscordSocketClient? client;
+
+        public static void Init(DiscordSocketClient c)
+        {
+            client = c;
+        }
+
         public static async Task<IUserMessage> Reply(this IUserMessage msg, object rp, bool ping = false)
         {
             string? reply = rp.ToString();
@@ -31,7 +38,7 @@ namespace CaretakerCore
             return await msg.ReplyAsync(embed: embed);
         }
 
-        public static async Task OverwriteMessage(this IUserMessage msg, string newMsg)
+        public static async Task OverwriteMessage(this IUserMessage msg, string newMsg = "")
         {
             var prevContent = msg.Content;
             await msg.ModifyAsync(x => x.Content = $"*{prevContent}*\n{newMsg}");
@@ -166,18 +173,41 @@ namespace CaretakerCore
         {
 
         }
+
+        public class ReactionSubscribe : IDisposable
+        {
+            private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> ReactionAdded;
+            public delegate Task<bool> OnReactionAdded(IUserMessage msg, SocketReaction react);
+            private readonly OnReactionAdded onReact;
+
+            public bool Destroyed = false;
+
+            // called when "using" is exited
+            public void Dispose()
+            {
+                if (Destroyed || client == null) return;
+                Destroyed = true;
+                client.ReactionAdded -= ReactionAdded;
+                GC.SuppressFinalize(this);
+            }
+
+            public ReactionSubscribe(OnReactionAdded onReact, IUserMessage msg)
+            {
+                this.onReact = onReact;
+                ReactionAdded = async (msgCache, chnlCache, reaction) => {
+                    if (Destroyed || msg.Id != msgCache.Value.Id) return;
+                    bool isLast = await onReact.Invoke(msgCache.Value, reaction);
+                    if (isLast) Dispose();
+                };
+                if (client == null) return;
+                client.ReactionAdded += ReactionAdded;
+            }
+
+            ~ReactionSubscribe()
+            {
+                Dispose();
+            }
+        }
     }
 
-    class ReactionSubscribe : IDisposable
-    {
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-        }
-
-        ~ReactionSubscribe()
-        {
-
-        }
-    }
 }

@@ -164,9 +164,10 @@ namespace CaretakerNET
         // public ConnectFour? connectFour = null;
         public BoardGame? CurrentGame = null;
 
-        public void Init(DiscordSocketClient client)
+        public void Init(DiscordSocketClient client, ulong guildId)
         {
-            var guild = client.GetGuild(GuildId);
+            GuildId = guildId;
+            var guild = client.GetGuild(guildId);
             GuildName = guild.Name;
             count.Init(guild);
             chain.Init(guild);
@@ -182,7 +183,7 @@ namespace CaretakerNET
         //     SlowModes = [];
         // }
     }
-    public class UserPersist()
+    public class UserPersist
     {
         public class Item(string name, string desc, float price)
         {
@@ -191,12 +192,21 @@ namespace CaretakerNET
             public float Price = price;
         }
 
-        public long Balance = 0;
+        public ulong UserId;
+        public string Username = "";
+        // null when starting. much easier to check and smarter than making another bool
+        public long? Balance = null;
         public List<Item> Inventory = [];
         public long Timeout = 0;
         // the name of the game won or lost
         public List<string> Wins = [];
         public List<string> Losses = [];
+
+        public void Init(DiscordSocketClient client, ulong userId)
+        {
+            UserId = userId;
+            Username = client.GetUser(userId)?.Username ?? "";
+        }
 
         public void AddWin(Type whichGame) => Wins.Add(whichGame.Name);
         public void AddLoss(Type whichGame) => Losses.Add(whichGame.Name);

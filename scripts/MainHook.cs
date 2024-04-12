@@ -15,6 +15,7 @@ using CaretakerNET.Commands;
 using CaretakerNET.ExternalEmojis;
 
 using org.mariuszgromada.math.mxparser;
+using CaretakerCore;
 
 namespace CaretakerNET
 {
@@ -76,6 +77,7 @@ namespace CaretakerNET
         private async Task MainAsync(string[] args)
         {
             CommandHandler.Init();
+            CaretakerCore.Discord.Init(Client);
             DebugMode = args.Contains("debug") || args.Contains("-d");
             TestingMode = args.Contains("testing") || args.Contains("-t");
 
@@ -149,7 +151,13 @@ namespace CaretakerNET
 
                 await Load();
 
-                SetActivity();
+                SaveLoop();
+                _ = Client.SetActivityAsync(new Game(
+                    ">playtest",
+                    ActivityType.Playing,
+                    ActivityProperties.None,
+                    "smiles a little bit :)"
+                ));
 
                 isReady = true;
             }
@@ -176,10 +184,24 @@ namespace CaretakerNET
                 } else {
                     GuildData.Remove(key);
                 }
-                if (!GuildData.TryGetValue(key, out GuildPersist? value) && value != null) {
-                    value.Init(Client);
-                }
+                GuildData[key].Init(Client, key);
             }
+            foreach (var key in UserData.Keys) {
+                if (key > 0) {
+                    if (UserData[key] == null) {
+                        UserData[key] = new();
+                    }
+                } else {
+                    UserData.Remove(key);
+                }
+                UserData[key].Init(Client, key);
+            }
+        }
+
+        private async void SaveLoop()
+        {
+            await Task.Delay(60000);
+            _ = Save();
         }
 
         public void CheckGuildData()
@@ -227,6 +249,7 @@ namespace CaretakerNET
         {
             if (!UserData.TryGetValue(id, out UserPersist? value)) {
                 value = new UserPersist();
+                value.Init(Client, id);
                 UserData.Add(id, value);
             }
             return value;
@@ -246,15 +269,15 @@ namespace CaretakerNET
         //     Discord_UpdatePresence(&discordPresence);
         // }
 
-        public void SetActivity()
-        {
-            Client.SetActivityAsync(new Game(
-                ">playtest",
-                ActivityType.Playing,
-                ActivityProperties.None,
-                "smiles a little bit :)"
-            ));
-        }
+        // public void SetActivity()
+        // {
+        //     Client.SetActivityAsync(new Game(
+        //         ">playtest",
+        //         ActivityType.Playing,
+        //         ActivityProperties.None,
+        //         "smiles a little bit :)"
+        //     ));
+        // }
 
         public async Task ButtonHandler(SocketMessageComponent component)
         {

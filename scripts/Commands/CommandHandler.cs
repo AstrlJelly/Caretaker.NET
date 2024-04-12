@@ -28,7 +28,7 @@ namespace CaretakerNET.Commands
                 new Param("prefix", $"the prefix to set to. if empty, resets to \"{DEFAULT_PREFIX}\"", "")
             ], [ ChannelPermission.ManageChannels ]),
 
-            new("help", "list all normal commands", "commands", async (msg, p) => {
+            new("help, listCommands", "list all normal commands", "commands", async (msg, p) => {
                 string command = p["command"] ?? "";
                 (string, string)[]? commandLists = ListCommands(msg, command, p["listParams"]);
                 if (commandLists == null) {
@@ -38,13 +38,64 @@ namespace CaretakerNET.Commands
                     );
                     return;
                 }
-                List<Embed> commandEmbeds = commandLists.Select(genreAndCom => {
+                if (commandLists.Length <= 0) {
+                    _ = msg.Reply("commandLists was empty!");
+                    return;
+                }
+
+                int currentEmbed = 0;
+                List<Embed> commandEmbeds = commandLists.Select((genreAndCom, index) => {
                     (string genre, string com) = genreAndCom;
                     return (new EmbedBuilder {
-                        Title = genre,
+                        Title = genre + $" ({index + 1} out of {commandLists.Length})",
                         Description = com
-                    }).Build();
+                    }).WithCurrentTimestamp().Build();
                 }).ToList();
+
+                var helpMsg = await msg.ReplyAsync(embed: commandEmbeds[0]);
+                Task.WaitAll(helpMsg.ReactAsync("⬅️"), helpMsg.ReactAsync("➡️"));
+
+                async Task<bool> ReactionCheck(IUserMessage message, SocketReaction reaction)
+                {
+                    IUser reactUser = reaction.User.Value;
+                    ulong ruId = reactUser.Id;
+                    if (message.Id != helpMsg.Id || ruId == CARETAKER_ID) {
+                        return false;
+                    }
+
+                    // if it's not the victim nor the caretaker (and it's not for anyone) remove the reaction
+                    if (ruId != msg.Author.Id) {
+                        _ = helpMsg.RemoveReactionAsync(reaction.Emote, reactUser);
+                        return false;
+                    }
+
+                    if (reaction.Emote.Name is "⬅️" or "➡️") {
+                        // go back or forward depending on reaction
+                        currentEmbed += ((reaction.Emote.Name is "⬅️" ? -1 : 1));
+                        currentEmbed = currentEmbed < 0 ? (commandEmbeds.Count - 1) : currentEmbed % commandEmbeds.Count;
+                        await helpMsg.ModifyAsync(m => m.Embed = commandEmbeds[currentEmbed]);
+                    }
+
+                    _ = helpMsg.RemoveReactionAsync(reaction.Emote, reactUser);
+
+                    return false;
+                }
+                
+                using var rs = new ReactionSubscribe(ReactionCheck, helpMsg);
+                    var stopwatch = new Stopwatch();
+                    stopwatch.Start();
+                    while (true)
+                    {
+                        if (rs.Destroyed) return; // end loop if already destroyed
+
+                        if (stopwatch.Elapsed.TotalSeconds >= 60) {
+                            _ = helpMsg.RemoveAllReactionsAsync();
+                            break;
+                        }
+                        await Task.Delay(1000);
+                    }
+                    stopwatch.Stop();
+                rs.Dispose();
             }, [ 
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
                 new Param("listParams", "list parameters?", false)
@@ -65,7 +116,40 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ], timeout: 4000),
 
-            new("math", "do math!", "silly", async (msg, p) => {
+            new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
+                IUser? user = p["user"];
+                if (user != null) {
+                    if (user.Id == CARETAKER_ID) {
+                        await msg.Reply("aw hii :3");
+                    } else if (user.IsBot) {
+                        await msg.RandomReply([
+                            "that's... a bot.", 
+                            "i don't think they'll even know you said hi", 
+                            "bots. aren't. people.", 
+                            "i can't reach that person right now :( maybe just send them a normal hello\n(or DON'T because they're a BOT??)"
+                        ]);
+                    } else if (user.Id == msg.Author.Id) {
+                        await msg.RandomReply([
+                            Emojis.Sab,
+                            ":(", 
+                            "you can just say hello to somebody else..!",
+                            "you MUST know other people here, right?",
+                            "why r u like this",
+                        ]);
+                    } else {
+                        string name = string.IsNullOrEmpty(msg.Author.GlobalName) ? msg.Author.Username : $"{msg.Author.GlobalName} ({msg.Author.Username})";
+                        string from = !IsNull(msg.GetGuild(), out var msgGuild) ? " from " + msgGuild!.Name : "";
+                        _ = msg.ReactAsync("✅");
+                        await user.SendMessageAsync(name + from + " says hi!");
+                    }
+                } else if (p.Unparams["user"] is "world" or "world!") { // the entire reason why Unparams exists
+                    await msg.Reply("Hello, world!");
+                } else {
+                    await msg.Reply($"i can't reach that person right now :( maybe just send them a normal hello");
+                }
+            }, [ new Param("user", "the username of the person you'd like to say hi to", CARETAKER_ID.ToString(), Param.ParamType.User) ]),
+
+            new("math, calc, calculator", "do math!", "silly", async (msg, p) => {
                 string? math = p["math"];
                 if (string.IsNullOrEmpty(math)) return;
                 string reply = math.Replace(" ", "");
@@ -170,7 +254,7 @@ namespace CaretakerNET.Commands
                 }
             }, [new Param("fileName", "what the file will be renamed to", "")]),
 
-            new("challenge", "challenge another user to a game", "games", async (msg, p) => {
+            new("challenge, game", "challenge another user to a game", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                 (string game, IUser? victim) = (p["game"] ?? "", (p["victim"] ?? msg.ReferencedMessage?.Author));
                 bool anyone = p.Unparams["victim"] is "any" or "anyone" or "<@&1219981878895968279>";
@@ -189,79 +273,74 @@ namespace CaretakerNET.Commands
                     _ = msg.Reply(thrown);
                     return;
                 }
-                int cFourChance =    Fuzz.WeightedRatio(game, "connect4");
+                int cFourChance    = Fuzz.WeightedRatio(game, "connect4");
                 int checkersChance = Fuzz.WeightedRatio(game, "checkers");
-                int unoChance =      Fuzz.WeightedRatio(game, "uno");
+                int unoChance      = Fuzz.WeightedRatio(game, "uno");
                 if ((new int[] {cFourChance, checkersChance, unoChance}).All(c => c <= 60)) { // if none of them are valid
                     await msg.Reply("that's not a game!");
                     return;
                 }
                 var challengeMsg = await msg.Reply($"{(victim != null ? UserPingFromID(victim.Id) : "anybody here")}, do you accept {UserPingFromID(msg.Author.Id)}'s challenge?");
-                bool destroyed = false;
                 Emoji? checkmark = Emoji.Parse("✅"); Emoji? crossmark = Emoji.Parse("❌");
                 _ = challengeMsg.AddReactionAsync(checkmark);
                 if (!anyone) _ = challengeMsg.AddReactionAsync(crossmark);
 
-                async Task ReactionCheck(Cacheable<IUserMessage, ulong> messageCache, Cacheable<IMessageChannel, ulong> channel, SocketReaction reaction)
+                async Task<bool> ReactionCheck(IUserMessage message, SocketReaction reaction)
                 {
-                    if (destroyed) return; // failsafe
-                    var message = messageCache.Value;
                     IUser reactUser = reaction.User.Value;
                     ulong ruId = reactUser.Id;
-                    if (message.Id == challengeMsg.Id && ruId != CARETAKER_ID) {
-                        // if it's not the victim nor the caretaker (and it's not for anyone) remove the reaction
-                        if (ruId != victim?.Id && !anyone) {
-                            _ = challengeMsg.RemoveReactionAsync(reaction.Emote, reactUser);
-                            return;
+                    if (message.Id == challengeMsg.Id || ruId == CARETAKER_ID) {
+                        return false;
+                    }
+
+                    // if it's not the victim nor the caretaker (and it's not for anyone) remove the reaction
+                    if (ruId != victim?.Id && !anyone) {
+                        _ = challengeMsg.RemoveReactionAsync(reaction.Emote, reactUser);
+                        return false;
+                    }
+
+                    if (reaction.Emote.Name == "✅") {
+                        if (ruId == victim?.Id || anyone) {
+                            if (cFourChance > 60) {
+                                s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, ruId);
+                            } else if (checkersChance > 60) {
+                                // s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
+                                _ = msg.Reply("not implemented yet! soon tho");
+                            } else if (unoChance > 60) {
+                                _ = msg.Reply("not implemented yet! soon tho");
+                            } else {
+                                _ = msg.Reply("okay this error should literally never happen. " + UserPingFromID(ASTRL_ID), true);
+                            }
+                            _ = challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(ruId)}, begin!");
+                            return true;
                         }
-                        if (reaction.Emote.Name == "✅") {
-                            if (ruId == victim?.Id || anyone) {
-                                if (cFourChance > 60) {
-                                    s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, ruId);
-                                } else if (checkersChance > 60) {
-                                    s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
-                                    _ = msg.Reply("not implemented yet! soon tho");
-                                } else if (unoChance > 60) {
-                                    _ = msg.Reply("not implemented yet! soon tho");
-                                } else {
-                                    _ = msg.Reply("okay this error should literally never happen. " + UserPingFromID(ASTRL_ID), true);
-                                }
-                                _ = challengeMsg.Reply($"{UserPingFromID(msg.Author.Id)} and {UserPingFromID(ruId)}, begin!");
-                                DestroySelf();
-                            }
-                        } else if (reaction.Emote.Name == "❌") {
-                            if ((ruId == victim?.Id || ruId == msg.Author.Id) && !anyone) {
-                                _ = challengeMsg.Reply("awww... they denied. 😢");
-                                DestroySelf();
-                            }
+                    } else if (reaction.Emote.Name == "❌") {
+                        if ((ruId == victim?.Id || ruId == msg.Author.Id) && !anyone) {
+                            _ = challengeMsg.Reply("awww... they denied. 😢");
+                            return true;
                         }
                     }
-                }
-                MainHook.instance.Client.ReactionAdded += ReactionCheck;
 
-                void DestroySelf()
-                {
-                    if (destroyed) return;
-                    destroyed = true;
-                    MainHook.instance.Client.ReactionAdded -= ReactionCheck;
+                    return false;
                 }
 
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-                while (true)
-                {
-                    if (destroyed) return; // end loop if already destroyed
+                using var rs = new ReactionSubscribe(ReactionCheck, challengeMsg);
+                    var stopwatch = new Stopwatch();
+                    stopwatch.Start();
+                    while (true)
+                    {
+                        if (rs.Destroyed) return; // end loop if already destroyed
 
-                    if (stopwatch.Elapsed.TotalSeconds >= 60 || s.CurrentGame != null) {
-                        _ = challengeMsg.RemoveAllReactionsAsync();
-                        string newMsg = s.CurrentGame != null ? "sorryyy another game started in the middle of you asking :/" :  "took too long! oops.";
-                        _ = challengeMsg.OverwriteMessage(newMsg);
-                        stopwatch.Stop();
-                        break;
+                        if (stopwatch.Elapsed.TotalSeconds >= 60 || s.CurrentGame != null) {
+                            _ = challengeMsg.RemoveAllReactionsAsync();
+                            string newMsg = s.CurrentGame != null ? "sorryyy another game started in the middle of you asking :/" :  "took too long! oops.";
+                            _ = challengeMsg.OverwriteMessage(newMsg);
+                            break;
+                        }
+                        await Task.Delay(1000);
                     }
-                    await Task.Delay(1000);
-                }
-                DestroySelf();
+                    stopwatch.Stop();
+                rs.Dispose();
             }, [
                 new Param("victim", "the username/display name of the person you'd like to challenge", "anyone", Param.ParamType.User),
                 new Param("game", "which game would you like to challenge with?", "connect4"),
@@ -293,38 +372,31 @@ namespace CaretakerNET.Commands
                 new Param("amount", "the amount of people to grab for the leaderboard", 10),
             ]),
 
-            new("hello, hi", "say hi to a user", "silly", async (msg, p) => {
-                IUser? user = p["user"];
-                if (user != null) {
-                    if (user.Id == CARETAKER_ID) {
-                        await msg.Reply("aw hii :3");
-                    } else if (user.IsBot) {
-                        await msg.RandomReply([
-                            "that's... a bot.", 
-                            "i don't think they'll even know you said hi", 
-                            "bots. aren't. people.", 
-                            "i can't reach that person right now :( maybe just send them a normal hello\n(or DON'T because they're a BOT??)"
-                        ]);
-                    } else if (user.Id == msg.Author.Id) {
-                        await msg.RandomReply([
-                            Emojis.Sab,
-                            ":(", 
-                            "you can just say hello to somebody else..!",
-                            "you MUST know other people here, right?",
-                            "why r u like this",
-                        ]);
-                    } else {
-                        string name = string.IsNullOrEmpty(msg.Author.GlobalName) ? msg.Author.Username : $"{msg.Author.GlobalName} ({msg.Author.Username})";
-                        string from = !IsNull(msg.GetGuild(), out var msgGuild) ? " from " + msgGuild!.Name : "";
-                        _ = msg.ReactAsync("✅");
-                        await user.SendMessageAsync(name + from + " says hi!");
-                    }
-                } else if (p.Unparams["user"] is "world" or "world!") { // the entire reason why Unparams exists
-                    await msg.Reply("Hello, world!");
-                } else {
-                    await msg.Reply($"i can't reach that person right now :( maybe just send them a normal hello");
+            new("bet, gamble", "see the top ranking individuals on this bot", "games", async (msg, p) => {
+                (int amount, bool loserboard) = (p["amount"], p.Command == "loserboard");
+                var topUsers = MainHook.instance.UserData.OrderByDescending((x) => !loserboard ? x.Value.Wins.Count : x.Value.Losses.Count).Take(amount);
+                StringBuilder desc = new();
+                int i = 0;
+                foreach ((ulong id, var u) in topUsers)
+                {
+                    var count = !loserboard ? u.Wins.Count : u.Losses.Count;
+                    if (count == 0) continue;
+                    desc.Append(i + 1);
+                    desc.Append(". ");
+                    desc.Append(UserPingFromID(id));
+                    desc.Append(" - ");
+                    desc.AppendLine(count.ToString());
+                    i++;
                 }
-            }, [ new Param("user", "the username of the person you'd like to say hi to", CARETAKER_ID.ToString(), Param.ParamType.User) ]),
+                EmbedBuilder leaderboard = new() {
+                    Title = !loserboard ? "Leaderboard" : "Loserboard",
+                    Description = desc.ToString(),
+                };
+                await msg.ReplyAsync(embed: leaderboard.Build());
+            }, [
+                // new Param("loserboard", "get the people who have LOST the most instead", false),
+                new Param("amount", "the amount of people to grab for the leaderboard", 10),
+            ]),
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
                 var guild = msg.GetGuild(); // remember, returns null in dms
