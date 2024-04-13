@@ -190,69 +190,38 @@ namespace CaretakerNET.Commands
             ], [ ChannelPermission.ManageChannels ]),
 
             new("jerma", "Okay, if I... if I chop you up in a meat grinder, and the only thing that comes out, that's left of you, is your eyeball, you'r- you're PROBABLY DEAD!", "silly", async (msg, p) => {
-                string? fileName = p["fileName"];
-                if (string.IsNullOrEmpty(fileName)) return;
                 var connectionInfo = new ConnectionInfo(
                     "150.230.169.222", "opc",
-                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
+                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PrivatesPath, "ssh.key")))
                 );
                 // using (var client = new ScpClient(connectionInfo))
                 using var client = new SftpClient(connectionInfo);
-                await msg.ReactAsync("✅");
-                try {
-                    client.Connect();
-                    const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
-                    var files = client.ListDirectory(remoteDirectory);
-                    if (files == null) {
-                        LogError("\"files\" was null.");
-                        _ = msg.RemoveAllReactionsAsync();
-                        _ = msg.ReactAsync("❌");
-                        return;
-                    }
-                    var randomFile = files.GetRandom()!;
-                    string path = randomFile.FullName.SplitByLastChar('/').Item1 + fileName;
-                    // Log(path);
-                    Stream newFile = File.Create(path);
-                    client.DownloadFile(randomFile.FullName, newFile, async id => {
+                    await msg.ReactAsync("✅");
+                    try {
+                        client.Connect();
+                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
+                        var files = client.ListDirectory(remoteDirectory);
+                        if (files == null) {
+                            await msg.ReactAsync("❌");
+                            return;
+                        }
+                        var randomFile = files.GetRandom()!;
+                        string n = randomFile.Name;
+                        Stream newFile = File.Exists(n) ? File.OpenRead(n) : File.Create(n);
+                        client.DownloadFile(randomFile.FullName, newFile);
+                        await msg.Reply(files.Count());
                         newFile.Dispose();
-                        await msg.Channel.SendFileAsync(path, messageReference: msg.Reference);
-                        File.Delete(path);
-                    });
-                } catch (Exception err) {
-                    _ = msg.RemoveAllReactionsAsync();
-                    _ = msg.ReactAsync("❌");
-                    LogError(err);
-                    throw;
-                }
-            }, [new Param("fileName", "what the file will be renamed to", "")]),
+                        await msg.Channel.SendFileAsync(n);
+                    } catch (Exception err) {
+                        await msg.ReactAsync("❌");
+                        LogError(err);
+                        throw;
+                    }
+                client.Dispose();
+            }, [ new Param("fileName", "what the file will be renamed to", "") ]),
 
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
-                var connectionInfo = new ConnectionInfo(
-                    "150.230.169.222", "opc",
-                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PRIVATES_PATH, "ssh.key")))
-                );
-                // using (var client = new ScpClient(connectionInfo))
-                using var client = new SftpClient(connectionInfo);
-                await msg.ReactAsync("✅");
-                try {
-                    client.Connect();
-                    const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
-                    var files = client.ListDirectory(remoteDirectory);
-                    if (files == null) {
-                        await msg.ReactAsync("❌");
-                        return;
-                    }
-                    var randomFile = files.GetRandom()!;
-                    Stream newFile = File.OpenRead(randomFile.Name);
-                    client.DownloadFile(randomFile.FullName, newFile);
-                    await msg.Reply(files.Count());
-                    await msg.Channel.SendFileAsync(randomFile.Name);
-                } catch (Exception err) {
-                    await msg.ReactAsync("❌");
-                    LogError(err);
-                    throw;
-                }
-            }, [new Param("fileName", "what the file will be renamed to", "")]),
+            }, [ new Param("fileName", "what the file will be renamed to", "") ]),
 
             new("challenge, game", "challenge another user to a game", "games", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
@@ -289,7 +258,7 @@ namespace CaretakerNET.Commands
                 {
                     IUser reactUser = reaction.User.Value;
                     ulong ruId = reactUser.Id;
-                    if (message.Id == challengeMsg.Id || ruId == CARETAKER_ID) {
+                    if (message.Id != challengeMsg.Id || ruId == CARETAKER_ID) {
                         return false;
                     }
 
@@ -373,29 +342,30 @@ namespace CaretakerNET.Commands
             ]),
 
             new("bet, gamble", "see the top ranking individuals on this bot", "games", async (msg, p) => {
-                (int amount, bool loserboard) = (p["amount"], p.Command == "loserboard");
-                var topUsers = MainHook.instance.UserData.OrderByDescending((x) => !loserboard ? x.Value.Wins.Count : x.Value.Losses.Count).Take(amount);
-                StringBuilder desc = new();
-                int i = 0;
-                foreach ((ulong id, var u) in topUsers)
-                {
-                    var count = !loserboard ? u.Wins.Count : u.Losses.Count;
-                    if (count == 0) continue;
-                    desc.Append(i + 1);
-                    desc.Append(". ");
-                    desc.Append(UserPingFromID(id));
-                    desc.Append(" - ");
-                    desc.AppendLine(count.ToString());
-                    i++;
+                int amount = p["amount"];
+                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+
+                var u = MainHook.instance.GetUserData(msg);
+                if (u.TryStartEconomy(msg)) return;
+
+                string reply = "";
+                if (s.CurrentGame == null) {
+                    reply = "silly billy! there's no game in play right now.";
+                } else if (amount <= 0) {
+                    reply = "that's... not right. gamble more, pls";
+                } else if (amount > u.Balance) {
+                    reply = "damnnn you're poor. get ur money up i think";
+                } else {
+                    s.CurrentGame.AddBet(msg.Author.Id, amount);
                 }
-                EmbedBuilder leaderboard = new() {
-                    Title = !loserboard ? "Leaderboard" : "Loserboard",
-                    Description = desc.ToString(),
-                };
-                await msg.ReplyAsync(embed: leaderboard.Build());
+                if (!string.IsNullOrEmpty(reply)) {
+                    _ = msg.ReactAsync("❌");
+                    _ = msg.Reply(reply);
+                } else {
+                    _ = msg.ReactAsync("✅");
+                }
             }, [
-                // new Param("loserboard", "get the people who have LOST the most instead", false),
-                new Param("amount", "the amount of people to grab for the leaderboard", 10),
+                new Param("amount", "the amount of jell to gamble", 1),
             ]),
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
@@ -523,10 +493,16 @@ namespace CaretakerNET.Commands
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
                 (string? channel, SocketGuild? guild) = (p["channel"], p["guild"] ?? msg.GetGuild());
                 if (guild == null) {
-                    await msg.Reply("mmm... nope.");
+                    _ = msg.Reply("mmm... nope.");
                     return;
                 }
-                MainHook.instance.TalkingChannel = (ITextChannel?)(!string.IsNullOrEmpty(channel) ? guild.ParseChannel(channel) : msg.Channel);
+                IMessageChannel? talkingChannel = !string.IsNullOrEmpty(channel) ? guild.ParseChannel(channel) : msg.Channel;
+                if (talkingChannel == null) {
+                    _ = msg.Reply("mmm... nope!!");
+                    return;
+                }
+                MainHook.instance.TalkingChannel = (ITextChannel)talkingChannel;
+                _ = msg.ReactAsync("✅");
             }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", Param.ParamType.Guild) ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {

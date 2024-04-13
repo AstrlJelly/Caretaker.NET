@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json.Serialization;
 
+using ComputeSharp;
+
 namespace CaretakerNET.Games
 {
     /*
@@ -72,11 +74,11 @@ namespace CaretakerNET.Games
             for (int i = 0; i < 4; i++)
             {
                 // weird
-                var start = i is 3      ? 3 : 0;
+                var start = i is 3      ? 1 : 0;
                 var xMod  = i is 1 or 2 ? 1 : 0; // this broke everything for like half an hour because it was -1 for a sec 😭
                 var yMod  = i is not 1  ? 1 : 0;
 
-                for (int x = start; x < W - (xMod * 3); x++) {
+                for (int x = start * 3; x < W - (xMod * 3); x++) {
                     for (int y = 0; y < H - (yMod * 3); y++) {
                         if (this[x, y] == 0) continue;
                         List<Vector2> checks = [];
@@ -88,6 +90,57 @@ namespace CaretakerNET.Games
                         }
                     }
                 }
+
+                /*
+                0 startX 0, x 0, y 3
+                1 startX 0, x 3, y 0
+                2 startX 0, x 3, y 3
+                3 startX 3, x 0, y 3
+                */
+
+                // // horizontal check
+                // for (int x = 0; x < W; x++) {
+                //     for (int y = 0; y < H - 3; y++) {
+                //         if (this[x, y] == 0) continue;
+                //         List<Vector2> checks = [ new(x, y), new(x, y + 1), new(x, y + 2), new(x, y + 3) ];
+                //         if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
+                //             return new Win(player, checks);
+                //         }
+                //     }
+                // }
+
+                // // vertical check
+                // for (int x = 0; x < W - 3; x++) {
+                //     for (int y = 0; y < H; y++) {
+                //         if (this[x, y] == 0) continue;
+                //         List<Vector2> checks = [ new(x, y), new(x + 1, y), new(x + 2, y), new(x + 3, y) ];
+                //         if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
+                //             return new Win(player, checks);
+                //         }
+                //     }
+                // }
+
+                // // horizontal check (top left to bottom right, i.e bottom left to top right)
+                // for (int x = 0; x < W - 3; x++) {
+                //     for (int y = 0; y < H - 3; y++) {
+                //         if (this[x, y] == 0) continue;
+                //         List<Vector2> checks = [ new(x, y), new(x + 1, y + 1), new(x + 2, y + 2), new(x + 3, y + 3) ];
+                //         if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
+                //             return new Win(player, checks);
+                //         }
+                //     }
+                // }
+
+                // // horizontal check (top left to bottom right, i.e bottom left to top right)
+                // for (int x = 3; x < W; x++) {
+                //     for (int y = 0; y < H - 3; y++) {
+                //         if (this[x, y] == 0) continue;
+                //         List<Vector2> checks = [ new(x, y), new(x - 1, y + 1), new(x - 2, y + 2), new(x - 3, y + 3) ];
+                //         if (checks.All(vec => this[(int)vec.X, (int)vec.Y] == pl)) {
+                //             return new Win(player, checks);
+                //         }
+                //     }
+                // }
             }
 
             return new Win();

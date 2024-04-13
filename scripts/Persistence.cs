@@ -6,7 +6,7 @@ using Discord;
 using Discord.WebSocket;
 
 using CaretakerNET.Games;
-
+using CaretakerNET.Economy;
 
 namespace CaretakerNET
 {
@@ -185,18 +185,12 @@ namespace CaretakerNET
     }
     public class UserPersist
     {
-        public class Item(string name, string desc, float price)
-        {
-            public string Name = name;
-            public string Desc = desc;
-            public float Price = price;
-        }
-
         public ulong UserId;
         public string Username = "";
         // null when starting. much easier to check and smarter than making another bool
         public long? Balance = null;
-        public List<Item> Inventory = [];
+        public const long START_BAL = 500;
+        public List<EconomyHandler.Item> Inventory = [];
         public long Timeout = 0;
         // the name of the game won or lost
         public List<string> Wins = [];
@@ -206,6 +200,21 @@ namespace CaretakerNET
         {
             UserId = userId;
             Username = client.GetUser(userId)?.Username ?? "";
+        }
+ 
+        /// <returns>True if economy hasn't started, false otherwise.</returns>
+        public bool TryStartEconomy(IUserMessage msg)
+        {
+            if (Balance != null) return false;
+            string[] replies = [
+                "ohhhh you haven't used the economy before, have you?",
+                "it's time for you to start gambling! :D",
+                "ur CRAZY poor right now",
+                "wow you somehow have no money. that's crazy.",
+            ];
+            _ = msg.Reply(replies.GetRandom()! + $"\nhere's {START_BAL}, you need it. (also, try that command again.)");
+            Balance = START_BAL;
+            return true;
         }
 
         public void AddWin(Type whichGame) => Wins.Add(whichGame.Name);

@@ -4,12 +4,9 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json.Serialization;
 
-
-
 namespace CaretakerNET.Games
 {
-    // weird. but it works... maybe?
-    // [JsonDerivedType(typeof(BoardGame), typeDiscriminator: "BoardGame")]
+    // weird. but it works!
     [JsonDerivedType(typeof(ConnectFour), typeDiscriminator: "ConnectFour")]
     [JsonDerivedType(typeof(Checkers), typeDiscriminator: "Checkers")]
     public abstract class BoardGame
@@ -25,7 +22,6 @@ namespace CaretakerNET.Games
         // internal ulong[]? allPlayers;
         public List<ulong> Players { get; internal set; } = [];
         
-        // public int PlayerTurns { get; internal set; } = 0;
         public int Turns { get; internal set; } = 0;
         public ulong ForfeitPlayer { get; internal set; }
         public int EndAt { get; internal set; } = int.MaxValue;
@@ -73,5 +69,32 @@ namespace CaretakerNET.Games
             ForfeitPlayer = playerId;
             return true;
         }
+
+        #region Betting
+        // public List<Bet> Betters { get; internal set; } = [];
+        // public struct Bet(ulong betterId, long betAmount)
+        // {
+        //     public ulong BetterId = betterId;
+        //     public long BetAmount = betAmount;
+        // }
+
+        // public bool TryAddBet(ulong playerId, long betAmount)
+        // {
+        //     if (!Betters.TryFindIndex(b => b.BetterId == playerId, out int index)) {
+        //         Betters.Add(new Bet(playerId, betAmount));
+        //         return true;
+        //     }
+        //     return false;
+        // }
+        public Dictionary<ulong, long> Betters { get; internal set; } = [];
+
+        public void AddBet(ulong playerId, long betAmount)
+        {
+            // if already contains playerId, set a new betAmount
+            if (!Betters.TryAdd(playerId, betAmount)) {
+                Betters[playerId] = betAmount;
+            }
+        }
+        #endregion
     }
 }

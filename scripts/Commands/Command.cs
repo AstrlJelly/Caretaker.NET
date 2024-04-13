@@ -15,7 +15,13 @@ namespace CaretakerNET.Commands
         /// <param name="unparamsParams">the "params" input, which is always an array.</param>
         public class ParsedParams(string command, Dictionary<string, dynamic?> @params, Dictionary<string, string?> unparams, string[] unparamsParams)
         {
-            public dynamic? this[string key] => Params[key];
+            public dynamic? this[string key] {
+                get => Params[key];
+            }
+            // add a bool to use Unparams, had it as one "this[]" but that didn't really work
+            public string? this[string key, bool doesntMatter] {
+                get => Unparams[key];
+            }
 
             public readonly string Command = command;
             public readonly Dictionary<string, dynamic?> Params = @params;
@@ -28,7 +34,6 @@ namespace CaretakerNET.Commands
         public readonly string Genre;
         public delegate Task RunAsync(IUserMessage msg, ParsedParams p);
         public readonly RunAsync Func;
-        // public readonly Dictionary<string, Param> Parameters;
         public readonly Param[] Params;
         public readonly Param? Inf = null;
         public HashSet<ChannelPermission> LimitedToPerms;
@@ -37,33 +42,41 @@ namespace CaretakerNET.Commands
 
         public Command(string name, string desc, string genre, RunAsync? func = null, List<Param>? parameters = null, HashSet<ChannelPermission>? limitedToPerms = null, HashSet<ulong>? limitedToIds = null, int timeout = 500)
         {
-            this.Name = name;
-            this.Desc = desc;
-            this.Genre = genre;
-            this.Func = func ?? ((_, _) => Task.CompletedTask);
-            this.LimitedToPerms = limitedToPerms ?? [];
-            this.LimitedToIds = limitedToIds ?? [];
-            this.Timeout = timeout;
+            Name = name;
+            Desc = desc;
+            Genre = genre;
+            Func = func ?? ((_, _) => Task.CompletedTask);
+            LimitedToPerms = limitedToPerms ?? [];
+            LimitedToIds = limitedToIds ?? [];
+            Timeout = timeout;
             // CurrentTimeout = 0;
 
-            // this.Inf = null;
             if (parameters != null) {
                 if (parameters.TryFindIndex(x => x.Name == "params", out int infIndex)) {
-                    this.Inf = parameters[infIndex];
+                    Inf = parameters[infIndex];
                     parameters.RemoveAt(infIndex);
                 }
-                this.Params = [..parameters];
+                Params = [..parameters];
                 // this.Parameters = parameters.ToDictionary(p => p.Name);
             } else {
-                this.Params = [];
+                Params = [];
             }
         }
 
         public bool HasPerms(IUserMessage msg) {
-            if (msg.GetGuild() == null) return true;
-            return HasPerms((SocketGuildUser)msg.Author, (IGuildChannel)msg.Channel);
+            var guild = msg.GetGuild();
+            if (guild == null) return true;
+            // this is silly. but afaik it's the only way
+            // also it doesn't error out at me :)
+            IGuildUser user = guild.GetUser(msg.Author.Id);
+            if (msg.Channel is IGuildChannel channel) {
+                return HasPerms(user, channel);
+            } else {
+                LogError("user or channel was not the right type! what the fuck");
+                return false;
+            }
         }
-        public bool HasPerms(SocketGuildUser user, IGuildChannel chnl)
+        public bool HasPerms(IGuildUser user, IGuildChannel chnl)
         {
             if (LimitedToPerms.Count <= 0 && LimitedToIds.Count <= 0) return true; // most common case
             if (LimitedToIds.Contains(user.Id)) return true; // id is easiest to check first

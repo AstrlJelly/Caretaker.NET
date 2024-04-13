@@ -37,10 +37,12 @@ namespace CaretakerNET
         public bool TestingMode = false;
 
         public static readonly HashSet<ulong> TrustedUsers = [
+            CARETAKER_ID,       // should be obvious
             438296397452935169, // @astrljelly
             752589264398712834, // @antoutta
         ];
         public static readonly HashSet<ulong> BannedUsers = [
+            391459218034786304, // @untitled.com
             // 468933965110312980, // @lifinale, it's been long enough
             // 476021507420586014, // @vincells, thin ice
         ];
@@ -57,7 +59,7 @@ namespace CaretakerNET
 
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
-            Client.ButtonExecuted += ButtonHandler;
+            // Client.ButtonExecuted += ButtonHandler;
             Client.Ready += ClientReady;
 
             AppDomain.CurrentDomain.UnhandledException += async delegate {
@@ -76,6 +78,11 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
+            // Log(Environment.MachineName.ToLower());
+            PrivatesPath = Environment.MachineName.ToLower() switch {
+                "hero-corp" => "B:/!folders/GitHub/CaretakerPrivates",
+                "macboros" or _ => "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/",
+            };
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
             DebugMode = args.Contains("debug") || args.Contains("-d");
@@ -86,10 +93,6 @@ namespace CaretakerNET
             // login and connect with token (change to config json file?)
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
             await Client.StartAsync();
-
-            // i literally have no clue why but this breaks Console.ReadLine(). it even breaks BACKSPACE fsr
-            // Console.TreatControlCAsInput = true;
-
 
             // keep running until Stop() is called
             while (keepRunning) {
@@ -114,19 +117,7 @@ namespace CaretakerNET
                     // }
 
                     if (TalkingChannel != null) {
-                        Task<IUserMessage>? message = TalkingChannel.SendMessageAsync(readLine);
-                        var s = GetGuildData(TalkingChannel.Guild);
-                        if (readLine.StartsWith(s.Prefix) && message != null) {
-                            _ = MessageHandler(await message, true);
-                            // _ = Task.Run(async () => {
-                            //     var msg = await message;
-                            //     (string command, string parameters) = readLine[PREFIX.Length..].SplitByFirstChar(' ');
-                            //     (Command? com, parameters) = CommandHandler.ParseCommand(command, parameters);
-                            //     if (com != null) {
-                            //         await CommandHandler.DoCommand(msg, com, parameters);
-                            //     }
-                            // });
-                        }
+                        _ = MessageHandler(await TalkingChannel.SendMessageAsync(readLine));
                     }
                 }
             }
@@ -144,8 +135,8 @@ namespace CaretakerNET
                 await Client.DownloadUsersAsync(Client.Guilds);
 
                 LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
-                // long ass namespace
-                org.mariuszgromada.math.mxparser.License.iConfirmNonCommercialUse("hmmmmm");
+                // org.mariuszgromada.math.mxparser
+                License.iConfirmNonCommercialUse("hmmmmm");
 
                 TalkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1220135295169597542");
 
@@ -175,7 +166,7 @@ namespace CaretakerNET
         {
             GuildData = await Voorhees.LoadGuilds();
             UserData = await Voorhees.LoadUsers();
-            CheckGuildData();
+            // CheckGuildData();
             foreach (var key in GuildData.Keys) {
                 if (key > 0) {
                     if (GuildData[key] == null) {
@@ -204,19 +195,15 @@ namespace CaretakerNET
             _ = Save();
         }
 
-        public void CheckGuildData()
-        {
-            Parallel.ForEach(Client.Guilds, (guild) => 
-            {
-                if (!GuildData.TryGetValue(guild.Id, out GuildPersist? value) || value == null) {
-                    GuildData[guild.Id] = new GuildPersist(guild.Id);
-                    // GuildData.Add(guild.Id, new GuildPersist(guild.Id));
-                }
-                // if (TryGetGuildData(guild.Id, out var data) /*&& data != null*/) {
-                //     data.Init(Client);
-                // }
-            });
-        }
+        // public void CheckGuildData()
+        // {
+        //     Parallel.ForEach(Client.Guilds, (guild) => 
+        //     {
+        //         if (!GuildData.TryGetValue(guild.Id, out GuildPersist? value) || value == null) {
+        //             GuildData[guild.Id] = new GuildPersist(guild.Id);
+        //         }
+        //     });
+        // }
 
         // data can very much so be null, but i trust any user (basically just me) to never use data if it's null.
         public bool TryGetGuildData(ulong id, out GuildPersist data) 
@@ -243,6 +230,11 @@ namespace CaretakerNET
             return value;
         }
 
+        public bool TryGetUserData(ulong id, out UserPersist data) 
+        {
+            data = GetUserData(id);
+            return data != null;
+        }
         public UserPersist GetUserData(IUserMessage msg) => GetUserData(msg.Author.Id);
         public UserPersist GetUserData(IUser user) => GetUserData(user.Id);
         public UserPersist GetUserData(ulong id)
@@ -279,31 +271,19 @@ namespace CaretakerNET
         //     ));
         // }
 
-        public async Task ButtonHandler(SocketMessageComponent component)
-        {
-            switch (component.Data.CustomId)
-            {
-                case "show-cards":
-                    await component.RespondAsync($"hi {component.User.Username}", ephemeral: true);
-                break;
-            }
-        }
-
         private Task MessageReceivedAsync(SocketMessage message)
         {
             // make sure the message is a user sent message, and output a new msg variable
-            if (message is SocketUserMessage msg) {
+            // also make sure it's not a bot
+            if (message is SocketUserMessage msg && !msg.Author.IsBot) {
                 _ = MessageHandler(msg);
             }
 
             return Task.CompletedTask;
         }
 
-        private async Task MessageHandler(IUserMessage msg, bool fromCmd = false)
+        private async Task MessageHandler(IUserMessage msg)
         {
-            // also make sure it's not a bot/not banned
-            if (msg.Author.IsBot && !fromCmd) return;
-
             var u = GetUserData(msg);
             var s = GetGuildData(msg);
             string prefix = s?.Prefix ?? DEFAULT_PREFIX;
@@ -351,7 +331,7 @@ namespace CaretakerNET
                     ulong cId = msg.Channel.Id;
 
                     // talking channel stuff
-                    if (cId == TalkingChannel?.Id) {
+                    if (cId == TalkingChannel?.Id && msg.Author.Id != CARETAKER_ID) {
                         LogInfo($"{msg.Author.GlobalName} : {msg.Content}", true);
                     }
 

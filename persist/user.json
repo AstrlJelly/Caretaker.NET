@@ -2,10 +2,11 @@
   "438296397452935169": {
     "UserId": 438296397452935169,
     "Username": "astrljelly",
-    "Balance": null,
+    "Balance": 500,
     "Inventory": [],
-    "Timeout": 1712903843126,
+    "Timeout": 1712974348121,
     "Wins": [
+      "ConnectFour",
       "ConnectFour",
       "ConnectFour",
       "ConnectFour",
@@ -21,9 +22,9 @@
   "752589264398712834": {
     "UserId": 752589264398712834,
     "Username": "antoutta",
-    "Balance": null,
+    "Balance": 500,
     "Inventory": [],
-    "Timeout": 0,
+    "Timeout": 1712977019461,
     "Wins": [],
     "Losses": []
   },
@@ -100,7 +101,7 @@
     "Username": "cosmic_hero",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712767340774,
+    "Timeout": 1712965407558,
     "Wins": [
       "ConnectFour",
       "ConnectFour",
@@ -384,7 +385,7 @@
     "Username": "Caretaker.net",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 0,
+    "Timeout": 1712943912234,
     "Wins": [],
     "Losses": []
   },
@@ -427,6 +428,98 @@
   "693814782129733704": {
     "UserId": 693814782129733704,
     "Username": "ryok3420",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "628700415541903411": {
+    "UserId": 628700415541903411,
+    "Username": "dropcase",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 1712937710173,
+    "Wins": [],
+    "Losses": []
+  },
+  "749390383389212802": {
+    "UserId": 749390383389212802,
+    "Username": "anbee420",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "749389414735544331": {
+    "UserId": 749389414735544331,
+    "Username": "ambee420",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "996204656541839363": {
+    "UserId": 996204656541839363,
+    "Username": "monkwee",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "543220818407063584": {
+    "UserId": 543220818407063584,
+    "Username": "bizarrotron3000",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "999020930800033876": {
+    "UserId": 999020930800033876,
+    "Username": "raffiustaffius",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": [
+      "ConnectFour"
+    ]
+  },
+  "1204246527560646727": {
+    "UserId": 1204246527560646727,
+    "Username": "beamdied",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "674109799419609089": {
+    "UserId": 674109799419609089,
+    "Username": "starshardz",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "449992480386056213": {
+    "UserId": 449992480386056213,
+    "Username": "kievit",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "188211521560641536": {
+    "UserId": 188211521560641536,
+    "Username": "mapeus",
     "Balance": null,
     "Inventory": [],
     "Timeout": 0,

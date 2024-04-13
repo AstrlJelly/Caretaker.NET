@@ -37,7 +37,78 @@
     },
     "convo": {},
     "slowModes": {},
-    "CurrentGame": null
+    "CurrentGame": {
+      "$type": "ConnectFour",
+      "board": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "Players": [
+        438296397452935169,
+        752589264398712834
+      ],
+      "Turns": 2,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647,
+      "Betters": {
+        "752589264398712834": 60
+      },
+      "PlayingChannelId": 887502008876167212
+    }
   },
   "1191816507374715023": {
     "GuildId": 1191816507374715023,
@@ -164,6 +235,7 @@
       "Turns": 0,
       "ForfeitPlayer": 0,
       "EndAt": 2147483647,
+      "Betters": {},
       "PlayingChannelId": 1077385447870844971
     }
   },
@@ -265,7 +337,76 @@
     },
     "convo": {},
     "slowModes": {},
-    "CurrentGame": null
+    "CurrentGame": {
+      "$type": "ConnectFour",
+      "board": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "Players": [
+        438296397452935169,
+        999020930800033876
+      ],
+      "Turns": 0,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647,
+      "Betters": {},
+      "PlayingChannelId": 1220135295169597542
+    }
   },
   "1218330896407462079": {
     "GuildId": 1218330896407462079,
@@ -310,6 +451,26 @@
   "1216253612464799786": {
     "GuildId": 1216253612464799786,
     "GuildName": "the silliest of times",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "628701221967888384": {
+    "GuildId": 628701221967888384,
+    "GuildName": "eleven38",
     "Prefix": "\u003E",
     "count": {
       "Current": 0,
