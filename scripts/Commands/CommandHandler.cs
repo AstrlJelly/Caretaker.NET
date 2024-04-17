@@ -43,56 +43,55 @@ namespace CaretakerNET.Commands
                     return;
                 }
 
-                int currentEmbed = 0;
-                List<Embed> commandEmbeds = commandLists.Select((genreAndCom, index) => {
+                var dictIndex = 0;
+                Dictionary<string, Embed> commandEmbeds = commandLists.Select((genreAndCom, index) => {
                     (string genre, string com) = genreAndCom;
                     return (new EmbedBuilder {
-                        Title = genre + $" ({index + 1} out of {commandLists.Length})",
+                        Title = "commands : " + genre /* + $" ({index + 1} out of {commandLists.Length})" */,
                         Description = com
                     }).WithCurrentTimestamp().Build();
-                }).ToList();
+                }).ToDictionary(x => commandLists[dictIndex++].Item1);
 
-                var helpMsg = await msg.ReplyAsync(embed: commandEmbeds[0]);
-                Task.WaitAll(helpMsg.ReactAsync("⬅️"), helpMsg.ReactAsync("➡️"));
+                var components = new ComponentBuilder {
+                    ActionRows = [
+                        new ActionRowBuilder().WithSelectMenu(
+                            "commands",
+                            commandLists.Select((genreAndCom) => new SelectMenuOptionBuilder(genreAndCom.Item1, genreAndCom.Item1)).ToList(),
+                            "command select!!"
+                        )
+                    ]
+                };
 
-                async Task<bool> ReactionCheck(IUserMessage message, SocketReaction reaction)
+                var helpMsg = await msg.ReplyAsync(components: components.Build(), embed: commandEmbeds.Values.ElementAt(0));
+
+                async Task<bool> OnDropdownChange(SocketMessageComponent args)
                 {
-                    IUser reactUser = reaction.User.Value;
+                    IUser reactUser = args.User;
+                    IMessage message = args.Message;
                     ulong ruId = reactUser.Id;
                     if (message.Id != helpMsg.Id || ruId == CARETAKER_ID) {
                         return false;
                     }
 
-                    // if it's not the victim nor the caretaker (and it's not for anyone) remove the reaction
+                    // if it's not the victim nor the caretaker, ephemerally tell them they can't use it
                     if (ruId != msg.Author.Id) {
-                        _ = helpMsg.RemoveReactionAsync(reaction.Emote, reactUser);
+                        _ = args.RespondAsync("not for you.", ephemeral: true);
                         return false;
                     }
 
-                    if (reaction.Emote.Name is "⬅️" or "➡️") {
-                        // go back or forward depending on reaction
-                        currentEmbed += ((reaction.Emote.Name is "⬅️" ? -1 : 1));
-                        currentEmbed = currentEmbed < 0 ? (commandEmbeds.Count - 1) : currentEmbed % commandEmbeds.Count;
-                        await helpMsg.ModifyAsync(m => m.Embed = commandEmbeds[currentEmbed]);
+                    if (args.Data.CustomId is "commands") {
+                        var genre = string.Join("", args.Data.Values);
+                        await helpMsg.ModifyAsync(m => m.Embed = commandEmbeds[genre]);
                     }
-
-                    _ = helpMsg.RemoveReactionAsync(reaction.Emote, reactUser);
 
                     return false;
                 }
                 
-                using var rs = new ReactionSubscribe(ReactionCheck, helpMsg);
+                using var rs = new ComponentSubscribe(OnDropdownChange, helpMsg);
                     var stopwatch = new Stopwatch();
                     stopwatch.Start();
-                    while (true)
-                    {
-                        if (rs.Destroyed) return; // end loop if already destroyed
-
-                        if (stopwatch.Elapsed.TotalSeconds >= 60) {
-                            _ = helpMsg.RemoveAllReactionsAsync();
-                            break;
-                        }
-                        await Task.Delay(1000);
+                    while (stopwatch.Elapsed.TotalSeconds < 60 && !rs.Destroyed) {
+                        // await Task.Delay(1000);
                     }
                     stopwatch.Stop();
                 rs.Dispose();
@@ -190,37 +189,11 @@ namespace CaretakerNET.Commands
             ], [ ChannelPermission.ManageChannels ]),
 
             new("jerma", "Okay, if I... if I chop you up in a meat grinder, and the only thing that comes out, that's left of you, is your eyeball, you'r- you're PROBABLY DEAD!", "silly", async (msg, p) => {
-                var connectionInfo = new ConnectionInfo(
-                    "150.230.169.222", "opc",
-                    new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PrivatesPath, "ssh.key")))
-                );
-                // using (var client = new ScpClient(connectionInfo))
-                using var client = new SftpClient(connectionInfo);
-                    await msg.ReactAsync("✅");
-                    try {
-                        client.Connect();
-                        const string remoteDirectory = "/home/opc/mediaHosting/jermaSFX/";
-                        var files = client.ListDirectory(remoteDirectory);
-                        if (files == null) {
-                            await msg.ReactAsync("❌");
-                            return;
-                        }
-                        var randomFile = files.GetRandom()!;
-                        string n = randomFile.Name;
-                        Stream newFile = File.Exists(n) ? File.OpenRead(n) : File.Create(n);
-                        client.DownloadFile(randomFile.FullName, newFile);
-                        await msg.Reply(files.Count());
-                        newFile.Dispose();
-                        await msg.Channel.SendFileAsync(n);
-                    } catch (Exception err) {
-                        await msg.ReactAsync("❌");
-                        LogError(err);
-                        throw;
-                    }
-                client.Dispose();
+                GetRandomFileFromSSH(msg, p["fileName"], "jermaSFX");
             }, [ new Param("fileName", "what the file will be renamed to", "") ]),
 
             new("flower", "Hiiii! " + Emojis.TalkingFlower, "silly", async (msg, p) => {
+                // GetRandomFileFromSSH(msg, p["fileName"], "flowerSFX");
             }, [ new Param("fileName", "what the file will be renamed to", "") ]),
 
             new("challenge, game", "challenge another user to a game", "games", async (msg, p) => {
@@ -301,9 +274,9 @@ namespace CaretakerNET.Commands
                         if (rs.Destroyed) return; // end loop if already destroyed
 
                         if (stopwatch.Elapsed.TotalSeconds >= 60 || s.CurrentGame != null) {
-                            _ = challengeMsg.RemoveAllReactionsAsync();
                             string newMsg = s.CurrentGame != null ? "sorryyy another game started in the middle of you asking :/" :  "took too long! oops.";
                             _ = challengeMsg.OverwriteMessage(newMsg);
+                            _ = challengeMsg.RemoveAllReactionsAsync();
                             break;
                         }
                         await Task.Delay(1000);
@@ -532,80 +505,78 @@ namespace CaretakerNET.Commands
             return (whichComms[command.ToLower()], parameters);
         }
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
-        public async static Task<bool> DoCommand(IUserMessage msg, Command com, string parameters, string commandName )
+        public async static Task<bool> DoCommand(IUserMessage msg, Command com, string parameters, string commandName)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
             Dictionary<string, dynamic?> paramDict = [];
             Dictionary<string, string?> unparamDict = [];
             string[] unparams = [];
-            if (com.Params != null && (com.Params.Length > 0 || com.Inf != null)) {
-                const char SPACE = '↭';
-                string[] splitParams = [];
-                if (parameters != "") { // only do these checks if there are parameters to check for
-                    if (parameters.Contains('"')) {
-                        string[] quoteSplit = parameters.Split('"');
-                        
-                        for (int x = 1; x < quoteSplit.Length; x += 2) { 
-                            // check every other section (they will always be "in" double quotes) 
-                            // and check if it actually has spaces needed to be replaced
-                            if (quoteSplit[x].Contains(' ')) {
-                                quoteSplit[x] = quoteSplit[x].ReplaceAll(' ', SPACE);
-                            }
+            if (com.Params != null && (com.Params.Length > 0 || com.Inf != null))
+            {
+                bool isBetweenQuotes = false;
+                int currentParamIndex = 0;
+                Param? currentParam = null;
+                bool stopLoop = false;
+
+                List<char> currentString = new(parameters.Length);
+                Dictionary<char, Action<int>> charActions = new() {
+                    { '"', i => isBetweenQuotes = !isBetweenQuotes },
+                    { ' ', i => {
+                        if (isBetweenQuotes) {
+                            currentString.Add(parameters[i]);
+                            return;
                         }
-                        parameters = string.Join("", quoteSplit); // join everything back together
+                        if ((parameters.IsIndexValid(i + 1) && parameters[i + 1] == ':') || (parameters.IsIndexValid(i - 1) && parameters[i - 1] == ':')) return;
+
+                        if (currentParam == null) {
+                            currentParam ??= com.Params[currentParamIndex];
+                            currentParamIndex++;
+                        }
+                        var paramStr = string.Concat(currentString);
+                        unparamDict.TryAdd(currentParam.Name, paramStr);
+                        dynamic? paramVal = currentParam.ToType(paramStr, msg.GetGuild());
+                        paramDict.TryAdd(currentParam.Name, paramVal);
+                        currentParam = null;
+                        currentString.Clear();
+                    }},
+                    { ':', i => {
+                        int paramIndex = Array.FindIndex(com.Params, p => p.Name == string.Concat(currentString));
+                        currentString.Clear();
+                        if (paramIndex > -1) {
+                            currentParam = com.Params[paramIndex];
+                        } else {
+                            var s = MainHook.instance.GetGuildData(msg);
+                            _ = msg.Reply($"incorrect param name! use \"{s?.Prefix ?? DEFAULT_PREFIX}help {com.Name}\" to get params for {com.Name}.");
+                            stopLoop = true;
+                        }
+                    }},
+                };
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    // if you can get the action from the character, and there's not a \ before the character
+                    if (charActions.TryGetValue(parameters[i], out var action) && !(parameters.IsIndexValid(i - 1) && parameters[i - 1] == '\\')) {
+                        action.Invoke(i);
+                    } else {
+                        currentString.Add(parameters[i]);
                     }
-                    splitParams = parameters.Split(' '); // then split it up as parameters
+                    if (stopLoop) return false;
+                }
+                // might be a better way to do this? works wonders rn!
+                if (currentString.Count > 0) {
+                    isBetweenQuotes = false;
+                    charActions[' '].Invoke(-69); // arbitrary. no other reason i chose it 😊😊😊
                 }
 
-                LogDebug("splitParams    // " + string.Join(", ", splitParams));
-                LogDebug("com.parameters // " + string.Join(", ", com.Params.Select(x => x.Name)));
+                foreach (var param in com.Params) {
+                    if (!paramDict.ContainsKey(param.Name)) {
+                        dynamic? paramVal = 
+                            param.Preset is string preset && param.Type != Param.ParamType.String ? 
+                                param.ToType(preset, msg.GetGuild()) : 
+                                param.Preset;
 
-                var guild = msg.GetGuild();
-
-                int i = 0; // make i global so it can be used later
-                int j = 0; // second iterator variable
-                bool paramsAdded = false;
-                for (i = 0; i < com.Params.Length; i++)
-                {
-                    Param? setParam; // the Param the name/preset/type are being grabbed from
-                    dynamic? value = null;
-                    
-                    if (splitParams.IsIndexValid(i) && !paramsAdded) { // will this parameter be set manually?
-                        setParam = com.Params[i];
-                        int colonIndex = splitParams[i].IndexOf('='); // used to be a colon, but there's not a reliable(/efficient) check if it's an emoji or not
-                        string valueStr = splitParams[i].ReplaceAll(SPACE, ' '); // get the spaces back
-                        if (colonIndex != -1) { // if colon exists, attempt to set settingParam to the string before the colon
-                            string paramName = splitParams[i][..colonIndex];
-                            if (paramName == "params" && com.Inf != null) { // if it's params, add the rest as the type of params and break the loop
-                                // if inf params are needed, grab everything after
-                                var unparamKeys = splitParams.Skip(i + 1);
-                                unparams = unparamKeys.ToArray();
-                                paramDict.TryAdd("params", unparamKeys.Select(splitParam => com.Inf.ToType(splitParam, guild)).ToArray());
-                                paramsAdded = true;
-                                continue;
-                            }
-                            valueStr = splitParams[i][(colonIndex + 1)..];
-                            setParam = Array.Find(com.Params, x => x.Name == paramName);
-                            if (setParam == null) {
-                                var s = MainHook.instance.GetGuildData(msg);
-                                await msg.Reply($"incorrect param name! use \"{s?.Prefix ?? DEFAULT_PREFIX}help {com.Name}\" to get params for {com.Name}.");
-                                return false;
-                            }
-                        } else {
-                            j++;
-                        }
-                        value = setParam.ToType(valueStr, guild);
-                        unparamDict.TryAdd(setParam.Name, valueStr);
-                    } else {
-                        setParam = com.Params[j];
-                        var p = setParam.Preset;
-                        value = p.GetType() == typeof(string) ? setParam.ToType(p, guild) : p;
-                        j++;
-                        unparamDict.TryAdd(setParam.Name, null);
+                        paramDict.Add(param.Name, paramVal);
                     }
-
-                    paramDict.TryAdd(setParam.Name, value);
                 }
             }
 
@@ -689,6 +660,38 @@ namespace CaretakerNET.Commands
             sw.Stop();
             LogDebug($"ListCommands() took {sw.ElapsedMilliseconds} milliseconds to complete");
             return listedCommands.Count > 0 ? [.. listedCommands] : null;
+        }
+
+        private static async void GetRandomFileFromSSH(IUserMessage msg, string? fileName, string sfxFolder)
+        {
+            var connectionInfo = new ConnectionInfo(
+                "150.230.169.222", "opc",
+                new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PrivatesPath, "ssh.key")))
+            );
+            // using (var client = new ScpClient(connectionInfo))
+            using var client = new SftpClient(connectionInfo);
+                await msg.ReactAsync("✅");
+                try {
+                    client.Connect();
+                    string remoteDirectory = $"/home/opc/mediaHosting/{sfxFolder}/";
+                    var files = client.ListDirectory(remoteDirectory);
+                    if (files == null) {
+                        await msg.ReactAsync("❌");
+                        return;
+                    }
+                    var randomFile = files.GetRandom()!;
+                    string n = "./temp/" + (!string.IsNullOrEmpty(fileName) ? fileName + ".mp3" : randomFile.Name);
+                    Stream newFile = File.Exists(n) ? File.OpenRead(n) : File.Create(n);
+                    client.DownloadFile(randomFile.FullName, newFile);
+                    newFile.Dispose();
+                    await msg.Channel.SendFileAsync(n);
+                    File.Delete(n);
+                } catch (Exception err) {
+                    await msg.ReactAsync("❌");
+                    LogError(err);
+                    throw;
+                }
+            client.Dispose();
         }
 
         // currently an instance isn't needed; try avoiding one?

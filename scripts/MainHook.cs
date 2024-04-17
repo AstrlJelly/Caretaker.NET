@@ -42,7 +42,7 @@ namespace CaretakerNET
             752589264398712834, // @antoutta
         ];
         public static readonly HashSet<ulong> BannedUsers = [
-            391459218034786304, // @untitled.com
+            // 391459218034786304, // @untitled.com, https://discord.com/channels/1171893658149191750/1229197791784468550/1229197801301479495
             // 468933965110312980, // @lifinale, it's been long enough
             // 476021507420586014, // @vincells, thin ice
         ];
@@ -59,7 +59,6 @@ namespace CaretakerNET
 
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
-            // Client.ButtonExecuted += ButtonHandler;
             Client.Ready += ClientReady;
 
             AppDomain.CurrentDomain.UnhandledException += async delegate {
@@ -78,55 +77,67 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
-            // Log(Environment.MachineName.ToLower());
-            PrivatesPath = Environment.MachineName.ToLower() switch {
-                "hero-corp" => "B:/!folders/GitHub/CaretakerPrivates",
-                "macboros" or _ => "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/",
-            };
+            // PrivatesPath = Environment.MachineName.ToLower() switch {
+            //     "hero-corp" => "B:/!folders/GitHub/CaretakerPrivates",
+            //     "macboros" or _ => "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/",
+            // };
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
             DebugMode = args.Contains("debug") || args.Contains("-d");
             TestingMode = args.Contains("testing") || args.Contains("-t");
 
-            // ChangeConsoleTitle("Starting...");
+            ChangeConsoleTitle("Starting...");
+            foreach (var directory in new string[] { "persist", "temp" }) {
+                if (!Directory.Exists("./" + directory)) {
+                    Directory.CreateDirectory("./" + directory);
+                }
+            }
 
+            PrivatesPath = File.ReadAllText("./privates_path.txt");
             // login and connect with token (change to config json file?)
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
             await Client.StartAsync();
 
+            StartReadingLine();
             // keep running until Stop() is called
-            while (keepRunning) {
-                string? readLine = Console.ReadLine();
-                if (readLine is "c" or "exit") {
-                    Stop();
-                    break;
-                }
-                if (!string.IsNullOrEmpty(readLine)) {
-                    // // the channel just doesn't wanna be IIntegrationChannel?? idk
-                    // Log(talkingChannel is IIntegrationChannel);
-                    // if (talkingChannel is IIntegrationChannel channel)
-                    // {
-                    //     var webhooks = await channel.GetWebhooksAsync();
-                    //     var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
-                    //     Log(webhook?.Name);
-                    //     if (webhook == null) {
-                    //         using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
-                    //         webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
-                    //     }
-                    //     await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
-                    // }
+            while (keepRunning);
 
-                    if (TalkingChannel != null) {
-                        _ = MessageHandler(await TalkingChannel.SendMessageAsync(readLine));
-                    }
-                }
-            }
             // async programming is funny
             Task stop = Client.StopAsync();
             if (GuildData.Count > 0 && GuildData.Count > 0) {
                 await Save();
             }
             await stop;
+        }
+
+        private async void StartReadingLine()
+        {
+            while (keepRunning) {
+                string? readLine = Console.ReadLine();
+                if (!string.IsNullOrEmpty(readLine)) {
+                    if (readLine is "c" or "cancel" or "exit") {
+                        Stop();
+                        break;
+                    }
+                    // the channel just doesn't wanna be IIntegrationChannel?? idk
+                    Log(TalkingChannel is IIntegrationChannel);
+                    if (TalkingChannel is IIntegrationChannel channel)
+                    {
+                        var webhooks = await channel.GetWebhooksAsync();
+                        var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
+                        Log(webhook?.Name);
+                        if (webhook == null) {
+                            using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+                            webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
+                        }
+                        await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
+                    }
+
+                    if (TalkingChannel != null) {
+                        _ = MessageHandler(await TalkingChannel.SendMessageAsync(readLine));
+                    }
+                }
+            }
         }
 
         public async Task ClientReady()
@@ -166,7 +177,6 @@ namespace CaretakerNET
         {
             GuildData = await Voorhees.LoadGuilds();
             UserData = await Voorhees.LoadUsers();
-            // CheckGuildData();
             foreach (var key in GuildData.Keys) {
                 if (key > 0) {
                     if (GuildData[key] == null) {
@@ -194,16 +204,6 @@ namespace CaretakerNET
             await Task.Delay(60000);
             _ = Save();
         }
-
-        // public void CheckGuildData()
-        // {
-        //     Parallel.ForEach(Client.Guilds, (guild) => 
-        //     {
-        //         if (!GuildData.TryGetValue(guild.Id, out GuildPersist? value) || value == null) {
-        //             GuildData[guild.Id] = new GuildPersist(guild.Id);
-        //         }
-        //     });
-        // }
 
         // data can very much so be null, but i trust any user (basically just me) to never use data if it's null.
         public bool TryGetGuildData(ulong id, out GuildPersist data) 

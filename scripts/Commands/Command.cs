@@ -120,13 +120,13 @@ namespace CaretakerNET.Commands
         public string Desc = desc;
         public dynamic Preset = preset;
         
-        public ParamType Type = type ?? preset.GetType().ToString() switch
+        public ParamType Type = type ?? preset.GetType().Name switch
         {
-            "System.Boolean" => ParamType.Boolean,
-            "System.Double" => ParamType.Double,
-            "System.Int32" => ParamType.Integer,
-            "System.UInt32" => ParamType.UInteger,
-            "System.String" or _ => ParamType.String,
+            "Boolean" => ParamType.Boolean,
+            "Double" => ParamType.Double,
+            "Int32" => ParamType.Integer,
+            "UInt32" => ParamType.UInteger,
+            "String" or _ => ParamType.String,
         };
     }
 }

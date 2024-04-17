@@ -20,8 +20,8 @@ namespace CaretakerNET
                 IncludeFields = true,
             };
 
-        public static async Task SaveGuilds(this Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
-        public static async Task SaveUsers(this Dictionary<ulong, UserPersist> dictionary)   => await Save(USER_PATH, dictionary);
+        public static async Task SaveGuilds(Dictionary<ulong, GuildPersist> dictionary) => await Save(GUILD_PATH, dictionary);
+        public static async Task SaveUsers(Dictionary<ulong, UserPersist> dictionary)   => await Save(USER_PATH, dictionary);
 
         private static async Task Save<T>(string path, Dictionary<ulong, T> objectToSave)
         {
@@ -41,23 +41,22 @@ namespace CaretakerNET
             LogInfo($"Start loading from {path}...", true);
             if (!Directory.Exists("./persist")) Directory.CreateDirectory("./persist");
             if (!File.Exists(path)) File.Create(path);
-            var jsonFileStr = await File.ReadAllTextAsync(path);
-            if (!string.IsNullOrEmpty(jsonFileStr)) {
-                try {
-                    var deserializedDict = JsonSerializer.Deserialize<T>(jsonFileStr, serializerSettings);
-                    if (deserializedDict != null) {
-                        // LogTemp("deserializedDict : " + deserializedDict);
-                        LogInfo("Loaded!", true);
-                        return deserializedDict;
-                    } else {
-                        throw new Exception($"Load (\"{path}\") failed!");
-                    }
-                } catch (Exception err) {
-                    LogError(err, true);
-                    throw;
+            string jsonFileStr = await File.ReadAllTextAsync(path);
+
+            if (string.IsNullOrEmpty(jsonFileStr)) return new();
+
+            try {
+                var deserializedDict = JsonSerializer.Deserialize<T>(jsonFileStr, serializerSettings);
+                if (deserializedDict != null) {
+                    // LogTemp("deserializedDict : " + deserializedDict);
+                    LogInfo("Loaded!", true);
+                    return deserializedDict;
+                } else {
+                    throw new Exception($"Load (\"{path}\") failed!");
                 }
-            } else {
-                return new();
+            } catch (Exception err) {
+                LogError(err, true);
+                throw;
             }
         }
     }
@@ -173,15 +172,6 @@ namespace CaretakerNET
             chain.Init(guild);
             convo.Init(guild);
         }
-
-
-        // public Persist() {
-        //     // CommandData = [];
-        //     Count = new();
-        //     Chain = new();
-        //     Convo = new();
-        //     SlowModes = [];
-        // }
     }
     public class UserPersist
     {
@@ -203,16 +193,19 @@ namespace CaretakerNET
         }
  
         /// <returns>True if economy hasn't started, false otherwise.</returns>
-        public bool TryStartEconomy(IUserMessage msg)
+        public bool TryStartEconomy(IUserMessage msg, bool fromCom = true)
         {
             if (Balance != null) return false;
-            string[] replies = [
+            string[] startReplies = [
                 "ohhhh you haven't used the economy before, have you?",
                 "it's time for you to start gambling! :D",
                 "ur CRAZY poor right now",
                 "wow you somehow have no money. that's crazy.",
             ];
-            _ = msg.Reply(replies.GetRandom()! + $"\nhere's {START_BAL}, you need it. (also, try that command again.)");
+            string reply = startReplies.GetRandom()! + $"\nhere's {START_BAL} jells, you need it.";
+            if (fromCom) reply += " (also, try that command again.)";
+
+            _ = msg.Reply(reply);
             Balance = START_BAL;
             return true;
         }

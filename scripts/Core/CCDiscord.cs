@@ -208,6 +208,56 @@ namespace CaretakerCore
                 Dispose();
             }
         }
+        public class ComponentSubscribe : IDisposable
+        {
+            private readonly Func<SocketMessageComponent, Task> OnComponentInteract;
+            public delegate Task<bool> OnButtonPressed(SocketMessageComponent args);
+            private readonly IUserMessage message;
+
+            public bool Destroyed = false;
+
+            // called when "using" is exited
+            public void Dispose()
+            {
+                if (Destroyed) return;
+                if (client == null) {
+                    LogError("client was null! make sure to run the init method in your start method");
+                    return;
+                }
+                Destroyed = true;
+                client.ButtonExecuted -= OnComponentInteract;
+                client.SelectMenuExecuted -= OnComponentInteract;
+                message.ModifyAsync(m => {
+                    m.Components = new ComponentBuilder().Build();
+                });
+                GC.SuppressFinalize(this);
+            }
+
+            public ComponentSubscribe(OnButtonPressed onComponentInteract, IUserMessage message)
+            {
+                this.message = message;
+                // this.onPressed = onPressed;
+                OnComponentInteract = async args => {
+                    if (Destroyed || message.Id != args.Message.Id) return;
+                    bool isLast = await onComponentInteract.Invoke(args);
+                    if (!args.HasResponded) {
+                        _ = args.DeferAsync();
+                    }
+                    if (isLast) Dispose();
+                };
+                if (client == null) {
+                    LogError("client was null! make sure to run the init method in your start method");
+                    return;
+                }
+                client.ButtonExecuted += OnComponentInteract;
+                client.SelectMenuExecuted += OnComponentInteract;
+            }
+
+            ~ComponentSubscribe()
+            {
+                Dispose();
+            }
+        }
     }
 
 }

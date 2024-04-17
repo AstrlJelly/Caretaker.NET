@@ -4,8 +4,9 @@
     "Username": "astrljelly",
     "Balance": 500,
     "Inventory": [],
-    "Timeout": 1712974348121,
+    "Timeout": 1713338998347,
     "Wins": [
+      "ConnectFour",
       "ConnectFour",
       "ConnectFour",
       "ConnectFour",
@@ -33,7 +34,7 @@
     "Username": "vincells",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712842455476,
+    "Timeout": 1713192342779,
     "Wins": [],
     "Losses": []
   },
@@ -42,9 +43,10 @@
     "Username": "untitled.com",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712858353086,
+    "Timeout": 1713211603932,
     "Wins": [],
     "Losses": [
+      "ConnectFour",
       "ConnectFour",
       "ConnectFour",
       "ConnectFour",
@@ -83,7 +85,7 @@
     "Username": "thatghostikat",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712753590323,
+    "Timeout": 1713338865487,
     "Wins": [],
     "Losses": []
   },
@@ -92,7 +94,7 @@
     "Username": "lifinale",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712842422067,
+    "Timeout": 1713192862002,
     "Wins": [],
     "Losses": []
   },
@@ -418,7 +420,7 @@
   },
   "1110883173648310352": {
     "UserId": 1110883173648310352,
-    "Username": "unclebobwiththemilk.",
+    "Username": "unclebobwiththemilk",
     "Balance": null,
     "Inventory": [],
     "Timeout": 0,
@@ -520,6 +522,51 @@
   "188211521560641536": {
     "UserId": 188211521560641536,
     "Username": "mapeus",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "666749655387865088": {
+    "UserId": 666749655387865088,
+    "Username": "ric.ardo",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "903858264243052616": {
+    "UserId": 903858264243052616,
+    "Username": "funsize_idiot",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "366276019344113664": {
+    "UserId": 366276019344113664,
+    "Username": "doublepoweredstation",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "512766843664990221": {
+    "UserId": 512766843664990221,
+    "Username": "eldrmckinley",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "860491562856611880": {
+    "UserId": 860491562856611880,
+    "Username": "tarloo_.",
     "Balance": null,
     "Inventory": [],
     "Timeout": 0,

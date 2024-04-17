@@ -119,7 +119,7 @@ namespace CaretakerCore
         /// </summary>
         /// <param name="enumerable"></param>
         /// <param name="index"></param>
-        /// <returns><i>True</i> if index is valid. False otherwise.</returns>
+        /// <returns><i>True</i> if index is valid. <i>False</i> otherwise.</returns>
         public static bool IsIndexValid<T>(this IEnumerable<T>? enumerable, int index) => enumerable != null && index >= 0 && index < enumerable.Count();
 
         /// <summary>
