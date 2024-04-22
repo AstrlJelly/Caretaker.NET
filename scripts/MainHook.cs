@@ -15,15 +15,15 @@ using CaretakerNET.Commands;
 using CaretakerNET.ExternalEmojis;
 
 using org.mariuszgromada.math.mxparser;
-using CaretakerCore;
 
 namespace CaretakerNET
 {
     public class MainHook
     {
-        public readonly static MainHook instance = new();
         // gets called when program is run; starts async loop
         static Task Main(string[] args) => instance.MainAsync(args);
+
+        public readonly static MainHook instance = new();
         private bool keepRunning = true;
         private bool isReady;
 
@@ -62,11 +62,14 @@ namespace CaretakerNET
             Client.Ready += ClientReady;
 
             AppDomain.CurrentDomain.UnhandledException += async delegate {
-                await Client.StopAsync();
-                await Save();
+                Task stop = Client.StopAsync();
+                if (GuildData.Count > 0) {
+                    await Save();
+                }
+                await stop;
             };
 
-            StartTime = new DateTimeOffset().ToUnixTimeMilliseconds();
+            StartTime = DateNow();
         }
 
         private static Task ClientLog(LogMessage message)
@@ -77,10 +80,6 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
-            // PrivatesPath = Environment.MachineName.ToLower() switch {
-            //     "hero-corp" => "B:/!folders/GitHub/CaretakerPrivates",
-            //     "macboros" or _ => "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/",
-            // };
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
             DebugMode = args.Contains("debug") || args.Contains("-d");
@@ -100,11 +99,11 @@ namespace CaretakerNET
 
             StartReadingLine();
             // keep running until Stop() is called
-            while (keepRunning);
+            while (keepRunning) await Task.Delay(100);
 
             // async programming is funny
             Task stop = Client.StopAsync();
-            if (GuildData.Count > 0 && GuildData.Count > 0) {
+            if (GuildData.Count > 0) {
                 await Save();
             }
             await stop;
@@ -120,18 +119,18 @@ namespace CaretakerNET
                         break;
                     }
                     // the channel just doesn't wanna be IIntegrationChannel?? idk
-                    Log(TalkingChannel is IIntegrationChannel);
-                    if (TalkingChannel is IIntegrationChannel channel)
-                    {
-                        var webhooks = await channel.GetWebhooksAsync();
-                        var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
-                        Log(webhook?.Name);
-                        if (webhook == null) {
-                            using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
-                            webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
-                        }
-                        await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
-                    }
+                    // Log(TalkingChannel is IIntegrationChannel);
+                    // if (TalkingChannel is IIntegrationChannel channel)
+                    // {
+                    //     var webhooks = await channel.GetWebhooksAsync();
+                    //     var webhook = webhooks.FirstOrDefault(x => x.Name == "AstrlJelly");
+                    //     Log(webhook?.Name);
+                    //     if (webhook == null) {
+                    //         using Stream ajIcon = File.Open("./ajIcon.png", FileMode.Open);
+                    //         webhook = await channel.CreateWebhookAsync("AstrlJelly", ajIcon);
+                    //     }
+                    //     await new DiscordWebhookClient(webhook).SendMessageAsync(readLine);
+                    // }
 
                     if (TalkingChannel != null) {
                         _ = MessageHandler(await TalkingChannel.SendMessageAsync(readLine));
@@ -142,6 +141,7 @@ namespace CaretakerNET
 
         public async Task ClientReady()
         {
+            // isReady is only used here, just to make sure it doesn't init a billion times
             if (!isReady) {
                 await Client.DownloadUsersAsync(Client.Guilds);
 
@@ -149,7 +149,7 @@ namespace CaretakerNET
                 // org.mariuszgromada.math.mxparser
                 License.iConfirmNonCommercialUse("hmmmmm");
 
-                TalkingChannel = Client.ParseGuild("1113913617608355992")?.ParseChannel("1220135295169597542");
+                TalkingChannel = (ITextChannel?)(Client.GetGuild(SPACE_JAMBOREE_ID)?.GetChannel(1230684176211251291));
 
                 await Load();
 
@@ -320,7 +320,7 @@ namespace CaretakerNET
                     await CommandHandler.DoCommand(msg, com, parameters, command);
                     u.Timeout = DateNow() + com.Timeout;
                     sw.Stop();
-                    LogDebug($"parsing {prefix}{command} command took {sw.ElapsedMilliseconds} ms");
+                    LogDebug($"parsing {prefix}{command} command took {sw.Elapsed.TotalMilliseconds} ms");
                 } catch (Exception error) {
                     await msg.Reply(error.Message, false);
                     LogError(error);

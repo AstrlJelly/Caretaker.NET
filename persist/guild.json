@@ -319,7 +319,7 @@
   },
   "1113913617608355992": {
     "GuildId": 1113913617608355992,
-    "GuildName": "Crazy Courthouse",
+    "GuildName": "The Routerheads",
     "Prefix": "\u003E",
     "count": {
       "Current": 0,
@@ -416,5 +416,114 @@
     "convo": {},
     "slowModes": {},
     "CurrentGame": null
+  },
+  "1230658674138157117": {
+    "GuildId": 1230658674138157117,
+    "GuildName": "Space Jamboree",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": null
+  },
+  "1154455637435101246": {
+    "GuildId": 1154455637435101246,
+    "GuildName": "",
+    "Prefix": "\u003E",
+    "count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "convo": {},
+    "slowModes": {},
+    "CurrentGame": {
+      "$type": "ConnectFour",
+      "board": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "Players": [
+        391459218034786304,
+        391459218034786304
+      ],
+      "Turns": 0,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647,
+      "Betters": {},
+      "PlayingChannelId": 1154455638127169720
+    }
   }
 }

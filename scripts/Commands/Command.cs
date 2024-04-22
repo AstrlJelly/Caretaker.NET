@@ -12,8 +12,8 @@ namespace CaretakerNET.Commands
         /// </summary>
         /// <param name="params">parsed params in a dictionary.</param>
         /// <param name="unparams">unparsed params; the strings that get parsed to the params dictionary.</param>
-        /// <param name="unparamsParams">the "params" input, which is always an array.</param>
-        public class ParsedParams(string command, Dictionary<string, dynamic?> @params, Dictionary<string, string?> unparams, string[] unparamsParams)
+        /// <param name="infParams">the "params" input, which is always an array.</param>
+        public class ParsedParams(string command, Dictionary<string, dynamic?> @params, Dictionary<string, string?> unparams, string[]? infParams)
         {
             public dynamic? this[string key] {
                 get => Params[key];
@@ -26,7 +26,8 @@ namespace CaretakerNET.Commands
             public readonly string Command = command;
             public readonly Dictionary<string, dynamic?> Params = @params;
             public readonly Dictionary<string, string?> Unparams = unparams;
-            public readonly string[] UnparamsParams = unparamsParams;
+            // public readonly string[] UnparamsParams = unparamsParams ?? [];
+            public readonly string[] InfParams = infParams ?? [];
         }
 
         public readonly string Name;
@@ -97,18 +98,20 @@ namespace CaretakerNET.Commands
             Boolean,
             Double,
             Integer,
-            UInteger,
-            Guild,
-            Channel,
+            // UInteger,
+            Long,
             User,
+            Channel,
+            Guild,
         }
-        public dynamic? ToType(string str, SocketGuild? guild) 
+        public dynamic? ToType(string str, SocketGuild? guild)
         {
             return Type switch {
-                ParamType.Integer     => int.Parse(str),
-                ParamType.UInteger    => uint.Parse(str),
-                ParamType.Double      => double.Parse(str),
                 ParamType.Boolean     => str == "true",
+                ParamType.Double      => double.Parse(str),
+                ParamType.Integer     => int.Parse(str),
+                // ParamType.UInteger    => uint.Parse(str),
+                ParamType.Long        => long.Parse(str),
                 ParamType.User        => MainHook.instance.Client.ParseUser(str, guild),
                 ParamType.Channel     => guild?.ParseChannel(str),
                 ParamType.Guild       => MainHook.instance.Client.ParseGuild(str),
@@ -125,7 +128,8 @@ namespace CaretakerNET.Commands
             "Boolean" => ParamType.Boolean,
             "Double" => ParamType.Double,
             "Int32" => ParamType.Integer,
-            "UInt32" => ParamType.UInteger,
+            // "UInt32" => ParamType.UInteger,
+            "Int64" => ParamType.Long,
             "String" or _ => ParamType.String,
         };
     }

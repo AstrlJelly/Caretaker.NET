@@ -270,8 +270,9 @@ namespace CaretakerCore
 
         public static long DateNow() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         #endregion
-    
+
         #region Async
+        [Obsolete("not really anything rn and might forever be nothing")]
         public static void Sleep()
         {
             

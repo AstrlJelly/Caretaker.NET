@@ -4,7 +4,7 @@
     "Username": "astrljelly",
     "Balance": 500,
     "Inventory": [],
-    "Timeout": 1713338998347,
+    "Timeout": 1713635081078,
     "Wins": [
       "ConnectFour",
       "ConnectFour",
@@ -32,10 +32,12 @@
   "476021507420586014": {
     "UserId": 476021507420586014,
     "Username": "vincells",
-    "Balance": null,
+    "Balance": 500,
     "Inventory": [],
-    "Timeout": 1713192342779,
-    "Wins": [],
+    "Timeout": 1713635113924,
+    "Wins": [
+      "ConnectFour"
+    ],
     "Losses": []
   },
   "391459218034786304": {
@@ -43,7 +45,7 @@
     "Username": "untitled.com",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1713211603932,
+    "Timeout": 1713544037870,
     "Wins": [],
     "Losses": [
       "ConnectFour",
@@ -94,7 +96,7 @@
     "Username": "lifinale",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1713192862002,
+    "Timeout": 1713635124098,
     "Wins": [],
     "Losses": []
   },
@@ -103,7 +105,7 @@
     "Username": "cosmic_hero",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712965407558,
+    "Timeout": 1713468829872,
     "Wins": [
       "ConnectFour",
       "ConnectFour",
@@ -387,7 +389,7 @@
     "Username": "Caretaker.net",
     "Balance": null,
     "Inventory": [],
-    "Timeout": 1712943912234,
+    "Timeout": 1713502980440,
     "Wins": [],
     "Losses": []
   },
@@ -567,6 +569,161 @@
   "860491562856611880": {
     "UserId": 860491562856611880,
     "Username": "tarloo_.",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "883989118336507934": {
+    "UserId": 883989118336507934,
+    "Username": "david_playzz1207",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "651550060923977728": {
+    "UserId": 651550060923977728,
+    "Username": "cykestr0gen",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "722629216486555679": {
+    "UserId": 722629216486555679,
+    "Username": "milkyshea",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "736835466795679744": {
+    "UserId": 736835466795679744,
+    "Username": "thebigbunny",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "847212073431990273": {
+    "UserId": 847212073431990273,
+    "Username": "netty_tricia0702",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "851502277461803009": {
+    "UserId": 851502277461803009,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "980614458198077471": {
+    "UserId": 980614458198077471,
+    "Username": "._yarg_.",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "706275608522391652": {
+    "UserId": 706275608522391652,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "983817668698198118": {
+    "UserId": 983817668698198118,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "680961869594230822": {
+    "UserId": 680961869594230822,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "1098103795147358268": {
+    "UserId": 1098103795147358268,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "775159414830399501": {
+    "UserId": 775159414830399501,
+    "Username": "",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "1071473313873940572": {
+    "UserId": 1071473313873940572,
+    "Username": "el_matias_69",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "353292543292866581": {
+    "UserId": 353292543292866581,
+    "Username": "soda_and_pop_inc.",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "1155031460814802995": {
+    "UserId": 1155031460814802995,
+    "Username": "foggyxires",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": []
+  },
+  "416818527241240597": {
+    "UserId": 416818527241240597,
+    "Username": "nspg",
+    "Balance": null,
+    "Inventory": [],
+    "Timeout": 0,
+    "Wins": [],
+    "Losses": [
+      "ConnectFour"
+    ]
+  },
+  "773209210943045632": {
+    "UserId": 773209210943045632,
+    "Username": "tenopiana",
     "Balance": null,
     "Inventory": [],
     "Timeout": 0,

@@ -166,7 +166,12 @@ namespace CaretakerNET
         public void Init(DiscordSocketClient client, ulong guildId)
         {
             GuildId = guildId;
-            var guild = client.GetGuild(guildId);
+            SocketGuild? guild = client.GetGuild(guildId);
+            if (guild == null) {
+                // LogError($"guild was null!! am i still in the guild with id \"{guildId}\"?");
+                LogDebug($"guild data with id \"{guildId}\" was null.");
+                return;
+            }
             GuildName = guild.Name;
             count.Init(guild);
             chain.Init(guild);
@@ -179,6 +184,7 @@ namespace CaretakerNET
         public string Username = "";
         // null when starting. much easier to check and smarter than making another bool
         public long? Balance = null;
+        public bool HasStartedEconomy => Balance != null;
         public const long START_BAL = 500;
         public List<EconomyHandler.Item> Inventory = [];
         public long Timeout = 0;
@@ -192,8 +198,14 @@ namespace CaretakerNET
             Username = client.GetUser(userId)?.Username ?? "";
         }
  
-        /// <returns>True if economy hasn't started, false otherwise.</returns>
-        public bool TryStartEconomy(IUserMessage msg, bool fromCom = true)
+        // public bool HasStartedEconomy()
+        // {
+        //     if (Balance != null) return false;
+        //     Balance = START_BAL;
+        //     return true;
+        // }
+
+        public bool StartEconomy(IUserMessage msg, bool fromCom = true)
         {
             if (Balance != null) return false;
             string[] startReplies = [

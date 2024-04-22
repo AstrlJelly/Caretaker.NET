@@ -86,13 +86,18 @@ namespace CaretakerNET.Games
         //     }
         //     return false;
         // }
-        public Dictionary<ulong, long> Betters { get; internal set; } = [];
+        public Dictionary<ulong, Bet> Betters { get; internal set; } = [];
+        public class Bet(long betAmount, ulong winnerGuess)
+        {
+            public long betAmount = betAmount;
+            public readonly ulong winnerGuess = winnerGuess;
+        }
 
-        public void AddBet(ulong playerId, long betAmount)
+        public void AddBet(ulong better, long betAmount, ulong winnerGuess)
         {
             // if already contains playerId, set a new betAmount
-            if (!Betters.TryAdd(playerId, betAmount)) {
-                Betters[playerId] = betAmount;
+            if (!Betters.TryAdd(better, new(betAmount, winnerGuess))) {
+                Betters[better].betAmount = betAmount;
             }
         }
         #endregion

@@ -314,22 +314,32 @@ namespace CaretakerNET.Commands
                 new Param("amount", "the amount of people to grab for the leaderboard", 10),
             ]),
 
-            new("bet, gamble", "see the top ranking individuals on this bot", "games", async (msg, p) => {
-                int amount = p["amount"];
+            new("bet, gamble", "see the top ranking individuals on this bot", "games", async (msg, p) => { // MAKE SURE MONEY IS SOMEHOW KEPT UNTIL THE GAME IS DESTROYED IN ANY WAY
+                (long amount, IUser? user) = (p["amount"], p["user"]);
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
 
                 var u = MainHook.instance.GetUserData(msg);
-                if (u.TryStartEconomy(msg)) return;
+                if (!u.HasStartedEconomy) {
+                    u.StartEconomy(msg);
+                    return;
+                }
 
                 string reply = "";
+                // HOW DO I NOT DO THIS. THIS IS SO MANY ELSE IFS.
                 if (s.CurrentGame == null) {
-                    reply = "silly billy! there's no game in play right now.";
+                    reply = "silly billy... there's no game in play right now.";
+                } else if (s.CurrentGame.Players.Contains(msg.Author.Id)) {
+                    reply = "HEY!! that's illegal!";
                 } else if (amount <= 0) {
                     reply = "that's... not right. gamble more, pls";
                 } else if (amount > u.Balance) {
                     reply = "damnnn you're poor. get ur money up i think";
+                } else if (user == null) {
+                    reply = "that's not a valid user!";
+                } else if (!s.CurrentGame.Players.Contains(user.Id)) {
+                    reply = "that user isn't playing here right now.";
                 } else {
-                    s.CurrentGame.AddBet(msg.Author.Id, amount);
+                    s.CurrentGame.AddBet(msg.Author.Id, amount, user.Id);
                 }
                 if (!string.IsNullOrEmpty(reply)) {
                     _ = msg.ReactAsync("❌");
@@ -338,7 +348,8 @@ namespace CaretakerNET.Commands
                     _ = msg.ReactAsync("✅");
                 }
             }, [
-                new Param("amount", "the amount of jell to gamble", 1),
+                new Param("amount", "the amount of jell to gamble", 1L),
+                new Param("user", "the user to gamble on", "", Param.ParamType.User),
             ]),
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
@@ -379,11 +390,9 @@ namespace CaretakerNET.Commands
             }),
 
             new("test", "for testing :)", "caretaker", async (msg, p) => {
-                var builder = new ComponentBuilder()
-                    .WithButton("label", "show-cards");
-
-                await msg.ReplyAsync("button", components: builder.Build());
-            }),
+                long test = p["test"];
+                _ = msg.Reply(test);
+            }, [ new("test", "for testing", 50L) ]),
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             new("cmd", "run more internal commands, will probably just be limited to astrl", "caretaker"),
@@ -479,12 +488,15 @@ namespace CaretakerNET.Commands
             }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", Param.ParamType.Guild) ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
-                await Task.Delay((int)p["delay"]);
+                int delay = p["delay"];
+                if (delay > 0) await Task.Delay(delay);
+                _ = msg.ReactAsync("✅");
                 MainHook.instance.Stop();
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
-
+                object[]? tempInf = p["params"];
+                string[]? infParams = tempInf?.Select(x => x?.ToString() ?? "").ToArray();
             }, [ new("test1", "for testing", ""), new("test2", "for testing: electric boogaloo", ""), new("params", "params!!!", "") ]),
         ];
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -509,74 +521,121 @@ namespace CaretakerNET.Commands
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            Dictionary<string, dynamic?> paramDict = [];
-            Dictionary<string, string?> unparamDict = [];
-            string[] unparams = [];
+            var guild = msg.GetGuild();
+            Dictionary<string, dynamic?> paramDict = []; // main dictionary of parsed parameters
+            Dictionary<string, string?> unparamDict = []; // dictionary of unparsed parameters; just the strings
+            string[]? unparams = null;
             if (com.Params != null && (com.Params.Length > 0 || com.Inf != null))
             {
-                bool isBetweenQuotes = false;
-                int currentParamIndex = 0;
-                Param? currentParam = null;
-                bool stopLoop = false;
+                bool isBetweenQuotes = false;   // 
+                bool backslash = false;         // true if last character was '\'
+                int currentParamIndex = 0;      // 
+                Param? currentParam = null;     // null unless manually set using "paramName : value"
+                List<string>? infParams = null; // inf params; gets converted to an array when setting unparams
+                int stopState = 0;              // a way for the Action<int> to return in the method; 0 = nothing, 1 = break, 2 = return
 
-                List<char> currentString = new(parameters.Length);
+                // a list of chars that get concatenated into either a parameter name or a parameter value
+                List<char> currentString = new(parameters.Length); // setting the capacity gives negligible change in performance but i think it's funny
+
+                // dictionary of actions that have the current index as an input, accessed using different types of chars
                 Dictionary<char, Action<int>> charActions = new() {
                     { '"', i => isBetweenQuotes = !isBetweenQuotes },
+                    { '\\', i => backslash = true }, // used to be a check in the for loop; this is much more intuitive
                     { ' ', i => {
-                        if (isBetweenQuotes) {
+                        if (isBetweenQuotes) { // just act like a normal character if between quotes
                             currentString.Add(parameters[i]);
                             return;
                         }
+
+                        // makes sure cases like ">echo thing  1000" don't break anything
+                        // maybe just check if last character was a space?
+                        if (currentString.Count < 1) return;
+                        // lets you do things like "paramName : value" or "paramName: value" or even "paramName :value"
                         if ((parameters.IsIndexValid(i + 1) && parameters[i + 1] == ':') || (parameters.IsIndexValid(i - 1) && parameters[i - 1] == ':')) return;
 
-                        if (currentParam == null) {
-                            currentParam ??= com.Params[currentParamIndex];
-                            currentParamIndex++;
+                        if (currentParamIndex >= com.Params.Length) {
+                            if (com.Inf != null) {
+                                infParams ??= [];
+                            } else {
+                                stopState = 1;
+                                return;
+                            }
                         }
+
                         var paramStr = string.Concat(currentString);
-                        unparamDict.TryAdd(currentParam.Name, paramStr);
-                        dynamic? paramVal = currentParam.ToType(paramStr, msg.GetGuild());
-                        paramDict.TryAdd(currentParam.Name, paramVal);
+                        if (infParams == null) {
+                            // if it's not being manually set (and not adding to inf params), use currentParamIndex then add 1 to it
+                            if (currentParam == null) {
+                                currentParam = com.Params[currentParamIndex];
+                                currentParamIndex++;
+                            }
+                            unparamDict.TryAdd(currentParam.Name, paramStr); // use TryAdd cuz i don't really care about duplicate keys
+                            dynamic? paramVal = currentParam.ToType(paramStr, guild);
+                            paramDict.TryAdd(currentParam.Name, paramVal);
+                        } else {
+                            infParams.Add(paramStr);
+                        }
                         currentParam = null;
                         currentString.Clear();
                     }},
                     { ':', i => {
-                        int paramIndex = Array.FindIndex(com.Params, p => p.Name == string.Concat(currentString));
+                        string paramName = string.Concat(currentString);
                         currentString.Clear();
-                        if (paramIndex > -1) {
-                            currentParam = com.Params[paramIndex];
+                        if (paramName == "params") {
+                            infParams = [];
                         } else {
-                            var s = MainHook.instance.GetGuildData(msg);
-                            _ = msg.Reply($"incorrect param name! use \"{s?.Prefix ?? DEFAULT_PREFIX}help {com.Name}\" to get params for {com.Name}.");
-                            stopLoop = true;
+                            Param? param = Array.Find(com.Params, p => p.Name == paramName);
+                            if (param != null) {
+                                currentParam = param;
+                            } else {
+                                GuildPersist? s = MainHook.instance.GetGuildData(msg);
+                                _ = msg.Reply($"incorrect param name! use \"{s?.Prefix ?? DEFAULT_PREFIX}help {com.Name}\" to get params for {com.Name}.");
+                                stopState = 2;
+                            }
                         }
                     }},
                 };
                 for (int i = 0; i < parameters.Length; i++)
                 {
                     // if you can get the action from the character, and there's not a \ before the character
-                    if (charActions.TryGetValue(parameters[i], out var action) && !(parameters.IsIndexValid(i - 1) && parameters[i - 1] == '\\')) {
+                    if (charActions.TryGetValue(parameters[i], out var action) && !backslash) {
                         action.Invoke(i);
                     } else {
                         currentString.Add(parameters[i]);
+                        backslash = false;
                     }
-                    if (stopLoop) return false;
+                    // refer to stopLoop comment
+                    if (stopState == 1) {
+                        break;
+                    } else if (stopState == 2) {
+                        return false;
+                    }
                 }
-                // might be a better way to do this? works wonders rn!
+                // there might be a better way to do this? works super well rn tho
                 if (currentString.Count > 0) {
-                    isBetweenQuotes = false;
+                    isBetweenQuotes = false; // make sure the action doesn't just add a space
                     charActions[' '].Invoke(-69); // arbitrary. no other reason i chose it 😊😊😊
                 }
 
+                // check if every param is actually in paramDict
+                // much better than the old method! this practically guarantees safety :)
                 foreach (var param in com.Params) {
                     if (!paramDict.ContainsKey(param.Name)) {
+                        // convert if it's needed; if the preset is a string but the param type is not supposed to be a string
+                        // this is for users, guilds, etc.
                         dynamic? paramVal = 
                             param.Preset is string preset && param.Type != Param.ParamType.String ? 
-                                param.ToType(preset, msg.GetGuild()) : 
+                                param.ToType(preset, guild) : 
                                 param.Preset;
 
                         paramDict.Add(param.Name, paramVal);
                     }
+                }
+                if (com.Inf != null) {
+                    // set unparams to infParams as string[]
+                    unparams = [.. infParams];
+                    // add an array to paramDict that is infParams converted to "params"'s type
+                    paramDict.Add("params", infParams?.Select(p => (object?)com.Inf.ToType(p, guild)).ToArray() ?? []);
                 }
             }
 
