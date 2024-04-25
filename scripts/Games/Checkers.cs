@@ -52,19 +52,19 @@ namespace CaretakerNET.Games
         }
         public string DisplayBoard(Win win)
         {
-            bool anyWin = win.WinningPlayer != Player.None;
+            // bool anyWin = win.WinningPlayer != Player.None;
             StringBuilder joinedRows = new();
             for (int i = 0; i < H; i++) {
                 for (int j = 0; j < W; j++) {
                     joinedRows.Append((Player)this[j, i] switch {
                         Player.One => "🔴", // red circle (p1)
                         Player.Two => "🟡", // yellow circle (p2)
-                        _ => j % 2 + i % 2 == 1 ? "⬜" : "⬛" // checkerboard base (empty)
+                        _ => (j + i) % 2 == 1 ? "⬜" : "⬛" // checkerboard base (empty)
                     });
                 }
                 joinedRows.Append('\n');
             }
-            joinedRows.AppendLine("1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣");
+            // joinedRows.AppendLine("1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣");
             return joinedRows.ToString();
         }
         public Checkers(ulong playingChannelId, params ulong[] players)
@@ -72,7 +72,8 @@ namespace CaretakerNET.Games
             board = new int[W, H];
 
             PlayingChannelId = playingChannelId;
-            Players = [ ..players ];
+            int j = 0;
+            Players = players.ToDictionary(_ => (Player)(++j));
         }
     }
 }

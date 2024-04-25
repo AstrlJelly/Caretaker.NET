@@ -53,7 +53,7 @@ namespace CaretakerNET.Commands
             // CurrentTimeout = 0;
 
             if (parameters != null) {
-                if (parameters.TryFindIndex(x => x.Name == "params", out int infIndex)) {
+                if (parameters.TryFindIndex((x, _) => x.Name == "params", out int infIndex)) {
                     Inf = parameters[infIndex];
                     parameters.RemoveAt(infIndex);
                 }

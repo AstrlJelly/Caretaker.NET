@@ -11,6 +11,9 @@ namespace CaretakerNET.Games
     [JsonDerivedType(typeof(Checkers), typeDiscriminator: "Checkers")]
     public abstract class BoardGame
     {
+        private ulong this[Player key] => Players[key];
+        private ulong this[int index] => Players[(Player)(index + 1)];
+
         public enum Player : int
         {
             None,
@@ -19,8 +22,8 @@ namespace CaretakerNET.Games
         }
 
         public ulong PlayingChannelId;
-        // internal ulong[]? allPlayers;
-        public List<ulong> Players { get; internal set; } = [];
+        // public List<ulong> Players { get; internal set; } = [];
+        public Dictionary<Player, ulong> Players { get; internal set; } = [];
         
         public int Turns { get; internal set; } = 0;
         public ulong ForfeitPlayer { get; internal set; }
@@ -34,12 +37,12 @@ namespace CaretakerNET.Games
         public Player GetWhichPlayer(ulong playerId)
         {
             if (Players != null) {
-                var pIndex = Players.FindIndex(x => x == playerId);
-                if (Turns == 0 && pIndex != 0) {
-                    Players.Reverse();
+                Player plr = Players.FirstOrDefault(x => x.Value == playerId).Key;
+                if (Turns == 0 && plr == Player.Two) {
+                    Players = (Dictionary<Player, ulong>)Players.Reverse();
                     return Player.One;
                 } else {
-                    return (Player)(pIndex + 1);
+                    return plr;
                 }
             }
 
@@ -48,16 +51,16 @@ namespace CaretakerNET.Games
 
         public ulong OtherPlayerId()
         {
-            return Players[Turns % 2];
+            return this[Turns % 2];
         }
 
         public (ulong, ulong) GetPlayerIds(ulong sentId)
         {
             if (Turns == 0) {
-                int which = sentId == Players[1] ? 0 : 1;
-                return (sentId, Players[which]);
+                int which = sentId == this[1] ? 0 : 1;
+                return (sentId, this[which]);
             } else {
-                return (Players[(Turns) % 2], Players[(Turns + 1) % 2]);
+                return (this[(Turns) % 2], this[(Turns + 1) % 2]);
             }
         }
 

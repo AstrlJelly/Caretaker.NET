@@ -28,14 +28,14 @@ namespace CaretakerNET
             LogInfo($"Start saving to {path}...", true);
             if (!Directory.Exists("./persist")) Directory.CreateDirectory("./persist");
             string? serializedDict = JsonSerializer.Serialize(objectToSave, serializerSettings);
-            await File.WriteAllTextAsync(path, serializedDict);
+            await File.WriteAllTextAsync(path, serializedDict); // creates file if it doesn't exist
             LogInfo("Saved!", true);
         }
 
         public static async Task<Dictionary<ulong, GuildPersist>> LoadGuilds() => await Load<Dictionary<ulong, GuildPersist>>(GUILD_PATH);
         public static async Task<Dictionary<ulong, UserPersist>>  LoadUsers()  => await Load<Dictionary<ulong, UserPersist>>(USER_PATH);
 
-        // tells the compiler that T always implements new(), so that i can construct a default dictionary. i love C#
+        // tells the compiler that T should always implement new(), so that i can construct a default dictionary. i love C#
         private static async Task<T> Load<T>(string path) where T : new()
         {
             LogInfo($"Start loading from {path}...", true);
@@ -117,8 +117,6 @@ namespace CaretakerNET
             }
             [JsonIgnore] internal ITextChannel? channel = channel;
             [JsonIgnore] internal IUserMessage? lastCountMsg = lastCountMsg;
-            // [JsonProperty] internal ulong? channelId;
-            // [JsonProperty] internal ulong? lastCountMsgChannelId, lastCountMsgId;
             internal ulong? channelId;
             internal ulong? lastCountMsgChannelId, lastCountMsgId;
             [JsonIgnore] public ITextChannel? Channel { get => channel; set {
@@ -146,21 +144,12 @@ namespace CaretakerNET
             }
         }
 
-        // public class SlowMode(ITextChannel? channel, int timer)
-        // {
-        //     public ITextChannel? channel = channel;
-        //     public int timer = timer;
-        // }
-
-        // public Dictionary<string, dynamic> CommandData;
         public ulong GuildId = guildId;
         public string GuildName = "";
         public string Prefix = DEFAULT_PREFIX;
-        public CountPersist count = new();
-        public ChainPersist chain = new();
-        public ConvoPersist convo = new();
-        public Dictionary<ulong, int> slowModes = []; // channel id and timer
-        // public ConnectFour? connectFour = null;
+        public CountPersist Count = new();
+        public ChainPersist Chain = new();
+        public ConvoPersist Convo = new();
         public BoardGame? CurrentGame = null;
 
         public void Init(DiscordSocketClient client, ulong guildId)
@@ -173,21 +162,23 @@ namespace CaretakerNET
                 return;
             }
             GuildName = guild.Name;
-            count.Init(guild);
-            chain.Init(guild);
-            convo.Init(guild);
+            Count.Init(guild);
+            Chain.Init(guild);
+            Convo.Init(guild);
         }
     }
     public class UserPersist
     {
         public ulong UserId;
+        [JsonInclude] bool IsInServer = true;
         public string Username = "";
         // null when starting. much easier to check and smarter than making another bool
         public long? Balance = null;
-        public bool HasStartedEconomy => Balance != null;
+        [JsonIgnore] public bool HasStartedEconomy => Balance != null;
         public const long START_BAL = 500;
         public List<EconomyHandler.Item> Inventory = [];
         public long Timeout = 0;
+
         // the name of the game won or lost
         public List<string> Wins = [];
         public List<string> Losses = [];
@@ -195,7 +186,13 @@ namespace CaretakerNET
         public void Init(DiscordSocketClient client, ulong userId)
         {
             UserId = userId;
-            Username = client.GetUser(userId)?.Username ?? "";
+            var user = client.GetUser(userId);
+            if (user != null) {
+                Username = user.Username;
+                IsInServer = true;
+            } else {
+                IsInServer = false;
+            }
         }
  
         // public bool HasStartedEconomy()

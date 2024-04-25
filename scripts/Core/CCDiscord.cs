@@ -65,9 +65,11 @@ namespace CaretakerCore
         /// </summary>
         /// <param name="msg">The message to react to.</param>
         /// <param name="emojiStr">An Emoji in string form.</param>
-        public async static Task ReactAsync(this IMessage msg, string emojiStr)
+        public async static Task React(this IMessage msg, string emojiStr)
         {
-            await msg.AddReactionAsync(Emoji.Parse(emojiStr));
+            // gets the emoji without the <> at the ends if it needs it (which is just kinda a guess)
+            bool custom = emojiStr.Length >= 2 && emojiStr[0] == '<' && emojiStr[^1] == '>';
+            await msg.AddReactionAsync(custom ? new Emoji(emojiStr[1..^1]) : Emoji.Parse(emojiStr));
         }
 
         /// <summary>
@@ -111,13 +113,13 @@ namespace CaretakerCore
         {
             SocketGuild? guild = null;
             Func<string, SocketGuild?>[] actions = [
-                x => c.GetGuild(ulong.Parse(guildToParse)),
+                x => ulong.TryParse(guildToParse, out ulong id) ? c.GetGuild(id) : null,
                 x => c.Guilds.FirstOrDefault(g => Core.Match(guildToParse, g.Name)),
                 // x => (SocketGuild?)c.Guilds.FirstOrDefault(ulong.Parse(guildToParse)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
-                    guild = actions[i](guildToParse);
+                    guild = actions[i].Invoke(guildToParse);
                     if (guild != null) break;
                 } catch {
                     continue;
@@ -131,12 +133,12 @@ namespace CaretakerCore
             if (guild == null) return null;
             ITextChannel? channel = null;
             Func<string, ITextChannel?>[] actions = [
-                x => guild.TextChannels.FirstOrDefault(chan => chan.Name.Match(channelToParse)),
-                x => (ITextChannel)guild.GetChannel(IDFromReference(channelToParse) ?? ulong.Parse(channelToParse)),
+                chan => guild.TextChannels.FirstOrDefault(c => c.GetChannelType() == ChannelType.Text && c.Name.Match(chan)),
+                chan => (ITextChannel)guild.GetChannel(IDFromReference(chan) ?? (ulong.TryParse(chan, out ulong id) ? id : 0)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
-                    channel = actions[i](channelToParse);
+                    channel = actions[i].Invoke(channelToParse);
                     if (channel != null) break;
                 } catch {
                     continue;
@@ -168,11 +170,6 @@ namespace CaretakerCore
 
         public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
         public static string UserPingFromID(ulong id) => $"<@{id}>";
-
-        public static void SubscribeToReactions()
-        {
-
-        }
 
         public class ReactionSubscribe : IDisposable
         {
@@ -228,6 +225,7 @@ namespace CaretakerCore
                 client.ButtonExecuted -= OnComponentInteract;
                 client.SelectMenuExecuted -= OnComponentInteract;
                 message.ModifyAsync(m => {
+                    // remove component from message; setting to null doesn't work
                     m.Components = new ComponentBuilder().Build();
                 });
                 GC.SuppressFinalize(this);
@@ -236,17 +234,17 @@ namespace CaretakerCore
             public ComponentSubscribe(OnButtonPressed onComponentInteract, IUserMessage message)
             {
                 this.message = message;
-                // this.onPressed = onPressed;
                 OnComponentInteract = async args => {
                     if (Destroyed || message.Id != args.Message.Id) return;
                     bool isLast = await onComponentInteract.Invoke(args);
                     if (!args.HasResponded) {
+                        // fixes some jank with "application didn't respond"
                         _ = args.DeferAsync();
                     }
                     if (isLast) Dispose();
                 };
                 if (client == null) {
-                    LogError("client was null! make sure to run the init method in your start method");
+                    LogError("client was null! make sure to run Init() in your start method.");
                     return;
                 }
                 client.ButtonExecuted += OnComponentInteract;

@@ -3,6 +3,7 @@
 // using System.Diagnostics;
 // using System.Text;
 
+using System;
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -17,13 +18,13 @@ namespace CaretakerCore
         public static string ReplaceAll(this string stringToReplace, char oldStr, char newStr) => string.Join(newStr, stringToReplace.Split(oldStr));
 
         /// <summary>
-        /// Inline IEnumberable.Get(), where if the value is not found at the index, false is returned.
+        /// A safer "this[]", which simply returns default if out of bounds.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="enumerable">The IEnumerable to use to get at <paramref name="index"/>.</param>
         /// <param name="index"></param>
         /// <returns>The item at <paramref name="index"/>, if <paramref name="enumerable"/> isn't null, and there is a value at that index.</returns>
-        public static T? TryGet<T>(this IEnumerable<T> enumerable, int index) 
+        public static T? TryGet<T>(this IEnumerable<T> enumerable, int index)
         {
             return enumerable != null && enumerable.IsIndexValid(index) ? enumerable.ElementAt(index) : default;
         }
@@ -157,7 +158,7 @@ namespace CaretakerCore
         /// <typeparam name="T"></typeparam>
         /// <param name="enumerable"></param>
         /// <returns>An element from <paramref name="enumerable"/>.</returns>
-        public static T? GetRandom<T>(this IEnumerable<T> enumerable) 
+        public static T? GetRandom<T>(this IEnumerable<T> enumerable)
         {
             var random = new Random();
             int count = enumerable.Count();
@@ -172,13 +173,13 @@ namespace CaretakerCore
         /// <param name="match"></param>
         /// <param name="index"></param>
         /// <returns><i>True</i> if the index was found. <i>False</i> otherwise.</returns>
-        public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Predicate<T> match, out int index) 
+        public static bool TryFindIndex<T>(this IEnumerable<T> enumerable, Func<T, int, bool> match, out int index) 
         {
             index = -1;
             foreach (T item in enumerable)
             {
                 index++;
-                if (match.Invoke(item)) return true;
+                if (match.Invoke(item, index)) return true;
             }
             return false;
         }
@@ -233,16 +234,22 @@ namespace CaretakerCore
             Console.ResetColor();
         }
 
-        [Obsolete("THIS SHOULD BE TEMPORARY!!")] // a LOT of logging.
-        // m : message, t : time
-        public static void Log(object? m = null, bool t = false) { InternalLog(m, t, LogSeverity.Info); }
+        // m : message, t : add timestamp?
         public static void LogInfo(object? m = null, bool t = false) { InternalLog(m, t, LogSeverity.Info); }
         public static void LogWarning(object? m = null, bool t = false) { InternalLog(m ?? "Warning!", t, LogSeverity.Warning); }
         public static void LogError(object? m = null, bool t = false) { InternalLog(m ?? "Error!", t, LogSeverity.Error); }
+        [Obsolete("THIS SHOULD BE TEMPORARY!!")]
+        public static void Log(object? m = null, bool t = false) { InternalLog(m, t, LogSeverity.Info); }
+
+        public static void ClearConsoleLine()
+        {
+            // clears current line by just spamming backspace
+            Console.Write(new string('\b', Console.WindowWidth));
+        }
 
         public static void ChangeConsoleTitle(string status)
         {
-            Console.Title = "CaretakerNET : ";
+            Console.Title = "CaretakerNET : " + status;
         }
         #endregion
 

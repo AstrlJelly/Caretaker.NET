@@ -13,6 +13,9 @@ using CaretakerNET.Games;
 using org.mariuszgromada.math.mxparser;
 using Renci.SshNet;
 using FuzzySharp;
+using ComputeSharp;
+using Z.Expressions.CodeCompiler.CSharp;
+using Z.Expressions;
 
 namespace CaretakerNET.Commands
 {
@@ -23,78 +26,13 @@ namespace CaretakerNET.Commands
             new("prefix", "set the prefix for the current guild", "commands", async (msg, p) => {
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 s.Prefix = string.IsNullOrEmpty(p["prefix"]) ? ">" : p["prefix"]!;
-                _ = msg.ReactAsync("✅");
+                _ = msg.React("✅");
             }, [
                 new Param("prefix", $"the prefix to set to. if empty, resets to \"{DEFAULT_PREFIX}\"", "")
             ], [ ChannelPermission.ManageChannels ]),
 
             new("help, listCommands", "list all normal commands", "commands", async (msg, p) => {
-                string command = p["command"] ?? "";
-                (string, string)[]? commandLists = ListCommands(msg, command, p["listParams"]);
-                if (commandLists == null) {
-                    await msg.Reply(
-                        $"{command} is NOT a command. try again :/" + (string.IsNullOrEmpty(command) ? "\nor something just went wrong. idk" : ""),
-                        false
-                    );
-                    return;
-                }
-                if (commandLists.Length <= 0) {
-                    _ = msg.Reply("commandLists was empty!");
-                    return;
-                }
-
-                var dictIndex = 0;
-                Dictionary<string, Embed> commandEmbeds = commandLists.Select((genreAndCom, index) => {
-                    (string genre, string com) = genreAndCom;
-                    return (new EmbedBuilder {
-                        Title = "commands : " + genre /* + $" ({index + 1} out of {commandLists.Length})" */,
-                        Description = com
-                    }).WithCurrentTimestamp().Build();
-                }).ToDictionary(x => commandLists[dictIndex++].Item1);
-
-                var components = new ComponentBuilder {
-                    ActionRows = [
-                        new ActionRowBuilder().WithSelectMenu(
-                            "commands",
-                            commandLists.Select((genreAndCom) => new SelectMenuOptionBuilder(genreAndCom.Item1, genreAndCom.Item1)).ToList(),
-                            "command select!!"
-                        )
-                    ]
-                };
-
-                var helpMsg = await msg.ReplyAsync(components: components.Build(), embed: commandEmbeds.Values.ElementAt(0));
-
-                async Task<bool> OnDropdownChange(SocketMessageComponent args)
-                {
-                    IUser reactUser = args.User;
-                    IMessage message = args.Message;
-                    ulong ruId = reactUser.Id;
-                    if (message.Id != helpMsg.Id || ruId == CARETAKER_ID) {
-                        return false;
-                    }
-
-                    // if it's not the victim nor the caretaker, ephemerally tell them they can't use it
-                    if (ruId != msg.Author.Id) {
-                        _ = args.RespondAsync("not for you.", ephemeral: true);
-                        return false;
-                    }
-
-                    if (args.Data.CustomId is "commands") {
-                        var genre = string.Join("", args.Data.Values);
-                        await helpMsg.ModifyAsync(m => m.Embed = commandEmbeds[genre]);
-                    }
-
-                    return false;
-                }
-                
-                using var rs = new ComponentSubscribe(OnDropdownChange, helpMsg);
-                    var stopwatch = new Stopwatch();
-                    stopwatch.Start();
-                    while (stopwatch.Elapsed.TotalSeconds < 60 && !rs.Destroyed) {
-                        // await Task.Delay(1000);
-                    }
-                    stopwatch.Stop();
-                rs.Dispose();
+                await HelpReply(msg, p["command"] ?? "", p["listParams"], false);
             }, [ 
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
                 new Param("listParams", "list parameters?", false)
@@ -138,7 +76,7 @@ namespace CaretakerNET.Commands
                     } else {
                         string name = string.IsNullOrEmpty(msg.Author.GlobalName) ? msg.Author.Username : $"{msg.Author.GlobalName} ({msg.Author.Username})";
                         string from = !IsNull(msg.GetGuild(), out var msgGuild) ? " from " + msgGuild!.Name : "";
-                        _ = msg.ReactAsync("✅");
+                        _ = msg.React("✅");
                         await user.SendMessageAsync(name + from + " says hi!");
                     }
                 } else if (p.Unparams["user"] is "world" or "world!") { // the entire reason why Unparams exists
@@ -165,10 +103,10 @@ namespace CaretakerNET.Commands
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 ITextChannel? countChannel = channel ?? (ITextChannel?)msg.Channel; // TryGetGuildData makes sure this is done in a guild, so this is 99.9% not null?
                 if (reset) {
-                    s.count.Reset(true);
+                    s.Count.Reset(true);
                 }
-                s.count.Channel = countChannel; 
-                await msg.ReactAsync("✅");
+                s.Count.Channel = countChannel; 
+                await msg.React("✅");
             }, [
                 new Param("channel", "the channel to count in", "", Param.ParamType.Channel),
                 new Param("reset", "reset everything?", true),
@@ -177,11 +115,11 @@ namespace CaretakerNET.Commands
             new("countSet", "set the current count", "gimmick", async (msg, p) => {
                 int newCount = p["newCount"];
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
-                if (s.count?.Channel != null) {
-                    _ = msg.ReactAsync("✅");
-                    s.count.Current = newCount;
+                if (s.Count?.Channel != null) {
+                    _ = msg.React("✅");
+                    s.Count.Current = newCount;
                 } else {
-                    _ = msg.ReactAsync("❌");
+                    _ = msg.React("❌");
                     await msg.Reply("couldn't get the guild data!");
                 }
             }, [
@@ -246,8 +184,8 @@ namespace CaretakerNET.Commands
                             if (cFourChance > 60) {
                                 s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, ruId);
                             } else if (checkersChance > 60) {
-                                // s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
-                                _ = msg.Reply("not implemented yet! soon tho");
+                                s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
+                                // _ = msg.Reply("not implemented yet! soon tho");
                             } else if (unoChance > 60) {
                                 _ = msg.Reply("not implemented yet! soon tho");
                             } else {
@@ -328,7 +266,7 @@ namespace CaretakerNET.Commands
                 // HOW DO I NOT DO THIS. THIS IS SO MANY ELSE IFS.
                 if (s.CurrentGame == null) {
                     reply = "silly billy... there's no game in play right now.";
-                } else if (s.CurrentGame.Players.Contains(msg.Author.Id)) {
+                } else if (s.CurrentGame.Players.ContainsValue(msg.Author.Id)) {
                     reply = "HEY!! that's illegal!";
                 } else if (amount <= 0) {
                     reply = "that's... not right. gamble more, pls";
@@ -336,16 +274,16 @@ namespace CaretakerNET.Commands
                     reply = "damnnn you're poor. get ur money up i think";
                 } else if (user == null) {
                     reply = "that's not a valid user!";
-                } else if (!s.CurrentGame.Players.Contains(user.Id)) {
+                } else if (!s.CurrentGame.Players.ContainsValue(user.Id)) {
                     reply = "that user isn't playing here right now.";
                 } else {
                     s.CurrentGame.AddBet(msg.Author.Id, amount, user.Id);
                 }
                 if (!string.IsNullOrEmpty(reply)) {
-                    _ = msg.ReactAsync("❌");
+                    _ = msg.React("❌");
                     _ = msg.Reply(reply);
                 } else {
-                    _ = msg.ReactAsync("✅");
+                    _ = msg.React("✅");
                 }
             }, [
                 new Param("amount", "the amount of jell to gamble", 1L),
@@ -367,12 +305,12 @@ namespace CaretakerNET.Commands
                         var role = guild.Roles.FirstOrDefault(x => x.Name == "Playtester");
                         if (user.RoleIds.Any(x => x == role?.Id)) {
                             // _ = user.RemoveRoleAsync(role);
-                            _ = msg.ReactAsync("❌");
+                            _ = msg.React("❌");
                             // _ = msg.Reply("okay... :(");
                             _ = msg.Reply("You're stuck here now.");
                         } else {
                             _ = user.AddRoleAsync(role);
-                            _ = msg.ReactAsync("✅");
+                            _ = msg.React("✅");
                             _ = msg.Reply("thanks :3");
                         }
                     } break;
@@ -382,7 +320,7 @@ namespace CaretakerNET.Commands
                     } break;
                     // any other server
                     default: {
-                        _ = msg.ReactAsync(Emojis.Smide);
+                        _ = msg.React(Emojis.Smide);
                         _ = msg.Reply("Check your dms.");
                         _ = msg.Author.SendMessageAsync("here's where you can ACTUALLY use that command! :D\n" + invite!.Url);
                     } break;
@@ -390,8 +328,11 @@ namespace CaretakerNET.Commands
             }),
 
             new("test", "for testing :)", "caretaker", async (msg, p) => {
-                long test = p["test"];
-                _ = msg.Reply(test);
+                var embed = new EmbedBuilder()
+                    .AddField("test1", "test2")
+                    .AddField("test3", "test4");
+                
+                _ = msg.ReplyAsync(embed: embed.Build());
             }, [ new("test", "for testing", 50L) ]),
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,9 +340,7 @@ namespace CaretakerNET.Commands
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
             new("help", "list all cmd commands", "commands", async (msg, p) => {
-                // string reply = ListCommands(msg, p["command"] ?? "", p["listParams"], true);
-                // await msg.Reply(reply, false);
-                await msg.Reply("implementing this later", false);
+                await HelpReply(msg, p["command"] ?? "", p["listParams"], true);
             }, [
                 new Param("command", "the command to get help for (if empty, just lists all)", ""),
                 new Param("listParams", "list parameters?", false)
@@ -434,7 +373,7 @@ namespace CaretakerNET.Commands
                 {
                     case "cancel": {
                         s.CurrentGame = null;
-                        _ = msg.ReactAsync("✅");
+                        _ = msg.React("✅");
                     } break;
                     case "refresh": {
                         switch (s.CurrentGame)
@@ -473,7 +412,11 @@ namespace CaretakerNET.Commands
             }, [ new("guild", "the name of the guild to make an invite for", "", Param.ParamType.Guild) ]),
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
-                (string? channel, SocketGuild? guild) = (p["channel"], p["guild"] ?? msg.GetGuild());
+                (int index, string? channel, SocketGuild? guild) = (p["index"], p["channel"], p["guild"] ?? msg.GetGuild());
+                if (index < 0 && index > MainHook.instance.cs.TalkingChannels.Length - 1) {
+                    _ = msg.Reply("too high. or too low! idk and idc");
+                    return;
+                }
                 if (guild == null) {
                     _ = msg.Reply("mmm... nope.");
                     return;
@@ -483,14 +426,35 @@ namespace CaretakerNET.Commands
                     _ = msg.Reply("mmm... nope!!");
                     return;
                 }
-                MainHook.instance.TalkingChannel = (ITextChannel)talkingChannel;
-                _ = msg.ReactAsync("✅");
-            }, [ new("channel", "the channel to talk in", ""), new("guild", "the guild to talk in", "", Param.ParamType.Guild) ]),
+                MainHook.instance.cs.TalkingChannels[index] = (ITextChannel)talkingChannel;
+                _ = msg.React("✅");
+            }, [
+                new("index", "the index to set the channel", 0),
+                new("channel", "the channel to talk in", ""),
+                new("guild", "the guild to talk in", "", Param.ParamType.Guild)
+            ]),
+
+            new("eval", "run code!!", "internal", async (msg, p) => {
+                string code = p["code"] ?? "null";
+                
+                // i am NOT satisfied with this at all but i can debug a few things which makes me happy
+                _ = msg.Reply(MainHook.instance.CompileContext.Execute(code, MainHook.instance));
+            }, [ new("code", "the code to execute", "") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
                 int delay = p["delay"];
                 if (delay > 0) await Task.Delay(delay);
-                _ = msg.ReactAsync("✅");
+                await msg.React("✅");
+                string[] replies = [
+                    "sounds good! shutting down",
+                    "sighhhh meowkay",
+                    "Um. Okay",
+                    "okay.. sure..",
+                    $"shutting down... {Emojis.Cride}",
+                    $"i... i don't wanna go {Emojis.Cride} {Emojis.Cride} {Emojis.Cride}",
+                    Emojis.Cride,
+                ];
+                await msg.RandomReply(replies);
                 MainHook.instance.Stop();
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
@@ -517,7 +481,7 @@ namespace CaretakerNET.Commands
             return (whichComms[command.ToLower()], parameters);
         }
         // might wanna make it return what the command.func returns, though i don't know how helpful that would be
-        public async static Task<bool> DoCommand(IUserMessage msg, Command com, string parameters, string commandName)
+        public async static Task<bool> DoCommand(IUserMessage msg, Command com, string strParams, string commandName)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -535,15 +499,16 @@ namespace CaretakerNET.Commands
                 int stopState = 0;              // a way for the Action<int> to return in the method; 0 = nothing, 1 = break, 2 = return
 
                 // a list of chars that get concatenated into either a parameter name or a parameter value
-                List<char> currentString = new(parameters.Length); // setting the capacity gives negligible change in performance but i think it's funny
+                List<char> currentString = new(strParams.Length); // setting the capacity gives negligible change in performance but i think it's funny
 
                 // dictionary of actions that have the current index as an input, accessed using different types of chars
                 Dictionary<char, Action<int>> charActions = new() {
                     { '"', i => isBetweenQuotes = !isBetweenQuotes },
                     { '\\', i => backslash = true }, // used to be a check in the for loop; this is much more intuitive
                     { ' ', i => {
-                        if (isBetweenQuotes) { // just act like a normal character if between quotes
-                            currentString.Add(parameters[i]);
+                        // just act like a normal character if between quotes or if the space won't signify a new param
+                        if (isBetweenQuotes || (currentParamIndex >= (com.Params.Length - 1)) && (i < strParams.Length && i >= 0)) {
+                            currentString.Add(strParams[i]);
                             return;
                         }
 
@@ -551,7 +516,7 @@ namespace CaretakerNET.Commands
                         // maybe just check if last character was a space?
                         if (currentString.Count < 1) return;
                         // lets you do things like "paramName : value" or "paramName: value" or even "paramName :value"
-                        if ((parameters.IsIndexValid(i + 1) && parameters[i + 1] == ':') || (parameters.IsIndexValid(i - 1) && parameters[i - 1] == ':')) return;
+                        if ((strParams.IsIndexValid(i + 1) && strParams[i + 1] == ':') || (strParams.IsIndexValid(i - 1) && strParams[i - 1] == ':')) return;
 
                         if (currentParamIndex >= com.Params.Length) {
                             if (com.Inf != null) {
@@ -595,13 +560,13 @@ namespace CaretakerNET.Commands
                         }
                     }},
                 };
-                for (int i = 0; i < parameters.Length; i++)
+                for (int i = 0; i < strParams.Length; i++)
                 {
                     // if you can get the action from the character, and there's not a \ before the character
-                    if (charActions.TryGetValue(parameters[i], out var action) && !backslash) {
+                    if (charActions.TryGetValue(strParams[i], out var action) && !backslash) {
                         action.Invoke(i);
                     } else {
-                        currentString.Add(parameters[i]);
+                        currentString.Add(strParams[i]);
                         backslash = false;
                     }
                     // refer to stopLoop comment
@@ -644,45 +609,111 @@ namespace CaretakerNET.Commands
             
             await com.Func.Invoke(msg, new Command.ParsedParams(commandName, paramDict, unparamDict, unparams));
             return true;
-            // try {
-            //     await com.Func.Invoke(msg, new Command.ParsedParams(paramDict, unparamDict, unparams));
-            //     return true;
-            // } catch (Exception err) {
-            //     LogError(err);
-            //     await msg.Reply(err.Message, false);
-            //     return false;
-            // }
         }
 
-        public static (string, string)[]? ListCommands(IUserMessage msg, string singleCom, bool listParams, bool cmd = false, bool showHidden = false)
+        private static async Task HelpReply(IUserMessage msg, string command, bool listParams, bool cmd = false, bool showHidden = false)
+        {
+            (string, string)[]? commandLists = ListCommands(msg, command, listParams, cmd, showHidden);
+            if (commandLists == null) {
+                _ = msg.Reply(
+                    $"{command} is NOT a command. try again :/" + (string.IsNullOrEmpty(command) ? "\nor something just went wrong. idk" : "")
+                );
+                return;
+            }
+            if (commandLists.Length <= 0) {
+                _ = msg.Reply("commandLists was empty!");
+                return;
+            }
+
+            var dictIndex = 0;
+            Dictionary<string, Embed> commandEmbeds = commandLists.Select((genreAndCom, index) => {
+                (string genre, string com) = genreAndCom;
+                return (new EmbedBuilder {
+                    Title = "commands : " + genre,
+                    Description = com
+                }).WithCurrentTimestamp().Build();
+            }).ToDictionary(x => commandLists[dictIndex++].Item1);
+
+            // there should only be components if there's more than one genre
+            // for example, when you select a command manually there won't be any components
+            var components = commandEmbeds.Keys.Count > 1 ? new ComponentBuilder {
+                ActionRows = [
+                    new ActionRowBuilder().WithSelectMenu(
+                        "commands",
+                        commandLists.Select((genreAndCom) => new SelectMenuOptionBuilder(genreAndCom.Item1, genreAndCom.Item1)).ToList(),
+                        "command select!!"
+                    )
+                ]
+            } : null;
+
+            var helpMsg = await msg.ReplyAsync(components: components?.Build(), embed: commandEmbeds.Values.ElementAt(0));
+
+            async Task<bool> OnDropdownChange(SocketMessageComponent args)
+            {
+                IUser reactUser = args.User;
+                IMessage message = args.Message;
+                ulong ruId = reactUser.Id;
+                if (message.Id != helpMsg.Id || ruId == CARETAKER_ID) {
+                    return false;
+                }
+
+                // if it's not the victim nor the caretaker, ephemerally tell them they can't use it
+                if (ruId != msg.Author.Id) {
+                    _ = args.RespondAsync("not for you.", ephemeral: true);
+                    return false;
+                }
+
+                if (args.Data.CustomId is "commands") {
+                    var genre = string.Join("", args.Data.Values);
+                    await helpMsg.ModifyAsync(m => m.Embed = commandEmbeds[genre]);
+                }
+
+                return false;
+            }
+            
+            using var rs = new ComponentSubscribe(OnDropdownChange, helpMsg);
+                var stopwatch = new Stopwatch();
+                stopwatch.Start();
+                while (stopwatch.Elapsed.TotalSeconds < 60 && !rs.Destroyed) {
+                    // await Task.Delay(100);
+                }
+                stopwatch.Stop();
+            rs.Dispose();
+        }
+
+        private static (string, string)[]? ListCommands(IUserMessage msg, string? singleCom, bool listParams, bool cmd = false, bool showHidden = false)
         {
             var sw = new Stopwatch();
             sw.Start();
             var commandDict = cmd ? CmdCommands : Commands;
-            if (singleCom != "" && !commandDict.ContainsKey(singleCom)) {
+            if (!string.IsNullOrEmpty(singleCom) && !commandDict.ContainsKey(singleCom)) {
                 return null;
             }
             var s = MainHook.instance.GetGuildData(msg);
             string prefix = s?.Prefix ?? DEFAULT_PREFIX;
-            StringBuilder tempCommandList = new();
 
-            // StringBuilder response = new();
-            // string[] commandKeys = singleCom != "" ? [ singleCom ] : [ ..commandDict.Keys ];
             Dictionary<string, List<Command>> comsSortedByGenre = [];
-            foreach (Command command in commandDict.Values)
-            {
-                string comGenre = command.Genre;
-                if (!comsSortedByGenre.TryGetValue(comGenre, out List<Command>? commands)) {
-                    commands = ([]);
-                    comsSortedByGenre.Add(comGenre, commands);
-                }
+            if (string.IsNullOrEmpty(singleCom)) {
+                foreach (Command command in commandDict.Values)
+                {
+                    string comGenre = command.Genre;
+                    if (!comsSortedByGenre.TryGetValue(comGenre, out List<Command>? commands)) {
+                        commands = ([]);
+                        comsSortedByGenre.Add(comGenre, commands);
+                    }
 
-                commands.Add(command);
+                    commands.Add(command);
+                }
+            } else {
+                var command = commandDict[singleCom];
+                comsSortedByGenre.Add(command.Genre, [ command ]);
             }
+
+            StringBuilder comListBuilder = new();
             List<(string, string)> listedCommands = [];
             foreach ((string key, List<Command> coms) in comsSortedByGenre)
             {
-                tempCommandList.Clear();
+                comListBuilder.Clear();
                 for (int i = 0; i < coms.Count; i++)
                 {
                     var com = coms[i];
@@ -692,29 +723,29 @@ namespace CaretakerNET.Commands
                         continue;
                     }
 
-                    tempCommandList.Append(prefix);
-                    tempCommandList.Append(com.Name);
+                    comListBuilder.Append(prefix);
+                    comListBuilder.Append(com.Name);
                     if (com.Params != null && !listParams) {
                         IEnumerable<string> paramNames = com.Params.Select(x => x.Name);
-                        tempCommandList.Append(" (");
-                        tempCommandList.Append(string.Join(", ", paramNames));
-                        if (com.Inf != null) tempCommandList.Append(", params");
-                        tempCommandList.Append(')');
+                        comListBuilder.Append(" (");
+                        comListBuilder.Append(string.Join(", ", paramNames));
+                        if (com.Inf != null) comListBuilder.Append(", params");
+                        comListBuilder.Append(')');
                     }
 
-                    tempCommandList.Append(" : ");
-                    tempCommandList.AppendLine(com.Desc);
+                    comListBuilder.Append(" : ");
+                    comListBuilder.AppendLine(com.Desc);
 
                     if (com.Params != null && listParams) {
                         foreach (var param in com.Params) {
-                            tempCommandList.Append("\t-");
-                            tempCommandList.Append(param.Name);
-                            tempCommandList.Append(" : ");
-                            tempCommandList.AppendLine(param.Desc);
+                            comListBuilder.Append("　-"); // that's an indentation, apparently
+                            comListBuilder.Append(param.Name);
+                            comListBuilder.Append(" : ");
+                            comListBuilder.AppendLine(param.Desc);
                         }
                     }
                 }
-                listedCommands.Add((key, tempCommandList.ToString()));
+                listedCommands.Add((key, comListBuilder.ToString()));
             }
             sw.Stop();
             LogDebug($"ListCommands() took {sw.ElapsedMilliseconds} milliseconds to complete");
@@ -729,13 +760,13 @@ namespace CaretakerNET.Commands
             );
             // using (var client = new ScpClient(connectionInfo))
             using var client = new SftpClient(connectionInfo);
-                await msg.ReactAsync("✅");
+                await msg.React("✅");
                 try {
                     client.Connect();
                     string remoteDirectory = $"/home/opc/mediaHosting/{sfxFolder}/";
                     var files = client.ListDirectory(remoteDirectory);
                     if (files == null) {
-                        await msg.ReactAsync("❌");
+                        await msg.React("❌");
                         return;
                     }
                     var randomFile = files.GetRandom()!;
@@ -746,7 +777,7 @@ namespace CaretakerNET.Commands
                     await msg.Channel.SendFileAsync(n);
                     File.Delete(n);
                 } catch (Exception err) {
-                    await msg.ReactAsync("❌");
+                    await msg.React("❌");
                     LogError(err);
                     throw;
                 }

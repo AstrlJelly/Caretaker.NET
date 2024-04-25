@@ -478,4 +478,8 @@ $RECYCLE.BIN/
 
 # Private Stuff
 token.txt
+privates_path.txt
+
+# Garbage
 temp/*
+privates_path.txt

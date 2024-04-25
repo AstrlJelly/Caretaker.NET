@@ -190,11 +190,12 @@ namespace CaretakerNET.Games
             }
 
             PlayingChannelId = playingChannelId;
-            Players = [ ..players ];
+            int j = 0;
+            Players = players.ToDictionary(_ => (Player)(++j));
         }
 
         [JsonConstructor]
-        public ConnectFour(List<ulong> Players, int[][] board)
+        public ConnectFour(Dictionary<Player, ulong> Players, int[][] board)
         {
             this.Players = Players;
             this.board = board;
