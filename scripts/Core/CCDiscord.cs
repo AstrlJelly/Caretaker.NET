@@ -3,8 +3,6 @@ using System.Collections;
 using System.Diagnostics;
 using System.Text;
 
-using CaretakerCore;
-
 using Discord;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -13,17 +11,19 @@ namespace CaretakerCore
 {
     public static class Discord
     {
-        private static DiscordSocketClient? client;
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public static DiscordSocketClient Client;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public static void Init(DiscordSocketClient c)
         {
-            client = c;
+            Client = c;
         }
 
         public static async Task<IUserMessage> Reply(this IUserMessage msg, object rp, bool ping = false)
         {
             string? reply = rp.ToString();
-            if (FlipCoin(0.01)) reply = reply?.ReplaceAll("l", "I"); // lol
+            if (FlipCoin(0.05)) reply = reply?.ReplaceAll("l", "I"); // lol
             return await msg.ReplyAsync(!string.IsNullOrEmpty(reply) ? reply : "the message sent was empty.", allowedMentions: ping ? AllowedMentions.All : AllowedMentions.None);
         }
 
@@ -59,7 +59,7 @@ namespace CaretakerCore
             if (msg.Channel is not SocketGuildChannel chnl) return null;
             return chnl.Guild;
         }
-        
+
         /// <summary>
         /// Automatically parses an emoji, then reacts to a message with it.
         /// </summary>
@@ -70,6 +70,19 @@ namespace CaretakerCore
             // gets the emoji without the <> at the ends if it needs it (which is just kinda a guess)
             bool custom = emojiStr.Length >= 2 && emojiStr[0] == '<' && emojiStr[^1] == '>';
             await msg.AddReactionAsync(custom ? new Emoji(emojiStr[1..^1]) : Emoji.Parse(emojiStr));
+        }
+
+        public static void LogMessage(IUserMessage msg)
+        {
+            LogMessage(msg.Author, msg.GetGuild(), msg.Channel, msg.Content);
+        }
+
+        public static void LogMessage(IUser user, IGuild? guild, IChannel chnl, string? message = null)
+        {
+            string username = string.IsNullOrEmpty(user.GlobalName) ? user.Username : user.GlobalName;
+            if (username.Length > 16) username = username[..13] + "...";
+            LogInfo($"{guild?.Name ?? "DMs"}, #{chnl.Name}", true);
+            LogInfo($"{username, 16} : {message}");
         }
 
         /// <summary>
@@ -83,6 +96,9 @@ namespace CaretakerCore
             return reference.Length > 0 && reference[0] == '<' && reference.Length >= 2 ? ulong.Parse(reference[2..^1]) : null;
         }
 
+        public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
+        public static string UserPingFromID(ulong id) => $"<@{id}>";
+
         /// <summary>
         /// Gets the first vanity invite from a guild. <br/>
         /// Tries to get an unlimited invite first.
@@ -94,7 +110,6 @@ namespace CaretakerCore
         /// </returns>
         public static async Task<RestInviteMetadata?> GetBestInvite(this SocketGuild guild)
         {
-            // await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID)
             var tempInvites = await guild.GetInvitesAsync();
             if (tempInvites.Count <= 0) return null;
             var invites = tempInvites.OrderBy(i => i.ExpiresAt?.ToUnixTimeMilliseconds());
@@ -133,8 +148,9 @@ namespace CaretakerCore
             if (guild == null) return null;
             ITextChannel? channel = null;
             Func<string, ITextChannel?>[] actions = [
-                chan => guild.TextChannels.FirstOrDefault(c => c.GetChannelType() == ChannelType.Text && c.Name.Match(chan)),
                 chan => (ITextChannel)guild.GetChannel(IDFromReference(chan) ?? (ulong.TryParse(chan, out ulong id) ? id : 0)),
+                chan => guild.TextChannels.FirstOrDefault(c => c.GetChannelType() == ChannelType.Text && c.Name.Match(chan)),
+                chan => guild.ThreadChannels.FirstOrDefault(c => c.Name.Match(chan)),
             ];
             for (int i = 0; i < actions.Length; i++) {
                 try {
@@ -168,9 +184,6 @@ namespace CaretakerCore
             return user;
         }
 
-        public static string ChannelLinkFromID(ulong id) => $"<#{id}>";
-        public static string UserPingFromID(ulong id) => $"<@{id}>";
-
         public class ReactionSubscribe : IDisposable
         {
             private readonly Func<Cacheable<IUserMessage, ulong>, Cacheable<IMessageChannel, ulong>, SocketReaction, Task> ReactionAdded;
@@ -182,9 +195,9 @@ namespace CaretakerCore
             // called when "using" is exited
             public void Dispose()
             {
-                if (Destroyed || client == null) return;
+                if (Destroyed || Client == null) return;
                 Destroyed = true;
-                client.ReactionAdded -= ReactionAdded;
+                Client.ReactionAdded -= ReactionAdded;
                 GC.SuppressFinalize(this);
             }
 
@@ -196,8 +209,8 @@ namespace CaretakerCore
                     bool isLast = await onReact.Invoke(msgCache.Value, reaction);
                     if (isLast) Dispose();
                 };
-                if (client == null) return;
-                client.ReactionAdded += ReactionAdded;
+                if (Client == null) return;
+                Client.ReactionAdded += ReactionAdded;
             }
 
             ~ReactionSubscribe()
@@ -217,13 +230,13 @@ namespace CaretakerCore
             public void Dispose()
             {
                 if (Destroyed) return;
-                if (client == null) {
+                if (Client == null) {
                     LogError("client was null! make sure to run the init method in your start method");
                     return;
                 }
                 Destroyed = true;
-                client.ButtonExecuted -= OnComponentInteract;
-                client.SelectMenuExecuted -= OnComponentInteract;
+                Client.ButtonExecuted -= OnComponentInteract;
+                Client.SelectMenuExecuted -= OnComponentInteract;
                 message.ModifyAsync(m => {
                     // remove component from message; setting to null doesn't work
                     m.Components = new ComponentBuilder().Build();
@@ -243,12 +256,12 @@ namespace CaretakerCore
                     }
                     if (isLast) Dispose();
                 };
-                if (client == null) {
+                if (Client == null) {
                     LogError("client was null! make sure to run Init() in your start method.");
                     return;
                 }
-                client.ButtonExecuted += OnComponentInteract;
-                client.SelectMenuExecuted += OnComponentInteract;
+                Client.ButtonExecuted += OnComponentInteract;
+                Client.SelectMenuExecuted += OnComponentInteract;
             }
 
             ~ComponentSubscribe()

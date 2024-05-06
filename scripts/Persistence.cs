@@ -169,42 +169,18 @@ namespace CaretakerNET
     }
     public class UserPersist
     {
-        public ulong UserId;
         [JsonInclude] bool IsInServer = true;
+        public ulong UserId;
         public string Username = "";
-        // null when starting. much easier to check and smarter than making another bool
-        public long? Balance = null;
-        [JsonIgnore] public bool HasStartedEconomy => Balance != null;
-        public const long START_BAL = 500;
+        // economy
+        public const decimal START_BAL = 50.00m;
+        public decimal Balance = 0.00m;
+        public bool HasStartedEconomy = false;
         public List<EconomyHandler.Item> Inventory = [];
-        public long Timeout = 0;
-
-        // the name of the game won or lost
-        public List<string> Wins = [];
-        public List<string> Losses = [];
-
-        public void Init(DiscordSocketClient client, ulong userId)
-        {
-            UserId = userId;
-            var user = client.GetUser(userId);
-            if (user != null) {
-                Username = user.Username;
-                IsInServer = true;
-            } else {
-                IsInServer = false;
-            }
-        }
- 
-        // public bool HasStartedEconomy()
-        // {
-        //     if (Balance != null) return false;
-        //     Balance = START_BAL;
-        //     return true;
-        // }
 
         public bool StartEconomy(IUserMessage msg, bool fromCom = true)
         {
-            if (Balance != null) return false;
+            if (HasStartedEconomy) return false;
             string[] startReplies = [
                 "ohhhh you haven't used the economy before, have you?",
                 "it's time for you to start gambling! :D",
@@ -219,11 +195,47 @@ namespace CaretakerNET
             return true;
         }
 
+
+        // gaming
+        public List<string> Wins = []; // the name of the class of the game won or lost
+        public List<string> Losses = [];
+
         public void AddWin(Type whichGame) => Wins.Add(whichGame.Name);
         public void AddLoss(Type whichGame) => Losses.Add(whichGame.Name);
         public float WinLossRatio()
         {
             return Wins.Count / Losses.Count;
+        }
+
+        // misc
+        public long Timeout = 0;
+
+        public enum Features
+        {
+            ItGo = 1,
+        }
+        public HashSet<Features> OptedOutFeatures = [];
+
+        public void Init(DiscordSocketClient client, ulong userId)
+        {
+            UserId = userId;
+            var user = client.GetUser(userId);
+            if (user != null) {
+                Username = user.Username;
+                IsInServer = true;
+            } else {
+                IsInServer = false;
+            }
+            Update();
+        }
+
+        [JsonInclude] bool NeedsUpdating;
+        private void Update()
+        {
+            if (!NeedsUpdating) return;
+            NeedsUpdating = true;
+
+            HasStartedEconomy = false;
         }
     }
 }

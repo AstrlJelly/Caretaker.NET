@@ -221,6 +221,8 @@ namespace CaretakerCore
             Verbose,
             Debug,
         }
+
+        public static Action<string>? OnLog;
         public static void InternalLog(object? message, bool time = false, LogSeverity severity = LogSeverity.Info)
         {
             Console.ForegroundColor = severity switch {
@@ -229,9 +231,11 @@ namespace CaretakerCore
                 LogSeverity.Verbose or LogSeverity.Debug  => ConsoleColor.DarkGray,
                 LogSeverity.Info or _                     => ConsoleColor.White,
             };
-            if (time) message = $"[{CurrentTime()}] " + message;
-            Console.WriteLine(message?.ToString() ?? "null");
+            string log = message?.ToString() ?? "null";
+            if (time) log = $"[{CurrentTime()}] " + log;
+            Console.WriteLine(log);
             Console.ResetColor();
+            OnLog?.Invoke(log);
         }
 
         // m : message, t : add timestamp?
@@ -241,23 +245,27 @@ namespace CaretakerCore
         [Obsolete("THIS SHOULD BE TEMPORARY!!")]
         public static void Log(object? m = null, bool t = false) { InternalLog(m, t, LogSeverity.Info); }
 
+        // doesn't quite work? still testing
         public static void ClearConsoleLine()
         {
-            // clears current line by just spamming backspace
-            Console.Write(new string('\b', Console.WindowWidth));
-        }
-
-        public static void ChangeConsoleTitle(string status)
-        {
-            Console.Title = "CaretakerNET : " + status;
+            // set cursor to beginning to actually overwrite stuff
+            Console.SetCursorPosition(0, Console.CursorTop);
+            // clears current line by just spamming space
+            Console.Write(new string(' ', Console.BufferWidth));
+            // puts cursor back to where it should be
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            // int currentLineCursor = Console.CursorTop;
+            // Console.SetCursorPosition(0, currentLineCursor);
+            // Console.Write(new string(' ', Console.WindowWidth)); 
+            // Console.SetCursorPosition(0, currentLineCursor);
         }
         #endregion
 
         #region Time
-        public enum Time { ms, sec, min, hr, day, week };
+        public enum Time { Ms, Sec, Min, Hour, Day, Week };
         
         // converts from seconds to minutes, hours to ms, minutes to days, etc.
-        public static double ConvertTime(double time, Time typeFromTemp = Time.ms, Time typeToTemp = Time.ms)
+        public static double ConvertTime(double time, Time typeFromTemp = Time.Ms, Time typeToTemp = Time.Ms)
         {
             if (typeToTemp == typeFromTemp) return time;
             var typeFrom = (int)typeFromTemp;
@@ -273,7 +281,7 @@ namespace CaretakerCore
             return (typeFrom > typeTo) ? (time * modifier) : (time / modifier);
         }
 
-        public static string CurrentTime() => DateTime.Now.ToString("HH:mm:ss tt");
+        public static string CurrentTime() => DateTime.Now.ToString("HH:mm:ss.fff tt");
 
         public static long DateNow() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         #endregion

@@ -8,16 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ComputeSharp" Version="2.1.0" />
-    <PackageReference Include="FuzzySharp" Version="2.0.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
+    <!-- <PackageReference Include="Microsoft.Extensions.ObjectPool"  Version="8.0.4" /> -->
+    <PackageReference Include="ComputeSharp" Version="2.1.0" />
+    <PackageReference Include="FuzzySharp" Version="2.0.2" />
     <PackageReference Include="Discord.Net" Version="3.13.0" />
     <PackageReference Include="Json.NET" Version="1.0.33" />
     <PackageReference Include="MathParser.org-mXparser" Version="5.2.1" />
-    <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="8.0.4" />
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="SSH.NET" Version="2024.0.0" />
+    <PackageReference Include="YamlDotNet" Version="15.1.2" />
     <PackageReference Include="Z.Expressions.Eval" Version="6.1.2" />
   </ItemGroup>
 

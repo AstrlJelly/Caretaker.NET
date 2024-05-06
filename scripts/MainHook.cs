@@ -3,19 +3,16 @@ global using static CaretakerCore.Discord;
 global using static CaretakerNET.Core.Caretaker;
 
 using System;
-using System.Threading;
+using System.Text;
 using System.Diagnostics;
 
 using Discord;
 using Discord.WebSocket;
-using Discord.Webhook;
 
 using CaretakerNET.Games;
 using CaretakerNET.Commands;
 using CaretakerNET.ExternalEmojis;
 
-using NAudio.Wave;
-using NAudio.Wasapi.CoreAudioApi.Interfaces;
 using org.mariuszgromada.math.mxparser;
 using Z.Expressions;
 using CaretakerNet.Audio;
@@ -33,7 +30,7 @@ namespace CaretakerNET
 
         public readonly DiscordSocketClient Client;
         public readonly EvalContext CompileContext = new();
-        // public ITextChannel? TalkingChannel;
+        public readonly StringBuilder LogBuilder = new();
         public Dictionary<ulong, GuildPersist> GuildData { get; private set; } = [];
         public Dictionary<ulong, UserPersist> UserData { get; private set; } = [];
 
@@ -66,7 +63,7 @@ namespace CaretakerNET
             Client.MessageReceived += MessageReceivedAsync;
             Client.Ready += ClientReady;
 
-            // Console.CancelKeyPress                     += async delegate { await OnStop(); };
+            Console.CancelKeyPress += delegate { Client.StopAsync(); };
             AppDomain.CurrentDomain.UnhandledException += async delegate { await OnStop(); };
 
             StartTime = DateNow();
@@ -80,26 +77,31 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
-            var af = new AudioFileReader("./sfx/startup.wav");
-            var wo = new WaveOutEvent();
-            wo.Init(af);
-            wo.Play();
-            wo.PlaybackStopped += delegate {
-                wo.Dispose();
-                af.Dispose();
+            OnLog += log => {
+                LogBuilder.AppendLine(log);
             };
+            ts.UpdateTitle();
+            SoundDeck.PlayOneShotClip("startup");
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
             DebugMode = args.Contains("debug") || args.Contains("-d");
             TestingMode = args.Contains("testing") || args.Contains("-t");
 
-            ChangeConsoleTitle("Starting...");
-            foreach (var directory in new string[] { "persist", "temp" }) {
+            foreach (var directory in new string[] { "persist", "temp", "logs" }) {
                 if (!Directory.Exists("./" + directory)) {
                     Directory.CreateDirectory("./" + directory);
                 }
             }
 
+            // might wanna make this async?
+            foreach (var filePath in Directory.GetFiles("./logs"))
+            {
+                var createTime = new DateTimeOffset(File.GetCreationTime(filePath)).ToUnixTimeMilliseconds();
+                var discardTime = DateNow() - ConvertTime(1, Time.Day);
+                if (createTime < discardTime) {
+                    File.Delete(filePath);
+                }
+            }
             PrivatesPath = File.ReadAllText("./privates_path.txt");
             // login and connect with token (change to config json file?)
             await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
@@ -113,146 +115,12 @@ namespace CaretakerNET
             await OnStop();
         }
 
-        // private bool chattingMode = false;
-        public class ConsoleState()
-        {
-            public enum States
-            {
-                Typing,
-                SettingChannel,
-            }
-            public States currentState = States.Typing;
-            public IDisposable? typingState = null;
-            // public int currentTalkingChannelIndex = 0;
-            public ITextChannel?[] TalkingChannels = [];
-            public ITextChannel? currentTalkingChannel = null;
-            public readonly List<char> consoleLine = [];
-
-            public void ClearLine()
-            {
-                consoleLine.Clear();
-            }
-        }
-        public readonly ConsoleState cs = new();
-
-        private void StartReadingKeys()
-        {
-            Dictionary<ConsoleKey, Action> keyActions = new() {
-                { ConsoleKey.Escape, Stop },
-                { ConsoleKey.Backspace, delegate {
-                    List<char> line = cs.consoleLine;
-                    if (line.Count > 0) {
-                        line.RemoveAt(line.Count - 1);
-                        // goes back a character, clears that character with space, then goes back again. i think
-                        Console.Write("\b \b");
-                    }
-                }},
-                { ConsoleKey.Enter, async delegate {
-                    if (cs.consoleLine.Count > 0) {
-                        string line = string.Join("", cs.consoleLine);
-                        cs.ClearLine();
-                        switch (cs.currentState)
-                        {
-                            case ConsoleState.States.SettingChannel: {
-                                (string cId, string gId) = line.SplitByFirstChar('|');
-
-                                SocketGuild? guild = (SocketGuild?)(string.IsNullOrEmpty(gId) ? cs.currentTalkingChannel?.Guild : Client.ParseGuild(gId));
-                                var ch = guild?.ParseChannel(cId);
-                                if (ch != null) {
-                                    cs.currentTalkingChannel = ch;
-                                } else {
-                                    LogError($"\nthat was null. is channel \"{cId}\" and guild \"{gId}\" correct?");
-                                }
-
-                                ClearConsoleLine();
-                                cs.currentState = ConsoleState.States.Typing;
-                            } break;
-                            default: { // or ConsoleState.Modes.Typing
-                                cs.typingState?.Dispose();
-                                cs.typingState = null;
-
-                                // with ConsoleKey.Escape, this is kinda redundant. keeping it anyways
-                                if (line is "c" or "cancel" or "exit") {
-                                    Stop();
-                                    return;
-                                }
-
-                                var talkingChannel = cs.currentTalkingChannel;
-                                if (talkingChannel != null) {
-                                    ClearConsoleLine();
-                                    LogInfo($"{talkingChannel.Guild.Name}, #{talkingChannel.Name}", true);
-                                    LogInfo($"{Client.CurrentUser.Username:14} : {line}");
-                                    _ = MessageHandler(await talkingChannel.SendMessageAsync(line));
-                                } else {
-                                    LogWarning("that's null. ouch");
-                                }
-                            } break;
-                        }
-                    }
-                }},
-            };
-            while (keepRunning)
-            {
-                // Console.SetCursorPosition(); // this looks cool
-                while (!Console.KeyAvailable);
-                ConsoleKeyInfo key = Console.ReadKey(true);
-
-                // restore when object pooling is done; seems like this lags WAY too much
-                int keySfx = new Random().Next(6) + 1;
-                AudioPlayer.PlayOneShot($"keyboard/keypress_{keySfx}.wav");
-
-                if (key.Key is >= ConsoleKey.F1 and <= ConsoleKey.F12) {
-                    switch (key.Key)
-                    {
-                        case >= ConsoleKey.F1 and <= ConsoleKey.F5: {
-                            int whichChannel = key.Key - ConsoleKey.F1;
-                            ITextChannel? ch = null;
-                            if (whichChannel >= 0 && whichChannel < cs.TalkingChannels.Length) {
-                                ch = cs.TalkingChannels[whichChannel];
-                            }
-                            
-                            if (ch != null) {
-                                cs.currentTalkingChannel = ch;
-                                LogInfo($"switched to channel \"{ch.Name}\" in guild \"{ch.Guild.Name}\"");
-                            } else {
-                                string[] logs = [
-                                    $"ahh sorry the channel at {whichChannel} is null",
-                                    $"talkingChannel at {whichChannel} was null!",
-                                    $"LOOOOOSERR... {whichChannel} doesn't exist.",
-                                    $"you know the drill. {whichChannel}",
-                                ];
-                                LogWarning(logs.GetRandom());
-                            }
-                        } break;
-                        case ConsoleKey.F6: {
-                            ClearConsoleLine();
-                            cs.ClearLine();
-                            Console.Write("\"guildId channelId\", please : ");
-                            cs.currentState = ConsoleState.States.SettingChannel;
-                        } break;
-                        case ConsoleKey.F12: {
-                            // gwahahaha! this is where i run any kind of code i want
-                        } break;
-                        default: {
-
-                        } break;
-                    }
-                } else if (keyActions.TryGetValue(key.Key, out var action)) {
-                    action.Invoke();
-                } else {
-                    if (cs.currentState == ConsoleState.States.Typing) {
-                        cs.typingState ??= cs.currentTalkingChannel?.EnterTypingState();
-                    }
-                    Console.Write(key.KeyChar);
-                    cs.consoleLine.Add(key.KeyChar);
-                }
-            }
-        }
-
         public async Task ClientReady()
         {
             // isReady is only used here, just to make sure it doesn't init a billion times
             if (!isReady) {
+                isReady = true;
+
                 await Client.DownloadUsersAsync(Client.Guilds);
 
                 LogDebug("GUILDS : " + string.Join(", ", Client.Guilds));
@@ -260,10 +128,11 @@ namespace CaretakerNET
                 License.iConfirmNonCommercialUse("hmmmmm");
 
                 (ulong, ulong)[] talkingChannelIds = [
-                    (SPACE_JAMBOREE_ID,   1230684176211251291), // space jamboree,    bot-central
                    (CARETAKER_CENTRAL_ID, 1189820692569538641), // caretaker central, caretaker-net
+                    (SPACE_JAMBOREE_ID,   1230684176211251291), // space jamboree,    caretaker-central-lite
                     (1113913617608355992, 1113944754460315759), // routerheads,       bot-commands
                     (1077367474447716352, 1077385447870844971), // no icon,           bot-central
+                    (1091542281242279979, 1182368930275274792), // korboy's,          astrl-posting thread
                 ];
                 List<ITextChannel?> tempTalkingChannels = [];
                 foreach (var ids in talkingChannelIds)
@@ -277,7 +146,7 @@ namespace CaretakerNET
                     }
                 }
                 cs.TalkingChannels = [ ..tempTalkingChannels ];
-                cs.currentTalkingChannel = cs.TalkingChannels[0];
+                cs.CurrentTalkingChannel = cs.TalkingChannels[0];
 
                 await Load();
 
@@ -289,29 +158,291 @@ namespace CaretakerNET
                     "smiles a little bit :)"
                 ));
 
-                isReady = true;
+                ts.UpdateTitle("Ready!");
+            }
+        }
+
+        public class TitleState
+        {
+            public string Status { get; private set; } = "Starting...";
+
+            public void UpdateTitle(string status)
+            {
+                Status = status;
+                UpdateTitle();
+            }
+
+            public void UpdateTitle()
+            {
+                var ch = instance.cs.CurrentTalkingChannel;
+                Console.Title = $"CaretakerNET : {Status} | {ch?.Guild.Name}, {ch?.Name}";
+            }
+        }
+        public readonly TitleState ts = new();
+
+        public class ConsoleState
+        {
+            public enum States
+            {
+                Typing,
+                SettingChannel,
+            }
+            public States CurrentState = States.Typing;
+            public IDisposable? TypingState = null;
+            public Stopwatch CancelTypingStopwatch = new();
+            public ITextChannel?[] TalkingChannels = [];
+            public ITextChannel? CurrentTalkingChannel = null;
+            public Stopwatch PlayKeyPressStopwatch = new();
+            public int CursorPos = 0;
+            public int HistoryIndex = 0;
+            public readonly List<char[]> ConsoleLineHistory = [];
+            public readonly List<char> ConsoleLine = [];
+
+            public void ClearLine(bool history = false)
+            {
+                CursorPos = 0;
+                ClearConsoleLine();
+                if (history) {
+                    ConsoleLineHistory.Add(ConsoleLine.ToArray());
+                }
+                ConsoleLine.Clear();
+            }
+
+            public void TypeKey(ConsoleKeyInfo key)
+            {
+                if (CurrentState == States.Typing) {
+                    TypingState ??= CurrentTalkingChannel?.EnterTypingState();
+                    CancelTypingStopwatch.Restart();
+                }
+                Console.Write(key.KeyChar);
+                ConsoleLine.Add(key.KeyChar);
+                CursorPos = ConsoleLine.Count - 1;
+            }
+
+            public void DisposeTyping()
+            {
+                TypingState?.Dispose();
+                TypingState = null;
+            }
+
+            private void AutoCancelTyping()
+            {
+                Task.Run(delegate {
+                    while (this != null) {
+                        while (CancelTypingStopwatch.Elapsed.TotalSeconds > 8 && TypingState != null) {
+                            DisposeTyping();
+                        }
+                    }
+                });
+            }
+
+            public void HistoryBack()
+            {
+                if (ConsoleLineHistory.Count > 0 && HistoryIndex > 0) {
+                    HistoryIndex--;
+                    ClearLine(false);
+                    ConsoleLine.AddRange(ConsoleLineHistory[HistoryIndex]);
+                    Console.Write(string.Join("", ConsoleLine));
+                }
+            }
+
+            public void HistoryForward()
+            {
+                ClearLine(false);
+                if (HistoryIndex < ConsoleLineHistory.Count) {
+                    HistoryIndex--;
+                    ConsoleLine.AddRange(ConsoleLineHistory[HistoryIndex]);
+                }
+                Console.Write(string.Join("", ConsoleLine));
+            }
+
+            public ConsoleState()
+            {
+                AutoCancelTyping();
+            }
+        }
+        public readonly ConsoleState cs = new();
+
+        private void StartReadingKeys()
+        {
+            Dictionary<ConsoleKey, Action> keyActions = new() {
+                { ConsoleKey.Escape, Stop },
+                { ConsoleKey.Backspace, delegate {
+                    List<char> line = cs.ConsoleLine;
+                    if (line.Count > 0) {
+                        line.RemoveAt(line.Count - 1);
+                        // goes back a character, clears that character with space, then goes back again. i think
+                        Console.Write("\b \b");
+                    }
+                    if (line.Count <= 0) {
+                        cs.DisposeTyping();
+                    }
+                }},
+                { ConsoleKey.Enter, async delegate {
+                    if (cs.ConsoleLine.Count > 0) {
+                        string line = string.Join("", cs.ConsoleLine);
+                        cs.ClearLine(true);
+                        switch (cs.CurrentState)
+                        {
+                            case ConsoleState.States.SettingChannel: {
+                                (string cId, string gId) = line.SplitByFirstChar('|');
+
+                                SocketGuild? guild = (SocketGuild?)(string.IsNullOrEmpty(gId) ? cs.CurrentTalkingChannel?.Guild : Client.ParseGuild(gId));
+                                var ch = guild?.ParseChannel(cId);
+                                if (ch != null) {
+                                    cs.CurrentTalkingChannel = ch;
+                                } else {
+                                    LogError($"\nthat was null. is channel \"{cId}\" and guild \"{gId}\" correct?");
+                                }
+
+                                ts.UpdateTitle();
+
+                                cs.CurrentState = ConsoleState.States.Typing;
+                            } break;
+                            default: { // or ConsoleState.Modes.Typing
+                                cs.DisposeTyping();
+
+                                // with ConsoleKey.Escape, this is kinda redundant. keeping it anyways
+                                if (line is "c" or "cancel" or "exit") {
+                                    Stop();
+                                    return;
+                                }
+
+                                var talkingChannel = cs.CurrentTalkingChannel;
+                                if (talkingChannel != null) {
+                                    LogMessage(Client.CurrentUser, talkingChannel.Guild, talkingChannel, line);
+                                    _ = MessageHandler(await talkingChannel.SendMessageAsync(line));
+                                } else {
+                                    LogWarning("that's null. ouch");
+                                }
+                            } break;
+                        }
+                    }
+                }},
+            };
+            while (keepRunning)
+            {
+                while (!Console.KeyAvailable);
+                ConsoleKeyInfo key = Console.ReadKey(true);
+
+                int keySfx = new Random().Next(6) + 1;
+                string path = $"keyboard/key_press_{keySfx}";
+                if (SoundDeck.ClipExists(path)) {
+                    SoundDeck.PlayOneShotClip(path);
+                } else {
+                    LogError(path + " doesn't exist!!! i hope you die");
+                }
+
+                switch (key.Key)
+                { // only use cases for ranges; for single keys just use keyActions
+                    case >= ConsoleKey.F1 and <= ConsoleKey.F12: {
+                        switch (key.Key)
+                        {
+                            // case >= ConsoleKey.F1 and <= ConsoleKey.F5: {
+                            // } break;
+                            case ConsoleKey.F6: {
+                                if (cs.CurrentState != ConsoleState.States.SettingChannel) {
+                                    cs.ClearLine(true);
+                                    Console.Write("\"channel|guild\", please : ");
+                                    cs.CurrentState = ConsoleState.States.SettingChannel;
+                                } else {
+                                    cs.ClearLine(false);
+                                    cs.CurrentState = ConsoleState.States.Typing;
+                                }
+                            } break;
+                            case ConsoleKey.F12: {
+                                // gwahahaha! this is where i run any kind of code i want
+                                cs.ClearLine(false);
+                            } break;
+                            default: {
+                                int whichChannel = key.Key - ConsoleKey.F1;
+                                ITextChannel? ch = null;
+                                if (whichChannel >= 0 && whichChannel < cs.TalkingChannels.Length) {
+                                    ch = cs.TalkingChannels[whichChannel];
+                                }
+                                
+                                if (ch != null) {
+                                    cs.CurrentTalkingChannel = ch;
+                                    LogInfo($"switched to channel \"{ch.Name}\" in guild \"{ch.Guild.Name}\"");
+                                } else {
+                                    string[] logs = [
+                                        $"ahh sorry the channel at {whichChannel} is null",
+                                        $"talkingChannel at {whichChannel} was null!",
+                                        $"LOOOOOSERR... {whichChannel} doesn't exist.",
+                                        $"you know the drill. {whichChannel}",
+                                    ];
+                                    LogWarning(logs.GetRandom());
+                                }
+                                ts.UpdateTitle();
+                            } break;
+                        }
+                    } break;
+                    case >= ConsoleKey.LeftArrow and <= ConsoleKey.DownArrow: {
+                        // x from LEFT, y from TOP
+                        (int left, int top) = Console.GetCursorPosition();
+                        Action? action = key.Key switch {
+                            ConsoleKey.LeftArrow => delegate { // 37
+                                if (cs.CursorPos >= 0) {
+                                    cs.CursorPos--;
+                                    Console.SetCursorPosition(left - 1, top);
+                                }
+                            },
+                            ConsoleKey.RightArrow => delegate { // 39
+                                if (cs.CursorPos < cs.ConsoleLine.Count - 1) {
+                                    cs.CursorPos++;
+                                    Console.SetCursorPosition(left + 1, top);
+                                }
+                            },
+                            ConsoleKey.UpArrow => cs.HistoryBack,
+                            ConsoleKey.DownArrow => cs.HistoryForward,
+                            _ => null,
+                        };
+                        
+                        action?.Invoke();
+                    } break;
+                    default: {
+                        if (keyActions.TryGetValue(key.Key, out var action)) {
+                            action.Invoke();
+                        } else {
+                            cs.TypeKey(key);
+                        }
+                    } break;
+                }
             }
         }
 
         public void Stop() => keepRunning = false;
         private async Task OnStop()
         {
-            Task[] toWait = [
+            List<Task> toWait = [
                 Client.StopAsync(),
-                GuildData.Count > 0 ? Save() : new Task(()=>{}),
+                SaveLogFile(),
                 Task.Delay(1000)
             ];
-            cs.typingState?.Dispose();
+            if (GuildData.Count > 0) {
+                toWait.Add(Save());
+            }
+            cs.TypingState?.Dispose();
             Console.ResetColor();
 
             // async programming is funny
             await Task.WhenAll(toWait);
         }
 
+        // might wanna clear the log builder and only save to one file every session
+        // would save building thousands of lines if it ever gets that big
+        public async Task SaveLogFile()
+        {
+            if (!Directory.Exists("./logs")) Directory.CreateDirectory("./logs");
+            await File.WriteAllTextAsync($"./logs/log_{DateTime.Now:yy-MM-dd_HH-mm-ss}.txt", LogBuilder.ToString()); // creates file if it doesn't exist
+        }
+
         public async Task Save()
         {
-            await Voorhees.SaveGuilds(GuildData);
-            await Voorhees.SaveUsers(UserData);
+            await Task.WhenAll(
+                Voorhees.SaveGuilds(GuildData),
+                Voorhees.SaveUsers(UserData)
+            );
         }
 
         public async Task Load()
@@ -357,6 +488,7 @@ namespace CaretakerNET
         {
             await Task.Delay(60000);
             _ = Save();
+            _ = SaveLogFile();
         }
 
         // data can very much so be null, but i trust any user (basically just me) to never use data if it's null.
@@ -401,20 +533,6 @@ namespace CaretakerNET
             return value;
         }
 
-        // static void UpdatePresence()
-        // {
-        //     DiscordRichPresence discordPresence;
-        //     memset(&discordPresence, 0, sizeof(discordPresence));
-        //     discordPresence.state = "You can, too!";
-        //     discordPresence.details = "Gambling & Making Money";
-        //     discordPresence.largeImageKey = "caretaker_central_icon";
-        //     discordPresence.largeImageText = "Caretaker Central";
-        //     discordPresence.smallImageText = "Caretaker Central";
-        //     discordPresence.partyId = "ae488379-351d-4a4f-ad32-2b9b01c91657";
-        //     discordPresence.joinSecret = "MTI4NzM0OjFpMmhuZToxMjMxMjM= ";
-        //     Discord_UpdatePresence(&discordPresence);
-        // }
-
         private Task MessageReceivedAsync(SocketMessage message)
         {
             // make sure the message is a user sent message, and output a new msg variable
@@ -432,37 +550,39 @@ namespace CaretakerNET
             var s = GetGuildData(msg);
             string prefix = s?.Prefix ?? DEFAULT_PREFIX;
 
-            _ = Task.Run(async () => {
-                var lowerCont = msg.Content.ToLower();
-                string[] stringsToFind = [
-                    "it", "go"
-                ];
-                int[] indexes = new int[stringsToFind.Length];
-                Array.Fill(indexes, -1);
-                for (int x = 0; x < lowerCont.Length; x++)
-                {
-                    for (int y = 0; y < stringsToFind.Length; y++)
-                    {
-                        string strToFind = stringsToFind[y];
-                        bool matches = true;
-                        for (int z = 0; z < strToFind.Length; z++)
-                        {
-                            var contChar = lowerCont.TryGet(x + z);
-                            if ((contChar == default(char) ? ' ' : contChar) != strToFind[z]) {
-                                matches = false;
-                                break;
-                            }
-                        }
-                        if (matches) indexes[y] = x;
-                    }
-                }
+            // _ = Task.Run(async () => {
+            //     var lowerCont = msg.Content.ToLower();
+            //     (string, int)[] findingStrs = [
+            //         ("it", -1), ("go", -1),
+            //     ];
+            //     for (int x = 0; x < lowerCont.Length; x++) // go through every character in msg content
+            //     {
+            //         for (int y = 0; y < findingStrs.Length; y++) // for every character, go through each string we want to find
+            //         {
+            //             if (findingStrs[y].Item2 > -1) continue;
+            //             string strToFind = findingStrs[y].Item1;
+            //             bool matches = true;
+            //             for (int z = 0; z < strToFind.Length; z++) // go through each character of the string we want to find
+            //             {
+            //                 var contChar = lowerCont.TryGet(x + z);
+            //                 if ((contChar == default(char) ? ' ' : contChar) != strToFind[z]) {
+            //                     matches = false;
+            //                     break;
+            //                 }
+            //             }
+            //             if (matches) findingStrs[y].Item2 = x;
+            //         }
+            //     }
 
-                if (indexes[0] > -1 && indexes[1] > -1 && indexes[0] < indexes[1]) {
-                    // randomizes from 0 - 10 full seconds
-                    await Task.Delay((new Random().Next(11)) * 1000);
-                    _ = msg.React(Emojis.Adofai);
-                }
-            });
+            //     if (
+            //         findingStrs[0].Item2 > -1 && findingStrs[1].Item2 > -1 &&
+            //         findingStrs[0].Item2 < findingStrs[1].Item2
+            //     ) {
+            //         // randomizes from 0 - 10 full seconds
+            //         await Task.Delay((new Random().Next(11)) * 1000);
+            //         _ = msg.React(Emojis.Adofai);
+            //     }
+            // });
 
             if (msg.Content.StartsWith(prefix)) {
                 bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
@@ -490,28 +610,33 @@ namespace CaretakerNET
                     return;
                 }
 
-                // var typing = msg.Channel.EnterTypingState();
-                try {
-                    Stopwatch sw = new();
-                    sw.Start();
-                    await CommandHandler.DoCommand(msg, com, parameters, command);
-                    u.Timeout = DateNow() + com.Timeout;
-                    sw.Stop();
-                    LogDebug($"parsing {prefix}{command} command took {sw.Elapsed.TotalMilliseconds} ms");
-                } catch (Exception error) {
-                    await msg.Reply(error.Message, false);
-                    LogError(error);
-                }
-                // typing.Dispose();
+                var typing = msg.Channel.EnterTypingState(
+                    new RequestOptions {
+                        Timeout = 1000,
+                    }
+                );
+                    try {
+                        Stopwatch sw = new();
+                        sw.Start();
+                        await CommandHandler.DoCommand(msg, com, parameters, command);
+                        u.Timeout = DateNow() + com.Timeout;
+                        sw.Stop();
+                        LogDebug($"parsing {prefix}{command} command took {sw.Elapsed.TotalMilliseconds} ms");
+                    } catch (Exception error) {
+                        await msg.Reply(error.Message, false);
+                        LogError(error);
+                    }
+                // might be not enough? or it might just not work.
+                await Task.Delay(1100);
+                typing.Dispose();
             } else {
                 if (s != null) {
                     ulong cId = msg.Channel.Id;
 
                     // talking channel stuff
                     // if (cs.currentTalkingChannel == cId && msg.Author.Id != CARETAKER_ID) {
-                    if ((cs.TalkingChannels.Any(c => c?.Id == cId) || cs.currentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
-                        LogInfo($"{msg.GetGuild()!.Name}, #{msg.Channel.Name}", true);
-                        LogInfo($"{msg.Author.GlobalName::14} : {msg.Content}");
+                    if ((cs.TalkingChannels.Any(c => c?.Id == cId) || cs.CurrentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
+                        LogMessage(msg);
                     }
 
                     Func<(string, string)?>[] funcs = [

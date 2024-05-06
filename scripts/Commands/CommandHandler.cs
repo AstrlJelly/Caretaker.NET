@@ -38,10 +38,20 @@ namespace CaretakerNET.Commands
                 new Param("listParams", "list parameters?", false)
             ]),
 
+            new("true", Emojis.True, "silly", async (msg, p) => {
+                var reactMsg = msg.ReferencedMessage ?? (await msg.Channel.GetMessagesAsync(2).LastAsync()).Last();
+                _ = reactMsg.DeleteAsync();
+                foreach (string trueId in Emojis.Trues) {
+                    // await reactMsg.React($"<:true:{trueId}>");
+                    _ = reactMsg.React($"<:true:{trueId}>");
+                    await Task.Delay(800);
+                }
+            }, timeout: 10000),
+
             new("echo", "list all normal commands", "silly", async (msg, p) => {
                 (string? reply, int wait) = (p["reply"], p["wait"]);
                 if (string.IsNullOrEmpty(reply)) return;
-                if (!reply.Contains("@everyone") && !reply.Contains("@here") && reply != "") {
+                if (wait < 120000 && reply != "" && !reply.Contains("@everyone") && !reply.Contains("@here")) {
                     await Task.Delay(int.Abs(wait));
                     await msg.Reply(reply, false);
                 } else {
@@ -97,6 +107,32 @@ namespace CaretakerNET.Commands
                 };
                 await msg.Reply(reply);
             }, [ new Param("math", "the math to do", "NaN"), ]),
+
+            new("optout, optin", "set the counting channel", "gimmick", async (msg, p) => {
+                string f = p["feature"] ?? "";
+                bool empty = string.IsNullOrEmpty(f);
+                
+                if (!empty && Enum.TryParse(f, out UserPersist.Features feature)) {
+                    if (!MainHook.instance.TryGetUserData(msg.Author.Id, out UserPersist u)) return;
+
+                    bool optOut = p.Command == "optout";
+                    if (optOut && u.OptedOutFeatures.Contains(feature)) {
+                        u.OptedOutFeatures.Remove(feature);
+                    } else {
+                        u.OptedOutFeatures.Add(feature);
+                    }
+                    _ = msg.Reply(optOut ? "opted out!" : "opted in!");
+                } else {
+                    var replyBuilder = new StringBuilder();
+                    foreach (var element in Enum.GetNames<UserPersist.Features>())
+                    {
+                        replyBuilder.AppendLine($"* \"{element}\"");
+                    }
+                    _ = msg.Reply((!empty ? "that's not a feature!\n" : "") + "here are the features you can opt out of :\n" + replyBuilder.ToString());
+                }
+            }, [
+                new Param("feature", "the feature to opt out of", ""),
+            ]),
 
             new("count", "set the counting channel", "gimmick", async (msg, p) => {
                 (ITextChannel? channel, bool reset) = (p["channel"], p["reset"]);
@@ -292,7 +328,7 @@ namespace CaretakerNET.Commands
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
                 var guild = msg.GetGuild(); // remember, returns null in dms
-                var invite = await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID).GetBestInvite();
+                var invite = await Client.GetGuild(CARETAKER_CENTRAL_ID).GetBestInvite();
                 if (invite == null && guild?.Id != CARETAKER_CENTRAL_ID) { // handle no invite being found but only if you need it
                     _ = msg.Reply("okay so apparently there's no invite for the caretaker central server. oops");
                     return;
@@ -394,7 +430,7 @@ namespace CaretakerNET.Commands
             }, [ new Param("thing", "the thing to control", "cancel") ]),
 
             new("guilds", "get all guilds", "hidden", async delegate {
-                var client = MainHook.instance.Client;
+                var client = Client;
                 LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
                     LogInfo(guild.Name);

@@ -4,9 +4,9 @@ namespace CaretakerNET.Economy
 {
     public class EconomyHandler
     {
-        public class Item(long price, string name, string desc)
+        public class Item(decimal price, string name, string desc)
         {
-            public long Price = price;
+            public decimal Price = price;
             public string Name = name;
             public string Desc = desc;
         }

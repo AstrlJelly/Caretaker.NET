@@ -112,9 +112,9 @@ namespace CaretakerNET.Commands
                 ParamType.Integer     => int.Parse(str),
                 // ParamType.UInteger    => uint.Parse(str),
                 ParamType.Long        => long.Parse(str),
-                ParamType.User        => MainHook.instance.Client.ParseUser(str, guild),
+                ParamType.User        => Client.ParseUser(str, guild),
                 ParamType.Channel     => guild?.ParseChannel(str),
-                ParamType.Guild       => MainHook.instance.Client.ParseGuild(str),
+                ParamType.Guild       => Client.ParseGuild(str),
                 ParamType.String or _ => str, // gotta always have that "or _" :)
             };
         }

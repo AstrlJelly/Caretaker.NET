@@ -230,13 +230,13 @@ namespace CaretakerNET.Commands
                         }
                     }
                 }
-                MainHook.instance.Client.ReactionAdded += ReactionCheck;
+                Client.ReactionAdded += ReactionCheck;
 
                 void DestroySelf()
                 {
                     if (destroyed) return;
                     destroyed = true;
-                    MainHook.instance.Client.ReactionAdded -= ReactionCheck;
+                    Client.ReactionAdded -= ReactionCheck;
                 }
 
                 var stopwatch = new Stopwatch();
@@ -321,7 +321,7 @@ namespace CaretakerNET.Commands
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {
                 var guild = msg.GetGuild(); // remember, returns null in dms
-                var invite = await MainHook.instance.Client.GetGuild(CARETAKER_CENTRAL_ID).GetBestInvite();
+                var invite = await Client.GetGuild(CARETAKER_CENTRAL_ID).GetBestInvite();
                 if (invite == null && guild?.Id != CARETAKER_CENTRAL_ID) { // handle no invite being found but only if you need it
                     _ = msg.Reply("okay so apparently there's no invite for the caretaker central server. oops");
                     return;
@@ -423,7 +423,7 @@ namespace CaretakerNET.Commands
             }, [ new Param("thing", "the thing to control", "cancel") ]),
 
             new("guilds", "get all guilds", "hidden", async delegate {
-                var client = MainHook.instance.Client;
+                var client = Client;
                 LogInfo(client.Guilds.Count);
                 foreach (var guild in client.Guilds) {
                     LogInfo(guild.Name);

@@ -75,13 +75,13 @@ namespace CaretakerNET.Games
 
         #region Betting
         // public List<Bet> Betters { get; internal set; } = [];
-        // public struct Bet(ulong betterId, long betAmount)
+        // public struct Bet(ulong betterId, decimal betAmount)
         // {
         //     public ulong BetterId = betterId;
-        //     public long BetAmount = betAmount;
+        //     public decimal BetAmount = betAmount;
         // }
 
-        // public bool TryAddBet(ulong playerId, long betAmount)
+        // public bool TryAddBet(ulong playerId, decimal betAmount)
         // {
         //     if (!Betters.TryFindIndex(b => b.BetterId == playerId, out int index)) {
         //         Betters.Add(new Bet(playerId, betAmount));
@@ -90,13 +90,13 @@ namespace CaretakerNET.Games
         //     return false;
         // }
         public Dictionary<ulong, Bet> Betters { get; internal set; } = [];
-        public class Bet(long betAmount, ulong winnerGuess)
+        public class Bet(decimal betAmount, ulong winnerGuess)
         {
-            public long betAmount = betAmount;
+            public decimal betAmount = betAmount;
             public readonly ulong winnerGuess = winnerGuess;
         }
 
-        public void AddBet(ulong better, long betAmount, ulong winnerGuess)
+        public void AddBet(ulong better, decimal betAmount, ulong winnerGuess)
         {
             // if already contains playerId, set a new betAmount
             if (!Betters.TryAdd(better, new(betAmount, winnerGuess))) {
