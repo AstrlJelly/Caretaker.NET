@@ -15,7 +15,11 @@ using CaretakerNET.ExternalEmojis;
 
 using org.mariuszgromada.math.mxparser;
 using Z.Expressions;
-using CaretakerNet.Audio;
+using CaretakerNET.Audio;
+using CaretakerNET.Persistence;
+using CaretakerNET.Core;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace CaretakerNET
 {
@@ -25,18 +29,19 @@ namespace CaretakerNET
         static Task Main(string[] args) => instance.MainAsync(args);
 
         public readonly static MainHook instance = new();
-        private bool keepRunning = true;
         private bool isReady;
 
         public readonly DiscordSocketClient Client;
+        public readonly CaretakerConsole ConsoleHandler = new();
         public readonly EvalContext CompileContext = new();
         public readonly StringBuilder LogBuilder = new();
+        public Config config = new();
         public Dictionary<ulong, GuildPersist> GuildData { get; private set; } = [];
         public Dictionary<ulong, UserPersist> UserData { get; private set; } = [];
 
         public readonly long StartTime;
-        public bool DebugMode = false;
-        public bool TestingMode = false;
+
+        public bool KeepRunning = true;
 
         public static readonly HashSet<ulong> TrustedUsers = [
             CARETAKER_ID,       // should be obvious
@@ -51,17 +56,21 @@ namespace CaretakerNET
 
         private MainHook()
         {
-            Client = new DiscordSocketClient(
+            Client = (new DiscordSocketClient(
                 new DiscordSocketConfig {
                     GatewayIntents = GatewayIntents.All,
                     LogLevel = Discord.LogSeverity.Info,
                     MessageCacheSize = 50,
                 }
-            );
+            ));
 
             Client.Log += ClientLog;
             Client.MessageReceived += MessageReceivedAsync;
             Client.Ready += ClientReady;
+
+            OnLog += log => {
+                LogBuilder.AppendLine(log);
+            };
 
             Console.CancelKeyPress += delegate { Client.StopAsync(); };
             AppDomain.CurrentDomain.UnhandledException += async delegate { await OnStop(); };
@@ -77,21 +86,23 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
-            OnLog += log => {
-                LogBuilder.AppendLine(log);
-            };
-            ts.UpdateTitle();
+            config = await ConfigHandler.Load();
             SoundDeck.PlayOneShotClip("startup");
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
-            DebugMode = args.Contains("debug") || args.Contains("-d");
-            TestingMode = args.Contains("testing") || args.Contains("-t");
+
+            ts.UpdateTitle();
+
+            //  stored in config file now
+            // DebugMode = args.Contains("debug") || args.Contains("-d");
+            // TestingMode = args.Contains("testing") || args.Contains("-t");
 
             foreach (var directory in new string[] { "persist", "temp", "logs" }) {
                 if (!Directory.Exists("./" + directory)) {
                     Directory.CreateDirectory("./" + directory);
                 }
             }
+
 
             // might wanna make this async?
             foreach (var filePath in Directory.GetFiles("./logs"))
@@ -102,15 +113,15 @@ namespace CaretakerNET
                     File.Delete(filePath);
                 }
             }
-            PrivatesPath = File.ReadAllText("./privates_path.txt");
+            // PrivatesPath = File.ReadAllText("./privates_path.txt");
             // login and connect with token (change to config json file?)
-            await Client.LoginAsync(TokenType.Bot, File.ReadAllText("./token.txt"));
+            await Client.LoginAsync(TokenType.Bot, config.Token);
             await Client.StartAsync();
 
-            StartReadingKeys();
+            ConsoleHandler.StartReadingKeys();
 
             // keep running until Stop() is called
-            while (keepRunning);
+            while (KeepRunning);
 
             await OnStop();
         }
@@ -145,8 +156,8 @@ namespace CaretakerNET
                         LogError($"channel with id {channelId} in guild with id {guildId} was null!");
                     }
                 }
-                cs.TalkingChannels = [ ..tempTalkingChannels ];
-                cs.CurrentTalkingChannel = cs.TalkingChannels[0];
+                ConsoleHandler.TalkingChannels = [ ..tempTalkingChannels ];
+                ConsoleHandler.CurrentTalkingChannel = ConsoleHandler.TalkingChannels[0];
 
                 await Load();
 
@@ -158,260 +169,36 @@ namespace CaretakerNET
                     "smiles a little bit :)"
                 ));
 
-                ts.UpdateTitle("Ready!");
+                // ts.UpdateTitle("Ready!");
+                ts.Status = "Ready!";
             }
         }
 
         public class TitleState
         {
-            public string Status { get; private set; } = "Starting...";
-
-            public void UpdateTitle(string status)
-            {
-                Status = status;
+            private string status = "Starting...";
+            public string Status { get => status; set {
+                status = value;
                 UpdateTitle();
-            }
+            }}
+
+            // public void UpdateTitle(string status)
+            // {
+            //     Status = status;
+            //     // UpdateTitle();
+            // }
 
             public void UpdateTitle()
             {
-                var ch = instance.cs.CurrentTalkingChannel;
+                var ch = instance.ConsoleHandler.CurrentTalkingChannel;
+                StringBuilder titleBuilder = new();
+                // titleBuilder.Append(Client.CurrentUser.GlobalName);
                 Console.Title = $"CaretakerNET : {Status} | {ch?.Guild.Name}, {ch?.Name}";
             }
         }
         public readonly TitleState ts = new();
 
-        public class ConsoleState
-        {
-            public enum States
-            {
-                Typing,
-                SettingChannel,
-            }
-            public States CurrentState = States.Typing;
-            public IDisposable? TypingState = null;
-            public Stopwatch CancelTypingStopwatch = new();
-            public ITextChannel?[] TalkingChannels = [];
-            public ITextChannel? CurrentTalkingChannel = null;
-            public Stopwatch PlayKeyPressStopwatch = new();
-            public int CursorPos = 0;
-            public int HistoryIndex = 0;
-            public readonly List<char[]> ConsoleLineHistory = [];
-            public readonly List<char> ConsoleLine = [];
-
-            public void ClearLine(bool history = false)
-            {
-                CursorPos = 0;
-                ClearConsoleLine();
-                if (history) {
-                    ConsoleLineHistory.Add(ConsoleLine.ToArray());
-                }
-                ConsoleLine.Clear();
-            }
-
-            public void TypeKey(ConsoleKeyInfo key)
-            {
-                if (CurrentState == States.Typing) {
-                    TypingState ??= CurrentTalkingChannel?.EnterTypingState();
-                    CancelTypingStopwatch.Restart();
-                }
-                Console.Write(key.KeyChar);
-                ConsoleLine.Add(key.KeyChar);
-                CursorPos = ConsoleLine.Count - 1;
-            }
-
-            public void DisposeTyping()
-            {
-                TypingState?.Dispose();
-                TypingState = null;
-            }
-
-            private void AutoCancelTyping()
-            {
-                Task.Run(delegate {
-                    while (this != null) {
-                        while (CancelTypingStopwatch.Elapsed.TotalSeconds > 8 && TypingState != null) {
-                            DisposeTyping();
-                        }
-                    }
-                });
-            }
-
-            public void HistoryBack()
-            {
-                if (ConsoleLineHistory.Count > 0 && HistoryIndex > 0) {
-                    HistoryIndex--;
-                    ClearLine(false);
-                    ConsoleLine.AddRange(ConsoleLineHistory[HistoryIndex]);
-                    Console.Write(string.Join("", ConsoleLine));
-                }
-            }
-
-            public void HistoryForward()
-            {
-                ClearLine(false);
-                if (HistoryIndex < ConsoleLineHistory.Count) {
-                    HistoryIndex--;
-                    ConsoleLine.AddRange(ConsoleLineHistory[HistoryIndex]);
-                }
-                Console.Write(string.Join("", ConsoleLine));
-            }
-
-            public ConsoleState()
-            {
-                AutoCancelTyping();
-            }
-        }
-        public readonly ConsoleState cs = new();
-
-        private void StartReadingKeys()
-        {
-            Dictionary<ConsoleKey, Action> keyActions = new() {
-                { ConsoleKey.Escape, Stop },
-                { ConsoleKey.Backspace, delegate {
-                    List<char> line = cs.ConsoleLine;
-                    if (line.Count > 0) {
-                        line.RemoveAt(line.Count - 1);
-                        // goes back a character, clears that character with space, then goes back again. i think
-                        Console.Write("\b \b");
-                    }
-                    if (line.Count <= 0) {
-                        cs.DisposeTyping();
-                    }
-                }},
-                { ConsoleKey.Enter, async delegate {
-                    if (cs.ConsoleLine.Count > 0) {
-                        string line = string.Join("", cs.ConsoleLine);
-                        cs.ClearLine(true);
-                        switch (cs.CurrentState)
-                        {
-                            case ConsoleState.States.SettingChannel: {
-                                (string cId, string gId) = line.SplitByFirstChar('|');
-
-                                SocketGuild? guild = (SocketGuild?)(string.IsNullOrEmpty(gId) ? cs.CurrentTalkingChannel?.Guild : Client.ParseGuild(gId));
-                                var ch = guild?.ParseChannel(cId);
-                                if (ch != null) {
-                                    cs.CurrentTalkingChannel = ch;
-                                } else {
-                                    LogError($"\nthat was null. is channel \"{cId}\" and guild \"{gId}\" correct?");
-                                }
-
-                                ts.UpdateTitle();
-
-                                cs.CurrentState = ConsoleState.States.Typing;
-                            } break;
-                            default: { // or ConsoleState.Modes.Typing
-                                cs.DisposeTyping();
-
-                                // with ConsoleKey.Escape, this is kinda redundant. keeping it anyways
-                                if (line is "c" or "cancel" or "exit") {
-                                    Stop();
-                                    return;
-                                }
-
-                                var talkingChannel = cs.CurrentTalkingChannel;
-                                if (talkingChannel != null) {
-                                    LogMessage(Client.CurrentUser, talkingChannel.Guild, talkingChannel, line);
-                                    _ = MessageHandler(await talkingChannel.SendMessageAsync(line));
-                                } else {
-                                    LogWarning("that's null. ouch");
-                                }
-                            } break;
-                        }
-                    }
-                }},
-            };
-            while (keepRunning)
-            {
-                while (!Console.KeyAvailable);
-                ConsoleKeyInfo key = Console.ReadKey(true);
-
-                int keySfx = new Random().Next(6) + 1;
-                string path = $"keyboard/key_press_{keySfx}";
-                if (SoundDeck.ClipExists(path)) {
-                    SoundDeck.PlayOneShotClip(path);
-                } else {
-                    LogError(path + " doesn't exist!!! i hope you die");
-                }
-
-                switch (key.Key)
-                { // only use cases for ranges; for single keys just use keyActions
-                    case >= ConsoleKey.F1 and <= ConsoleKey.F12: {
-                        switch (key.Key)
-                        {
-                            // case >= ConsoleKey.F1 and <= ConsoleKey.F5: {
-                            // } break;
-                            case ConsoleKey.F6: {
-                                if (cs.CurrentState != ConsoleState.States.SettingChannel) {
-                                    cs.ClearLine(true);
-                                    Console.Write("\"channel|guild\", please : ");
-                                    cs.CurrentState = ConsoleState.States.SettingChannel;
-                                } else {
-                                    cs.ClearLine(false);
-                                    cs.CurrentState = ConsoleState.States.Typing;
-                                }
-                            } break;
-                            case ConsoleKey.F12: {
-                                // gwahahaha! this is where i run any kind of code i want
-                                cs.ClearLine(false);
-                            } break;
-                            default: {
-                                int whichChannel = key.Key - ConsoleKey.F1;
-                                ITextChannel? ch = null;
-                                if (whichChannel >= 0 && whichChannel < cs.TalkingChannels.Length) {
-                                    ch = cs.TalkingChannels[whichChannel];
-                                }
-                                
-                                if (ch != null) {
-                                    cs.CurrentTalkingChannel = ch;
-                                    LogInfo($"switched to channel \"{ch.Name}\" in guild \"{ch.Guild.Name}\"");
-                                } else {
-                                    string[] logs = [
-                                        $"ahh sorry the channel at {whichChannel} is null",
-                                        $"talkingChannel at {whichChannel} was null!",
-                                        $"LOOOOOSERR... {whichChannel} doesn't exist.",
-                                        $"you know the drill. {whichChannel}",
-                                    ];
-                                    LogWarning(logs.GetRandom());
-                                }
-                                ts.UpdateTitle();
-                            } break;
-                        }
-                    } break;
-                    case >= ConsoleKey.LeftArrow and <= ConsoleKey.DownArrow: {
-                        // x from LEFT, y from TOP
-                        (int left, int top) = Console.GetCursorPosition();
-                        Action? action = key.Key switch {
-                            ConsoleKey.LeftArrow => delegate { // 37
-                                if (cs.CursorPos >= 0) {
-                                    cs.CursorPos--;
-                                    Console.SetCursorPosition(left - 1, top);
-                                }
-                            },
-                            ConsoleKey.RightArrow => delegate { // 39
-                                if (cs.CursorPos < cs.ConsoleLine.Count - 1) {
-                                    cs.CursorPos++;
-                                    Console.SetCursorPosition(left + 1, top);
-                                }
-                            },
-                            ConsoleKey.UpArrow => cs.HistoryBack,
-                            ConsoleKey.DownArrow => cs.HistoryForward,
-                            _ => null,
-                        };
-                        
-                        action?.Invoke();
-                    } break;
-                    default: {
-                        if (keyActions.TryGetValue(key.Key, out var action)) {
-                            action.Invoke();
-                        } else {
-                            cs.TypeKey(key);
-                        }
-                    } break;
-                }
-            }
-        }
-
-        public void Stop() => keepRunning = false;
+        public void Stop() => KeepRunning = false;
         private async Task OnStop()
         {
             List<Task> toWait = [
@@ -422,7 +209,7 @@ namespace CaretakerNET
             if (GuildData.Count > 0) {
                 toWait.Add(Save());
             }
-            cs.TypingState?.Dispose();
+            ConsoleHandler.TypingState?.Dispose();
             Console.ResetColor();
 
             // async programming is funny
@@ -544,7 +331,7 @@ namespace CaretakerNET
             return Task.CompletedTask;
         }
 
-        private async Task MessageHandler(IUserMessage msg)
+        public async Task MessageHandler(IUserMessage msg)
         {
             var u = GetUserData(msg);
             var s = GetGuildData(msg);
@@ -586,9 +373,9 @@ namespace CaretakerNET
 
             if (msg.Content.StartsWith(prefix)) {
                 bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
-                bool testing = TestingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
+                bool testing = config.TestingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
                 LogDebug(msg.Author.Username + " banned? : " + banned);
-                LogDebug("testing mode on? : " + TestingMode);
+                LogDebug("testing mode on? : " + config.TestingMode);
 
                 (string command, string parameters) = msg.Content[prefix.Length..].SplitByFirstChar(' ');
                 if (string.IsNullOrEmpty(command) || banned || testing) return;
@@ -610,11 +397,11 @@ namespace CaretakerNET
                     return;
                 }
 
-                var typing = msg.Channel.EnterTypingState(
-                    new RequestOptions {
-                        Timeout = 1000,
-                    }
-                );
+                // var typing = msg.Channel.EnterTypingState(
+                //     new RequestOptions {
+                //         Timeout = 1000,
+                //     }
+                // );
                     try {
                         Stopwatch sw = new();
                         sw.Start();
@@ -626,16 +413,16 @@ namespace CaretakerNET
                         await msg.Reply(error.Message, false);
                         LogError(error);
                     }
-                // might be not enough? or it might just not work.
-                await Task.Delay(1100);
-                typing.Dispose();
+                // // might be not enough? or it might just not work.
+                // await Task.Delay(1100);
+                // typing.Dispose();
             } else {
                 if (s != null) {
                     ulong cId = msg.Channel.Id;
 
                     // talking channel stuff
                     // if (cs.currentTalkingChannel == cId && msg.Author.Id != CARETAKER_ID) {
-                    if ((cs.TalkingChannels.Any(c => c?.Id == cId) || cs.CurrentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
+                    if ((ConsoleHandler.TalkingChannels.Any(c => c?.Id == cId) || ConsoleHandler.CurrentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
                         LogMessage(msg);
                     }
 

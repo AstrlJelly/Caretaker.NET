@@ -1,7 +1,7 @@
 using System;
 using NAudio.Wave;
 
-namespace CaretakerNet.Audio
+namespace CaretakerNET.Audio
 {
     public class SoundDeck
     {

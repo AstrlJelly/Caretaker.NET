@@ -32,7 +32,8 @@ namespace CaretakerNET.Commands
 
         public readonly string Name;
         public readonly string Desc;
-        public readonly string Genre;
+        // public readonly string Genre;
+        public readonly HashSet<string> Genres;
         public delegate Task RunAsync(IUserMessage msg, ParsedParams p);
         public readonly RunAsync Func;
         public readonly Param[] Params;
@@ -45,7 +46,7 @@ namespace CaretakerNET.Commands
         {
             Name = name;
             Desc = desc;
-            Genre = genre;
+            Genres = genre.Split(", ").ToHashSet();
             Func = func ?? ((_, _) => Task.CompletedTask);
             LimitedToPerms = limitedToPerms ?? [];
             LimitedToIds = limitedToIds ?? [];
@@ -62,6 +63,11 @@ namespace CaretakerNET.Commands
             } else {
                 Params = [];
             }
+        }
+
+        public bool IsGenre(string genre)
+        {
+            return Genres.Contains(genre);
         }
 
         public bool HasPerms(IUserMessage msg) {

@@ -16,6 +16,7 @@ using FuzzySharp;
 using ComputeSharp;
 using Z.Expressions.CodeCompiler.CSharp;
 using Z.Expressions;
+using CaretakerNET.Persistence;
 
 namespace CaretakerNET.Commands
 {
@@ -288,7 +289,7 @@ namespace CaretakerNET.Commands
                 new Param("amount", "the amount of people to grab for the leaderboard", 10),
             ]),
 
-            new("bet, gamble", "see the top ranking individuals on this bot", "games", async (msg, p) => { // MAKE SURE MONEY IS SOMEHOW KEPT UNTIL THE GAME IS DESTROYED IN ANY WAY
+            new("bet, gamble", "see the top ranking individuals on this bot", "games, economy", async (msg, p) => { // MAKE SURE MONEY IS SOMEHOW KEPT UNTIL THE GAME IS DESTROYED IN ANY WAY
                 (long amount, IUser? user) = (p["amount"], p["user"]);
                 if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
 
@@ -449,7 +450,7 @@ namespace CaretakerNET.Commands
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
                 (int index, string? channel, SocketGuild? guild) = (p["index"], p["channel"], p["guild"] ?? msg.GetGuild());
-                if (index < 0 && index > MainHook.instance.cs.TalkingChannels.Length - 1) {
+                if (index < 0 && index > MainHook.instance.ConsoleHandler.TalkingChannels.Length - 1) {
                     _ = msg.Reply("too high. or too low! idk and idc");
                     return;
                 }
@@ -462,7 +463,7 @@ namespace CaretakerNET.Commands
                     _ = msg.Reply("mmm... nope!!");
                     return;
                 }
-                MainHook.instance.cs.TalkingChannels[index] = (ITextChannel)talkingChannel;
+                MainHook.instance.ConsoleHandler.TalkingChannels[index] = (ITextChannel)talkingChannel;
                 _ = msg.React("✅");
             }, [
                 new("index", "the index to set the channel", 0),
@@ -730,19 +731,21 @@ namespace CaretakerNET.Commands
 
             Dictionary<string, List<Command>> comsSortedByGenre = [];
             if (string.IsNullOrEmpty(singleCom)) {
-                foreach (Command command in commandDict.Values)
-                {
-                    string comGenre = command.Genre;
-                    if (!comsSortedByGenre.TryGetValue(comGenre, out List<Command>? commands)) {
-                        commands = ([]);
-                        comsSortedByGenre.Add(comGenre, commands);
-                    }
+                foreach (Command command in commandDict.Values) {
+                    foreach (var genre in command.Genres) {
+                        if (!comsSortedByGenre.TryGetValue(genre, out List<Command>? commands)) {
+                            commands = ([]);
+                            comsSortedByGenre.Add(genre, commands);
+                        }
 
-                    commands.Add(command);
+                        commands.Add(command);
+                    }
                 }
             } else {
                 var command = commandDict[singleCom];
-                comsSortedByGenre.Add(command.Genre, [ command ]);
+                foreach (var genre in command.Genres) {
+                    comsSortedByGenre.Add(genre, [ command ]);
+                }
             }
 
             StringBuilder comListBuilder = new();
@@ -754,7 +757,7 @@ namespace CaretakerNET.Commands
                 {
                     var com = coms[i];
                     if ((coms.IsIndexValid(i - 1) && coms[i - 1].Name == com.Name) || 
-                        (com.Genre == "hidden" && !showHidden))
+                        (com.IsGenre("hidden") && !showHidden))
                     {
                         continue;
                     }
@@ -792,7 +795,7 @@ namespace CaretakerNET.Commands
         {
             var connectionInfo = new ConnectionInfo(
                 "150.230.169.222", "opc",
-                new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(PrivatesPath, "ssh.key")))
+                new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(MainHook.instance.config.PrivatesPath, "ssh.key")))
             );
             // using (var client = new ScpClient(connectionInfo))
             using var client = new SftpClient(connectionInfo);

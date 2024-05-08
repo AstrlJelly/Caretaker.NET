@@ -277,3 +277,4 @@ privates_path.txt
 temp/*
 logs/*
 privates_path.txt
+config.yaml

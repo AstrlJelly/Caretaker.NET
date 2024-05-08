@@ -12,12 +12,17 @@ namespace CaretakerCore
     public static class Discord
     {
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public static DiscordSocketClient Client;
+        public static DiscordSocketClient Client { get; private set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public static void Init(DiscordSocketClient c)
         {
-            Client = c;
+            if (Client == null) {
+                Client = c;
+            } else {
+                LogWarning($"attempted to init CaretakerCore.Discord while it was already initialized!");
+            }
+            
         }
 
         public static async Task<IUserMessage> Reply(this IUserMessage msg, object rp, bool ping = false)
