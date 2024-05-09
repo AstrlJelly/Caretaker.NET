@@ -12,6 +12,21 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
+  "820357014831628309": {
+    "IsInServer": true,
+    "UserId": 820357014831628309,
+    "Username": "12u3ie",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [
+      "ConnectFour"
+    ],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
   "615705128292319292": {
     "IsInServer": true,
     "UserId": 615705128292319292,
@@ -77,6 +92,19 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
+  "786360377284755478": {
+    "IsInServer": true,
+    "UserId": 786360377284755478,
+    "Username": "artificialchip",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
   "438296397452935169": {
     "IsInServer": true,
     "UserId": 438296397452935169,
@@ -112,10 +140,11 @@
       "ConnectFour",
       "ConnectFour",
       "ConnectFour",
+      "ConnectFour",
       "ConnectFour"
     ],
     "Losses": [],
-    "Timeout": 1715104408104,
+    "Timeout": 1715269148144,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -179,12 +208,13 @@
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [
+      "ConnectFour",
       "ConnectFour"
     ],
     "Losses": [
       "ConnectFour"
     ],
-    "Timeout": 1714064390634,
+    "Timeout": 1715266244374,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -939,7 +969,7 @@
       "ConnectFour",
       "ConnectFour"
     ],
-    "Timeout": 1714501077146,
+    "Timeout": 1715265606332,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -966,7 +996,9 @@
     "Wins": [
       "ConnectFour"
     ],
-    "Losses": [],
+    "Losses": [
+      "ConnectFour"
+    ],
     "Timeout": 1713635113924,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
@@ -1002,19 +1034,6 @@
     "UserId": 899484883347472416,
     "Username": "zoesusername",
     "Balance": 500,
-    "HasStartedEconomy": false,
-    "Inventory": [],
-    "Wins": [],
-    "Losses": [],
-    "Timeout": 0,
-    "OptedOutFeatures": [],
-    "NeedsUpdating": false
-  },
-  "786360377284755478": {
-    "IsInServer": true,
-    "UserId": 786360377284755478,
-    "Username": "artificialchip",
-    "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [],

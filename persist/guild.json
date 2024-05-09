@@ -302,5 +302,24 @@
     },
     "Convo": {},
     "CurrentGame": null
+  },
+  "1232490784742182962": {
+    "GuildId": 1232490784742182962,
+    "GuildName": "the",
+    "Prefix": "\u003E",
+    "Count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "Chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "Convo": {},
+    "CurrentGame": null
   }
 }

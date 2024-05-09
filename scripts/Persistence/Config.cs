@@ -8,9 +8,7 @@ namespace CaretakerNET.Persistence
         private const string CONFIG_PATH = "./config.yaml";
         public static async void Save(Config config)
         {
-            var serializer = new SerializerBuilder()
-                // .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                .Build();
+            var serializer = new SerializerBuilder().Build();
 
             var yaml = serializer.Serialize(config);
             await File.WriteAllTextAsync(CONFIG_PATH, yaml); // creates new file or overwrites existing one
@@ -24,7 +22,6 @@ namespace CaretakerNET.Persistence
             } else {
                 try {
                     string yaml = await File.ReadAllTextAsync(CONFIG_PATH);
-                    Log(yaml);
                     var deserializer = new Deserializer();
                     return deserializer.Deserialize<Config>(yaml) ?? Fail();
                 } catch (Exception err) {
@@ -48,15 +45,7 @@ namespace CaretakerNET.Persistence
     public class Config
     {
         public bool DebugMode = false;
-        public bool TestingMode = false;
         public string PrivatesPath = "";
         public string Token = "";
-        // [YamlMember(Alias = "Token")] 
-        // private string token = "";
-        // [YamlIgnore] public string Token { get {
-        //     string tempToken = token;
-        //     token = "";
-        //     return tempToken;
-        // }}
     }
 }

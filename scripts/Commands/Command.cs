@@ -103,6 +103,7 @@ namespace CaretakerNET.Commands
             String,
             Boolean,
             Double,
+            Decimal,
             Integer,
             // UInteger,
             Long,
@@ -114,10 +115,10 @@ namespace CaretakerNET.Commands
         {
             return Type switch {
                 ParamType.Boolean     => str == "true",
-                ParamType.Double      => double.Parse(str),
-                ParamType.Integer     => int.Parse(str),
-                // ParamType.UInteger    => uint.Parse(str),
-                ParamType.Long        => long.Parse(str),
+                ParamType.Double      => double.TryParse(str, out double @double)    ? @double  : Preset,
+                ParamType.Decimal     => decimal.TryParse(str, out decimal @decimal) ? @decimal : Preset,
+                ParamType.Integer     => int.TryParse(str, out int @int)             ? @int     : Preset,
+                ParamType.Long        => long.TryParse(str, out long @long)          ? @long    : Preset,
                 ParamType.User        => Client.ParseUser(str, guild),
                 ParamType.Channel     => guild?.ParseChannel(str),
                 ParamType.Guild       => Client.ParseGuild(str),
@@ -134,7 +135,6 @@ namespace CaretakerNET.Commands
             "Boolean" => ParamType.Boolean,
             "Double" => ParamType.Double,
             "Int32" => ParamType.Integer,
-            // "UInt32" => ParamType.UInteger,
             "Int64" => ParamType.Long,
             "String" or _ => ParamType.String,
         };

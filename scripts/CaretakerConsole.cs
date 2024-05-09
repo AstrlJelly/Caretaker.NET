@@ -82,6 +82,7 @@ namespace CaretakerNET
         }
         public void StartReadingKeys()
         {
+            PlayKeyPressStopwatch.Start();
             AutoCancelTyping();
 
             Dictionary<ConsoleKey, Action> keyActions = new() {
@@ -147,7 +148,10 @@ namespace CaretakerNET
                 int keySfx = new Random().Next(6) + 1;
                 string path = $"keyboard/key_press_{keySfx}";
                 if (SoundDeck.ClipExists(path)) {
-                    SoundDeck.PlayOneShotClip(path);
+                    if (PlayKeyPressStopwatch.Elapsed.Milliseconds > 10) {
+                        SoundDeck.PlayOneShotClip(path);
+                        PlayKeyPressStopwatch.Restart();
+                    }
                 } else {
                     LogError(path + " doesn't exist!!! i hope you die");
                 }

@@ -12,6 +12,13 @@ namespace CaretakerNET.Persistence
     {
         [JsonInclude] bool IsInServer = true;
         public ulong UserId;
+        [JsonIgnore] private IUser? user;
+        [JsonIgnore] public IUser User {
+            get {
+                user ??= Client.GetUser(UserId);
+                return user;
+            }
+        }
         public string Username = "";
         // economy
         public const decimal START_BAL = 50.00m;
@@ -60,7 +67,7 @@ namespace CaretakerNET.Persistence
         public void Init(DiscordSocketClient client, ulong userId)
         {
             UserId = userId;
-            var user = client.GetUser(userId);
+            user = client.GetUser(userId);
             if (user != null) {
                 Username = user.Username;
                 IsInServer = true;

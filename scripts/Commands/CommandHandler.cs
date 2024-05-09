@@ -275,7 +275,9 @@ namespace CaretakerNET.Commands
                     desc.Append(i + 1);
                     desc.Append(". ");
                     desc.Append(UserPingFromID(id));
-                    desc.Append(" - ");
+                    desc.Append("                                                                                                                                                                                             (");
+                    desc.Append(u.Username);
+                    desc.Append(") - ");
                     desc.AppendLine(count.ToString());
                     i++;
                 }
@@ -285,7 +287,6 @@ namespace CaretakerNET.Commands
                 };
                 await msg.ReplyAsync(embed: leaderboard.Build());
             }, [
-                // new Param("loserboard", "get the people who have LOST the most instead", false),
                 new Param("amount", "the amount of people to grab for the leaderboard", 10),
             ]),
 
@@ -323,8 +324,16 @@ namespace CaretakerNET.Commands
                     _ = msg.React("✅");
                 }
             }, [
-                new Param("amount", "the amount of jell to gamble", 1L),
+                new Param("amount", "the amount of jell to gamble", 1.00m),
                 new Param("user", "the user to gamble on", "", Param.ParamType.User),
+            ]),
+
+            new("donate, donut", "give money to another user", "economy, hidden", async (msg, p) => {
+                var u = MainHook.instance.GetUserData(msg);
+
+            }, [
+                new Param("amount", "the amount of money to give", 4.20m),
+                new Param("user", "the user to give money to", "astrljelly", Param.ParamType.User),
             ]),
 
             new("playtest", "give yourself the playtester role, or dm you an invite to the caretaker server if it's the wrong server", "caretaker", async (msg, p) => {

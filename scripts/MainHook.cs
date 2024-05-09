@@ -30,6 +30,7 @@ namespace CaretakerNET
 
         public readonly static MainHook instance = new();
         private bool isReady;
+        private bool testingMode;
 
         public readonly DiscordSocketClient Client;
         public readonly CaretakerConsole ConsoleHandler = new();
@@ -95,22 +96,21 @@ namespace CaretakerNET
 
             //  stored in config file now
             // DebugMode = args.Contains("debug") || args.Contains("-d");
-            // TestingMode = args.Contains("testing") || args.Contains("-t");
+            testingMode = args.Contains("testing") || args.Contains("-t");
 
             foreach (var directory in new string[] { "persist", "temp", "logs" }) {
                 if (!Directory.Exists("./" + directory)) {
                     Directory.CreateDirectory("./" + directory);
                 }
             }
-
-
+            
             // might wanna make this async?
             foreach (var filePath in Directory.GetFiles("./logs"))
             {
                 var createTime = new DateTimeOffset(File.GetCreationTime(filePath)).ToUnixTimeMilliseconds();
                 var discardTime = DateNow() - ConvertTime(1, Time.Day);
                 if (createTime < discardTime) {
-                    File.Delete(filePath);
+                    _ = Task.Run(() => File.Delete(filePath));
                 }
             }
             // PrivatesPath = File.ReadAllText("./privates_path.txt");
@@ -373,9 +373,9 @@ namespace CaretakerNET
 
             if (msg.Content.StartsWith(prefix)) {
                 bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
-                bool testing = config.TestingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
+                bool testing = testingMode && !TrustedUsers.Contains(msg.Author.Id); // check if testing, and if user is valid
                 LogDebug(msg.Author.Username + " banned? : " + banned);
-                LogDebug("testing mode on? : " + config.TestingMode);
+                LogDebug("testing mode on? : " + testingMode);
 
                 (string command, string parameters) = msg.Content[prefix.Length..].SplitByFirstChar(' ');
                 if (string.IsNullOrEmpty(command) || banned || testing) return;
