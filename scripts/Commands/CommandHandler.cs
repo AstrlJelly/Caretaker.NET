@@ -345,6 +345,10 @@ namespace CaretakerNET.Commands
                 }
                 switch (guild?.Id)
                 {
+                    // dms
+                    case null: {
+                        _ = msg.Channel.SendMessageAsync("ermm " + invite!.Url);
+                    } break;
                     // caretaker server
                     case CARETAKER_CENTRAL_ID: {
                         IGuildUser user = (IGuildUser)msg.Author;
@@ -360,10 +364,6 @@ namespace CaretakerNET.Commands
                             _ = msg.Reply("thanks :3");
                         }
                     } break;
-                    // dms
-                    case null: {
-                        _ = msg.Channel.SendMessageAsync("ermm " + invite!.Url);
-                    } break;
                     // any other server
                     default: {
                         _ = msg.React(Emojis.Smide);
@@ -374,12 +374,51 @@ namespace CaretakerNET.Commands
             }),
 
             new("test", "for testing :)", "caretaker", async (msg, p) => {
-                var embed = new EmbedBuilder()
-                    .AddField("test1", "test2")
-                    .AddField("test3", "test4");
-                
-                _ = msg.ReplyAsync(embed: embed.Build());
-            }, [ new("test", "for testing", 50L) ]),
+                string unsplitVals = p["vals"] ?? "";
+                double[] vals = unsplitVals.Split(" ").Select(x => double.Parse(x)).ToArray();
+                if (vals.Length < 1) {
+                    await msg.Reply(new string[] { "Bitch.", "i hope you die", "DON'T!!! DO THAT!!!" }.GetRandom()!);
+                }
+                double mean, median;
+                List<double> modes = [];
+                mean = median = 0;
+                Dictionary<double, int> modeChecker = [];
+                for (int i = 0; i < vals.Length; i++) {
+                    double val = vals[i];
+
+                    // mean
+                    mean += val;
+                    // mode
+                    if (modeChecker.ContainsKey(val)) {
+                        modeChecker[val]++;
+                    } else {
+                        modeChecker[val] = 1;
+                    }
+                }
+
+                // mean
+                mean /= vals.Length;
+
+                // median
+                if (vals.Length % 2 == 1) {
+                    median = vals[(vals.Length - 1) / 2];
+                } else {
+                    median = (vals[(vals.Length / 2) - 1] + vals[vals.Length / 2]) / 2;
+                }
+
+                // mode
+                double firstVal = double.NaN;
+                foreach ((var numThatWasRepeated, var timesRepeated) in modeChecker.OrderByDescending(x => x.Value))
+                {
+                    if (double.IsNaN(firstVal) || timesRepeated == firstVal) {
+                        modes.Add(numThatWasRepeated);
+                        firstVal = timesRepeated;
+                    }
+                }
+                await msg.Reply($"mean : {mean}\nmedian : {median}\nmodes : {string.Join(", ", modes)}");
+            }, [
+                new("vals", "for testing", ""),
+            ]),
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             new("cmd", "run more internal commands, will probably just be limited to astrl", "caretaker"),
@@ -545,7 +584,7 @@ namespace CaretakerNET.Commands
                 int stopState = 0;              // a way for the Action<int> to return in the method; 0 = nothing, 1 = break, 2 = return
 
                 // a list of chars that get concatenated into either a parameter name or a parameter value
-                List<char> currentString = new(strParams.Length); // setting the capacity gives negligible change in performance but i think it's funny
+                List<char> currentStringAsChars = new(strParams.Length); // setting the capacity gives negligible change in performance but i think it's funny
 
                 // dictionary of actions that have the current index as an input, accessed using different types of chars
                 Dictionary<char, Action<int>> charActions = new() {
@@ -554,13 +593,13 @@ namespace CaretakerNET.Commands
                     { ' ', i => {
                         // just act like a normal character if between quotes or if the space won't signify a new param
                         if (isBetweenQuotes || (currentParamIndex >= (com.Params.Length - 1)) && (i < strParams.Length && i >= 0)) {
-                            currentString.Add(strParams[i]);
+                            currentStringAsChars.Add(strParams[i]);
                             return;
                         }
 
                         // makes sure cases like ">echo thing  1000" don't break anything
                         // maybe just check if last character was a space?
-                        if (currentString.Count < 1) return;
+                        if (currentStringAsChars.Count < 1) return;
                         // lets you do things like "paramName : value" or "paramName: value" or even "paramName :value"
                         if ((strParams.IsIndexValid(i + 1) && strParams[i + 1] == ':') || (strParams.IsIndexValid(i - 1) && strParams[i - 1] == ':')) return;
 
@@ -573,7 +612,7 @@ namespace CaretakerNET.Commands
                             }
                         }
 
-                        var paramStr = string.Concat(currentString);
+                        var paramStr = string.Concat(currentStringAsChars);
                         if (infParams == null) {
                             // if it's not being manually set (and not adding to inf params), use currentParamIndex then add 1 to it
                             if (currentParam == null) {
@@ -587,11 +626,11 @@ namespace CaretakerNET.Commands
                             infParams.Add(paramStr);
                         }
                         currentParam = null;
-                        currentString.Clear();
+                        currentStringAsChars.Clear();
                     }},
                     { ':', i => {
-                        string paramName = string.Concat(currentString);
-                        currentString.Clear();
+                        string paramName = string.Concat(currentStringAsChars);
+                        currentStringAsChars.Clear();
                         if (paramName == "params") {
                             infParams = [];
                         } else {
@@ -612,7 +651,7 @@ namespace CaretakerNET.Commands
                     if (charActions.TryGetValue(strParams[i], out var action) && !backslash) {
                         action.Invoke(i);
                     } else {
-                        currentString.Add(strParams[i]);
+                        currentStringAsChars.Add(strParams[i]);
                         backslash = false;
                     }
                     // refer to stopLoop comment
@@ -623,7 +662,7 @@ namespace CaretakerNET.Commands
                     }
                 }
                 // there might be a better way to do this? works super well rn tho
-                if (currentString.Count > 0) {
+                if (currentStringAsChars.Count > 0) {
                     isBetweenQuotes = false; // make sure the action doesn't just add a space
                     charActions[' '].Invoke(-69); // arbitrary. no other reason i chose it 😊😊😊
                 }

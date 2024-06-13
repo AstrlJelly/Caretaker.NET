@@ -144,7 +144,7 @@
       "ConnectFour"
     ],
     "Losses": [],
-    "Timeout": 1715269148144,
+    "Timeout": 1716572010399,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -410,7 +410,7 @@
     "NeedsUpdating": false
   },
   "1155031460814802995": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 1155031460814802995,
     "Username": "foggyxires",
     "Balance": 500,
@@ -487,6 +487,19 @@
     "UserId": 736278761401745449,
     "Username": "hotelmariolover",
     "Balance": 500,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "722467746553790624": {
+    "IsInServer": true,
+    "UserId": 722467746553790624,
+    "Username": "imperativecollective",
+    "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [],
@@ -604,7 +617,7 @@
       "ConnectFour",
       "ConnectFour"
     ],
-    "Timeout": 1715098448972,
+    "Timeout": 1716397292677,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -702,7 +715,7 @@
     "NeedsUpdating": false
   },
   "355135135349473282": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 355135135349473282,
     "Username": "obeliskwithlimbs",
     "Balance": 500,

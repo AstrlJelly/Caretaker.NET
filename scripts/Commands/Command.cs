@@ -26,7 +26,6 @@ namespace CaretakerNET.Commands
             public readonly string Command = command;
             public readonly Dictionary<string, dynamic?> Params = @params;
             public readonly Dictionary<string, string?> Unparams = unparams;
-            // public readonly string[] UnparamsParams = unparamsParams ?? [];
             public readonly string[] InfParams = infParams ?? [];
         }
 

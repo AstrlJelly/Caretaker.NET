@@ -26,7 +26,7 @@ namespace CaretakerNET
     public class MainHook
     {
         // gets called when program is run; starts async loop
-        static Task Main(string[] args) => instance.MainAsync(args);
+        private static Task Main(string[] args) => instance.MainAsync(args);
 
         public readonly static MainHook instance = new();
         private bool isReady;
@@ -97,6 +97,7 @@ namespace CaretakerNET
             //  stored in config file now
             // DebugMode = args.Contains("debug") || args.Contains("-d");
             testingMode = args.Contains("testing") || args.Contains("-t");
+            string name = nameof(CaretakerNET);
 
             foreach (var directory in new string[] { "persist", "temp", "logs" }) {
                 if (!Directory.Exists("./" + directory)) {
