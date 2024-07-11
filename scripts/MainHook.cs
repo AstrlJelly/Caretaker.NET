@@ -94,10 +94,8 @@ namespace CaretakerNET
 
             ts.UpdateTitle();
 
-            //  stored in config file now
-            // DebugMode = args.Contains("debug") || args.Contains("-d");
             testingMode = args.Contains("testing") || args.Contains("-t");
-            string name = nameof(CaretakerNET);
+            // string name = nameof(CaretakerNET);
 
             foreach (var directory in new string[] { "persist", "temp", "logs" }) {
                 if (!Directory.Exists("./" + directory)) {
@@ -192,8 +190,6 @@ namespace CaretakerNET
             public void UpdateTitle()
             {
                 var ch = instance.ConsoleHandler.CurrentTalkingChannel;
-                StringBuilder titleBuilder = new();
-                // titleBuilder.Append(Client.CurrentUser.GlobalName);
                 Console.Title = $"CaretakerNET : {Status} | {ch?.Guild.Name}, {ch?.Name}";
             }
         }
@@ -537,7 +533,7 @@ namespace CaretakerNET
                                         case "go": {
                                             if (playerId != msg.Author.Id) return null;
                                             int column = int.Parse(columnStr[0].ToString()) - 1;
-                                            if (!c4.AddToColumn(column, player)) {
+                                            if (!c4.TryAddToColumn(column, player)) {
                                                 return ("❌", "");
                                             }
                                             c4.SwitchPlayers();

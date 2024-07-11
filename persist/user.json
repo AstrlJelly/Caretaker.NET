@@ -1,6 +1,6 @@
 {
   "980614458198077471": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 980614458198077471,
     "Username": "._yarg_.",
     "Balance": 500,
@@ -67,7 +67,7 @@
     "NeedsUpdating": false
   },
   "492158012060860417": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 492158012060860417,
     "Username": "angeltm",
     "Balance": 500,
@@ -175,7 +175,7 @@
     "NeedsUpdating": false
   },
   "412110038358818828": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 412110038358818828,
     "Username": "bobthenerd10",
     "Balance": 500,
@@ -358,7 +358,7 @@
     "NeedsUpdating": false
   },
   "1071473313873940572": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 1071473313873940572,
     "Username": "el_matias_69",
     "Balance": 500,
@@ -410,7 +410,7 @@
     "NeedsUpdating": false
   },
   "1155031460814802995": {
-    "IsInServer": false,
+    "IsInServer": true,
     "UserId": 1155031460814802995,
     "Username": "foggyxires",
     "Balance": 500,
@@ -436,7 +436,7 @@
     "NeedsUpdating": false
   },
   "896469677193191436": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 896469677193191436,
     "Username": "graygravity_",
     "Balance": 500,
@@ -535,7 +535,7 @@
     "NeedsUpdating": false
   },
   "449992480386056213": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 449992480386056213,
     "Username": "kievit",
     "Balance": 500,
@@ -661,7 +661,7 @@
     "NeedsUpdating": false
   },
   "1048881593651056691": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 1048881593651056691,
     "Username": "misschangeling",
     "Balance": 500,
@@ -914,7 +914,7 @@
   "736835466795679744": {
     "IsInServer": true,
     "UserId": 736835466795679744,
-    "Username": "thebigbunny",
+    "Username": "pretzelgilbert",
     "Balance": 500,
     "HasStartedEconomy": false,
     "Inventory": [],
@@ -938,7 +938,7 @@
     "NeedsUpdating": false
   },
   "298939166060838912": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 298939166060838912,
     "Username": "thepurpleanon",
     "Balance": 500,
@@ -1043,7 +1043,7 @@
     "NeedsUpdating": false
   },
   "899484883347472416": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 899484883347472416,
     "Username": "zoesusername",
     "Balance": 500,

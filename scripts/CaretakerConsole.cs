@@ -80,7 +80,7 @@ namespace CaretakerNET
             }
             Console.Write(string.Join("", ConsoleLine));
         }
-        public void StartReadingKeys()
+        public async void StartReadingKeys()
         {
             PlayKeyPressStopwatch.Start();
             AutoCancelTyping();
@@ -142,7 +142,7 @@ namespace CaretakerNET
             };
             while (MainHook.instance.KeepRunning)
             {
-                while (!Console.KeyAvailable);
+                while (!Console.KeyAvailable) await Task.Delay(10);
                 ConsoleKeyInfo key = Console.ReadKey(true);
 
                 int keySfx = new Random().Next(6) + 1;

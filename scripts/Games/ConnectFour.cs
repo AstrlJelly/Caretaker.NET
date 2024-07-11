@@ -30,14 +30,11 @@ namespace CaretakerNET.Games
         [JsonInclude] private readonly int[][] board; // list of a list of ints
         public const int W = 7; // width of the board
         public const int H = 6; // height of the board
-        // public const int W = 6; // width of the board
-        // public const int H = 8; // height of the board
 
-        // public static bool IsValidMove(int column) => column is < W and >= 0;
-        public bool AddToColumn(int column, Player player) => AddToColumn(column, (int)player);
-        public bool AddToColumn(int column, int player)
+        public bool TryAddToColumn(int column, Player player) => TryAddToColumn(column, (int)player);
+        public bool TryAddToColumn(int column, int player)
         {
-            if (column is < W and >= 0 && this[column, H - 1] == 0) {
+            if (IsColumnFull(column)) {
                 for (int i = 0; i < H; i++) {
                     if (this[column, i] == 0) {
                         this[column, i] = player;
@@ -48,10 +45,27 @@ namespace CaretakerNET.Games
             return false;
         }
 
-        // public Win WinCheckFromPoint(Vector2 point, Player player)
-        // {
-            
-        // }
+        public void AddToColumn(int column, Player player) => AddToColumn(column, (int)player);
+        public void AddToColumn(int column, int player)
+        {
+            _ = TryAddToColumn(column, player);
+        }
+
+        private bool IsColumnFull(int column)
+        {
+            return column is < W and >= 0 && this[column, H - 1] == 0;
+        }
+
+        private bool IsBoardFull()
+        {
+            for (int i = 0; i < W; i++)
+            {
+                if (board[i][H - 1] == 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public Win WinCheck()
         {
@@ -199,6 +213,32 @@ namespace CaretakerNET.Games
         {
             this.Players = Players;
             this.board = board;
+        }
+
+        private int MinMax(int depth, bool maximizingPlayer)
+        {
+            if (depth <= 0)
+                return 0;
+
+            var winner = WinCheck();
+            if (winner.WinningPlayer is Player.Two)
+                return depth;
+            if (winner.WinningPlayer is Player.One)
+                return -depth;
+            if (IsBoardFull())
+                return 0;
+
+
+            int bestValue = maximizingPlayer ? -1 : 1;
+            for (int i = 0; i < W; i++)
+            {
+                if (!IsColumnFull(i))
+                    continue;
+                int v = MinMax(depth - 1, !maximizingPlayer);
+                bestValue = maximizingPlayer ? Math.Max(bestValue, v) : Math.Min(bestValue, v);
+            }
+
+            return bestValue;
         }
     }
 }
