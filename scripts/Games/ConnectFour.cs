@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Numerics;
 using System.Text;
 using System.Text.Json.Serialization;
 
 using ComputeSharp;
+using Discord;
 
 namespace CaretakerNET.Games
 {
@@ -27,6 +29,7 @@ namespace CaretakerNET.Games
             public bool Tie = tie;
         }
 
+        [JsonInclude] public Player CaretakerPlayer = Player.None;
         [JsonInclude] private readonly int[][] board; // list of a list of ints
         public const int W = 7; // width of the board
         public const int H = 6; // height of the board
@@ -196,26 +199,22 @@ namespace CaretakerNET.Games
             return joinedRows.ToString();
         }
 
-        public ConnectFour(ulong playingChannelId, params ulong[] players)
+        public async void DoCaretakerMove(IMessageChannel c4Channel)
         {
-            board = new int[W][];
-            for (int i = 0; i < W; i++) {
-                board[i] = new int[H];
+            Stopwatch sw = new();
+            sw.Start();
+            string display;
+            if (TryAddToColumn(MinMax(), CaretakerPlayer)) {
+                sw.Stop();
+                display = $"{DisplayBoard()}\ntook {sw.Elapsed.TotalMilliseconds} ms";
+            } else {
+                display = "ermmm no.";
             }
-
-            PlayingChannelId = playingChannelId;
-            int j = 0;
-            Players = players.ToDictionary(_ => (Player)(++j));
+            await Task.Delay((int)(500 - sw.Elapsed.TotalMilliseconds));
+            _ = c4Channel.SendMessageAsync(display);
         }
 
-        [JsonConstructor]
-        public ConnectFour(Dictionary<Player, ulong> Players, int[][] board)
-        {
-            this.Players = Players;
-            this.board = board;
-        }
-
-        private int MinMax(int depth, bool maximizingPlayer)
+        private int MinMax(int depth = 6)
         {
             if (depth <= 0)
                 return 0;
@@ -228,17 +227,37 @@ namespace CaretakerNET.Games
             if (IsBoardFull())
                 return 0;
 
-
-            int bestValue = maximizingPlayer ? -1 : 1;
+            int bestValue = CaretakerPlayer == Player.One ? -1 : 1;
             for (int i = 0; i < W; i++)
             {
                 if (!IsColumnFull(i))
                     continue;
-                int v = MinMax(depth - 1, !maximizingPlayer);
-                bestValue = maximizingPlayer ? Math.Max(bestValue, v) : Math.Min(bestValue, v);
+                int v = MinMax(depth - 1);
+                bestValue = CaretakerPlayer == Player.One ? Math.Max(bestValue, v) : Math.Min(bestValue, v);
             }
 
             return bestValue;
+        }
+
+        public ConnectFour(ulong playingChannelId, Player caretakerPlayer, params ulong[] players)
+        {
+            board = new int[W][];
+            for (int i = 0; i < W; i++) {
+                board[i] = new int[H];
+            }
+
+            PlayingChannelId = playingChannelId;
+            CaretakerPlayer = caretakerPlayer;
+            int j = 0;
+            Players = players.ToDictionary(_ => (Player)(++j));
+        }
+
+        [JsonConstructor]
+        public ConnectFour(Dictionary<Player, ulong> Players, int[][] board, Player CaretakerPlayer)
+        {
+            this.Players = Players;
+            this.board = board;
+            this.CaretakerPlayer = CaretakerPlayer;
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Text;
 using Discord;
 using Discord.WebSocket;
 
+using CaretakerNET.Persistence;
 using CaretakerNET.ExternalEmojis;
 using CaretakerNET.Games;
 
@@ -16,7 +17,7 @@ using FuzzySharp;
 using ComputeSharp;
 using Z.Expressions.CodeCompiler.CSharp;
 using Z.Expressions;
-using CaretakerNET.Persistence;
+using ChatGPT.Net;
 
 namespace CaretakerNET.Commands
 {
@@ -109,6 +110,17 @@ namespace CaretakerNET.Commands
                 await msg.Reply(reply);
             }, [ new Param("math", "the math to do", "NaN"), ]),
 
+            new("say, ai", "talk to caretaker, except this time it's not just astrl", "hidden", async (msg, p) => {
+                string? ask = (string?)p["ask"];
+                if (string.IsNullOrEmpty(ask)) {
+                    await msg.Reply("how am i gonna respond to an empty message?");
+                    return;
+                }
+                _ = msg.React("👍");
+                string response = await MainHook.instance.CaretakerChat.Ask(ask);
+                await msg.Reply(response);
+            }, [ new Param("ask", "the message you'd like to say to caretaker", "") ]),
+
             new("optout, optin", "set the counting channel", "gimmick", async (msg, p) => {
                 string f = p["feature"] ?? "";
                 bool empty = string.IsNullOrEmpty(f);
@@ -183,7 +195,7 @@ namespace CaretakerNET.Commands
                 } else if (victim?.Id == msg.Author.Id) {
                     thrown = "MainHook.BannedUsers.Add(msg.Author.Id); " + Emojis.Smide;
                     MainHook.BannedUsers.Add(msg.Author.Id);
-                } else if (victim?.IsBot ?? false) {
+                } else if ((victim?.IsBot ?? false) && victim.Id != CARETAKER_ID) {
                     thrown = "dude. that's a bot.";
                 }
                 if (thrown != null) {
@@ -206,7 +218,7 @@ namespace CaretakerNET.Commands
                 {
                     IUser reactUser = reaction.User.Value;
                     ulong ruId = reactUser.Id;
-                    if (message.Id != challengeMsg.Id || ruId == CARETAKER_ID) {
+                    if (message.Id != challengeMsg.Id || (ruId == CARETAKER_ID && victim?.Id != CARETAKER_ID)) {
                         return false;
                     }
 
@@ -218,11 +230,11 @@ namespace CaretakerNET.Commands
 
                     if (reaction.Emote.Name == "✅") {
                         if (ruId == victim?.Id || anyone) {
+                            BoardGame.Player caretakerPlayer = victim?.Id == CARETAKER_ID ? BoardGame.Player.Two : BoardGame.Player.None;
                             if (cFourChance > 60) {
-                                s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, msg.Author.Id, ruId);
+                                s.CurrentGame = new ConnectFour(challengeMsg.Channel.Id, caretakerPlayer, msg.Author.Id, ruId);
                             } else if (checkersChance > 60) {
                                 s.CurrentGame = new Checkers(challengeMsg.Channel.Id, msg.Author.Id, ruId);
-                                // _ = msg.Reply("not implemented yet! soon tho");
                             } else if (unoChance > 60) {
                                 _ = msg.Reply("not implemented yet! soon tho");
                             } else {

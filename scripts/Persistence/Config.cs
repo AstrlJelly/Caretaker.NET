@@ -23,11 +23,14 @@ namespace CaretakerNET.Persistence
                 try {
                     string yaml = await File.ReadAllTextAsync(CONFIG_PATH);
                     var deserializer = new Deserializer();
-                    return deserializer.Deserialize<Config>(yaml) ?? Fail();
+                    var config = deserializer.Deserialize<Config>(yaml) ?? Fail();
+                    Save(config);
+                    return config;
                 } catch (Exception err) {
                     return Fail(err);
                 }
             }
+
 
             static Config Fail(Exception? err = null)
             {
@@ -47,5 +50,7 @@ namespace CaretakerNET.Persistence
         public bool DebugMode = false;
         public string PrivatesPath = "";
         public string Token = "";
+        public string CaretakerChatApiToken = "";
+        public string CaretakerChatPrompt = "";
     }
 }

@@ -18,8 +18,6 @@ using Z.Expressions;
 using CaretakerNET.Audio;
 using CaretakerNET.Persistence;
 using CaretakerNET.Core;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace CaretakerNET
 {
@@ -36,13 +34,14 @@ namespace CaretakerNET
         public readonly CaretakerConsole ConsoleHandler = new();
         public readonly EvalContext CompileContext = new();
         public readonly StringBuilder LogBuilder = new();
+        public ChatGPT.Net.ChatGpt CaretakerChat { get; private set; } = new("");
         public Config config = new();
         public Dictionary<ulong, GuildPersist> GuildData { get; private set; } = [];
         public Dictionary<ulong, UserPersist> UserData { get; private set; } = [];
 
         public readonly long StartTime;
 
-        public bool KeepRunning = true;
+        public bool KeepRunning { get; private set; } = true;
 
         public static readonly HashSet<ulong> TrustedUsers = [
             CARETAKER_ID,       // should be obvious
@@ -92,6 +91,11 @@ namespace CaretakerNET
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
 
+            CaretakerChat = new(config.CaretakerChatApiToken, new() {
+                BaseUrl = "https://api.pawan.krd/cosmosrp/v1/",
+                Model = "cosmosrp"
+            });
+
             ts.UpdateTitle();
 
             testingMode = args.Contains("testing") || args.Contains("-t");
@@ -120,7 +124,7 @@ namespace CaretakerNET
             ConsoleHandler.StartReadingKeys();
 
             // keep running until Stop() is called
-            while (KeepRunning);
+            while (KeepRunning) await Task.Delay(100);
 
             await OnStop();
         }
@@ -389,7 +393,7 @@ namespace CaretakerNET
                 if (u.Timeout > DateNow()) {
                     LogDebug("timeout : " + u.Timeout);
                     LogDebug("DateNow() : " + DateNow());
-                    u.Timeout += 1000;
+                    u.Timeout += 1500;
                     _ = msg.React("🕒");
                     return;
                 }
@@ -417,8 +421,8 @@ namespace CaretakerNET
                 if (s != null) {
                     ulong cId = msg.Channel.Id;
 
-                    // talking channel stuff
-                    // if (cs.currentTalkingChannel == cId && msg.Author.Id != CARETAKER_ID) {
+                    // make sure the message is only logged if it's in any of the talking channels, or is the current talking channel.
+                    // also don't log it if it's caretaker, i handle that specially.
                     if ((ConsoleHandler.TalkingChannels.Any(c => c?.Id == cId) || ConsoleHandler.CurrentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
                         LogMessage(msg);
                     }
@@ -536,7 +540,9 @@ namespace CaretakerNET
                                             if (!c4.TryAddToColumn(column, player)) {
                                                 return ("❌", "");
                                             }
-                                            c4.SwitchPlayers();
+                                            if (c4.CaretakerPlayer == BoardGame.Player.None) {
+                                                c4.SwitchPlayers();
+                                            }
                                             string board = c4.DisplayBoard(out var win);
                                             if (win.Tie) {
                                                 board += $"it's a tie...";
@@ -550,6 +556,9 @@ namespace CaretakerNET
                                                     board += $"{c4.GetEmoji(player)}{UserPingFromID(playerId)} won!";
                                                     s.CurrentGame = null;
                                                 }
+                                            }
+                                            if (c4.CaretakerPlayer != BoardGame.Player.None) {
+                                                c4.DoCaretakerMove(msg.Channel);
                                             }
                                             return ("✅", board);
                                         }

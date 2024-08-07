@@ -113,6 +113,7 @@
     "Convo": {},
     "CurrentGame": {
       "$type": "ConnectFour",
+      "CaretakerPlayer": 0,
       "board": [
         [
           0,
@@ -218,7 +219,77 @@
       "AutoChain": 0
     },
     "Convo": {},
-    "CurrentGame": null
+    "CurrentGame": {
+      "$type": "ConnectFour",
+      "CaretakerPlayer": 2,
+      "board": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "Players": {
+        "One": 438296397452935169,
+        "Two": 1182009469824139395
+      },
+      "Turns": 0,
+      "ForfeitPlayer": 0,
+      "EndAt": 2147483647,
+      "Betters": {},
+      "PlayingChannelId": 1189820692569538641
+    }
   },
   "1145223256056537181": {
     "GuildId": 1145223256056537181,
@@ -375,6 +446,25 @@
   "1232490784742182962": {
     "GuildId": 1232490784742182962,
     "GuildName": "pp",
+    "Prefix": "\u003E",
+    "Count": {
+      "Current": 0,
+      "PrevNumber": 0,
+      "HighestNum": 0
+    },
+    "Chain": {
+      "Current": null,
+      "ChainLength": 0,
+      "PrevChain": null,
+      "LastChainer": 0,
+      "AutoChain": 0
+    },
+    "Convo": {},
+    "CurrentGame": null
+  },
+  "1242180709800607865": {
+    "GuildId": 1242180709800607865,
+    "GuildName": "Heaven Studio Plus",
     "Prefix": "\u003E",
     "Count": {
       "Current": 0,
