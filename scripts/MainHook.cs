@@ -24,20 +24,18 @@ namespace CaretakerNET
     public class MainHook
     {
         // gets called when program is run; starts async loop
-        private static Task Main(string[] args) => instance.MainAsync(args);
+        private static Task Main(string[] args) => Instance.MainAsync(args);
 
-        public readonly static MainHook instance = new();
+        public readonly static MainHook Instance = new();
         private bool isReady;
         private bool testingMode;
 
-        public readonly DiscordSocketClient Client;
-        public readonly CaretakerConsole ConsoleHandler = new();
+        private readonly DiscordSocketClient Client;
+        private readonly StringBuilder LogBuilder = new();
         public readonly EvalContext CompileContext = new();
-        public readonly StringBuilder LogBuilder = new();
+        // public CaretakerConsole ConsoleHandler { get; private set; }
         public ChatGPT.Net.ChatGpt CaretakerChat { get; private set; } = new("");
-        public Config config = new();
-        public Dictionary<ulong, GuildPersist> GuildData { get; private set; } = [];
-        public Dictionary<ulong, UserPersist> UserData { get; private set; } = [];
+        public Config @Config { get; private set; } = new();
 
         public readonly long StartTime;
 
@@ -86,17 +84,17 @@ namespace CaretakerNET
 
         private async Task MainAsync(string[] args)
         {
-            config = await ConfigHandler.Load();
+            Config = await ConfigHandler.Load();
             SoundDeck.PlayOneShotClip("startup");
             CommandHandler.Init();
             CaretakerCore.Discord.Init(Client);
 
-            CaretakerChat = new(config.CaretakerChatApiToken, new() {
+            CaretakerChat = new(Config.CaretakerChatApiToken, new() {
                 BaseUrl = "https://api.pawan.krd/cosmosrp/v1/",
                 Model = "cosmosrp"
             });
 
-            ts.UpdateTitle();
+            CaretakerConsole.Instance.CurrentTitleState.UpdateTitle();
 
             testingMode = args.Contains("testing") || args.Contains("-t");
             // string name = nameof(CaretakerNET);
@@ -118,10 +116,9 @@ namespace CaretakerNET
             }
             // PrivatesPath = File.ReadAllText("./privates_path.txt");
             // login and connect with token (change to config json file?)
-            await Client.LoginAsync(TokenType.Bot, config.Token);
+            await Client.LoginAsync(TokenType.Bot, Config.Token);
             await Client.StartAsync();
 
-            ConsoleHandler.StartReadingKeys();
 
             // keep running until Stop() is called
             while (KeepRunning) await Task.Delay(100);
@@ -159,10 +156,9 @@ namespace CaretakerNET
                         LogError($"channel with id {channelId} in guild with id {guildId} was null!");
                     }
                 }
-                ConsoleHandler.TalkingChannels = [ ..tempTalkingChannels ];
-                ConsoleHandler.CurrentTalkingChannel = ConsoleHandler.TalkingChannels[0];
+                CaretakerConsole.Init(new([ ..tempTalkingChannels ]));
 
-                await Load();
+                await PersistenceHandler.Instance.Load();
 
                 SaveLoop();
                 await Client.SetActivityAsync(new Game(
@@ -173,31 +169,10 @@ namespace CaretakerNET
                 ));
 
                 // ts.UpdateTitle("Ready!");
-                ts.Status = "Ready!";
+                CaretakerConsole.Instance.CurrentTitleState.Status = "Ready!";
             }
         }
 
-        public class TitleState
-        {
-            private string status = "Starting...";
-            public string Status { get => status; set {
-                status = value;
-                UpdateTitle();
-            }}
-
-            // public void UpdateTitle(string status)
-            // {
-            //     Status = status;
-            //     // UpdateTitle();
-            // }
-
-            public void UpdateTitle()
-            {
-                var ch = instance.ConsoleHandler.CurrentTalkingChannel;
-                Console.Title = $"CaretakerNET : {Status} | {ch?.Guild.Name}, {ch?.Name}";
-            }
-        }
-        public readonly TitleState ts = new();
 
         public void Stop() => KeepRunning = false;
         private async Task OnStop()
@@ -207,10 +182,10 @@ namespace CaretakerNET
                 SaveLogFile(),
                 Task.Delay(1000)
             ];
-            if (GuildData.Count > 0) {
-                toWait.Add(Save());
+            if (PersistenceHandler.Instance.GuildData.Count > 0) {
+                toWait.Add(PersistenceHandler.Instance.Save());
             }
-            ConsoleHandler.TypingState?.Dispose();
+            CaretakerConsole.Instance.TypingState?.Dispose();
             Console.ResetColor();
 
             // async programming is funny
@@ -225,100 +200,12 @@ namespace CaretakerNET
             await File.WriteAllTextAsync($"./logs/log_{DateTime.Now:yy-MM-dd_HH-mm-ss}.txt", LogBuilder.ToString()); // creates file if it doesn't exist
         }
 
-        public async Task Save()
-        {
-            await Task.WhenAll(
-                Voorhees.SaveGuilds(GuildData),
-                Voorhees.SaveUsers(UserData)
-            );
-        }
-
-        public async Task Load()
-        {
-            var loadGuilds = Task.Run(async () => {
-                GuildData = await Voorhees.LoadGuilds();
-                // not necessary, takes 5-10 ms to complete at 15 guilds. yeeeouch
-                // also yes, i probably need to do that GetGuild().GetUser(), so that i can get caretaker as IGuildUser :(
-                GuildData = GuildData.OrderBy(x => Client.GetGuild(x.Key)?.GetUser(CARETAKER_ID)?.JoinedAt?.UtcTicks).ToDictionary();
-                LogDebug("GuildData.Count : " + GuildData.Count);
-                foreach (var key in GuildData.Keys) {
-                    if (key > 0) {
-                        if (GuildData[key] == null) {
-                            GuildData[key] = new(key);
-                        }
-                    } else {
-                        GuildData.Remove(key);
-                    }
-                    GuildData[key].Init(Client, key);
-                }
-
-            });
-            var loadUsers = Task.Run(async () => {
-                UserData = await Voorhees.LoadUsers();
-                // also not necessary, and also takes 5-10 ms to complete at 76 users
-                UserData = UserData.OrderBy(x => x.Value.Username).ToDictionary();
-                LogDebug("UserData.Count : " + UserData.Count);
-                foreach (var key in UserData.Keys) {
-                    if (key > 0) {
-                        if (UserData[key] == null) {
-                            UserData[key] = new();
-                        }
-                    } else {
-                        UserData.Remove(key);
-                    }
-                    UserData[key].Init(Client, key);
-                }
-            });
-            await Task.WhenAll(loadGuilds, loadUsers);
-        }
 
         private async void SaveLoop()
         {
             await Task.Delay(60000);
-            _ = Save();
+            _ = PersistenceHandler.Instance.Save();
             _ = SaveLogFile();
-        }
-
-        // data can very much so be null, but i trust any user (basically just me) to never use data if it's null.
-        public bool TryGetGuildData(ulong id, out GuildPersist data) 
-        {
-            data = GetGuildData(id)!;
-            return data != null;
-        }
-        public bool TryGetGuildData(IUserMessage msg, out GuildPersist data) 
-        {
-            data = GetGuildData(msg)!;
-            return data != null;
-        }
-        // returns null if not in guild, like if you're in dms
-        public GuildPersist? GetGuildData(IUserMessage msg) => GetGuildData(msg.GetGuild()?.Id ?? 0);
-        public GuildPersist GetGuildData(IGuild guild) => GetGuildData(guild.Id)!;
-        public GuildPersist? GetGuildData(ulong id)
-        {
-            if (id == 0) return null; // return null here, don't wanna try creating a GuildPersist for a null guild
-
-            if (!GuildData.TryGetValue(id, out GuildPersist? value)) {
-                value = new GuildPersist(id);
-                GuildData.Add(id, value);
-            }
-            return value;
-        }
-
-        public bool TryGetUserData(ulong id, out UserPersist data) 
-        {
-            data = GetUserData(id);
-            return data != null;
-        }
-        public UserPersist GetUserData(IUserMessage msg) => GetUserData(msg.Author.Id);
-        public UserPersist GetUserData(IUser user) => GetUserData(user.Id);
-        public UserPersist GetUserData(ulong id)
-        {
-            if (!UserData.TryGetValue(id, out UserPersist? value)) {
-                value = new UserPersist();
-                value.Init(Client, id);
-                UserData.Add(id, value);
-            }
-            return value;
         }
 
         private Task MessageReceivedAsync(SocketMessage message)
@@ -332,45 +219,164 @@ namespace CaretakerNET
             return Task.CompletedTask;
         }
 
+        private (string, string)? HandleCountAndChain(IUserMessage msg)
+        {
+            // var u = PersistenceHandler.Instance.GetUserData(msg);
+            var s = PersistenceHandler.Instance.GetGuildData(msg);
+            if (s == null) return null;
+            if (s.Count != null && msg.Channel.Id == s.Count?.Channel?.Id) { // count stuff
+                GuildPersist.CountPersist count = s.Count!;
+                // duplicate check
+                if (s.Count.LastCountMsg?.Author.Id == msg.Author.Id) {
+                    s.Count.Reset(false);
+                    return ("💀", "you can't count twice in a row! try again");
+                }
+                // parse number from message
+                var math = new Expression(msg.Content);
+                double newNumberTemp = math.calculate();
+                if (double.IsNaN(newNumberTemp)){
+                    math.setExpressionString(msg.Content.Split(' ')[0]);
+                    newNumberTemp = math.calculate();
+                }
+
+                if (double.IsNaN(newNumberTemp)) {
+                    List<char> numbers = [];
+                    bool numberStarted = false;
+                    for (int i = 0; i < msg.Content.Length; i++)
+                    {
+                        if (char.IsNumber(msg.Content[i])) {
+                            numberStarted = true;
+                            numbers.Add(msg.Content[i]);
+                        } else {
+                            if (numberStarted) break;
+                        }
+                    }
+                    if (numbers.Count > 0) {
+                        newNumberTemp = double.Parse(string.Join("", numbers));
+                    } /* else { // maybe? would need to be reworked. i probably won't.
+                        List<int?> computes = [];
+                        int lastWorkingIndex = 0;
+                        for (int i = 0; i < msg.Content.Length; i++)
+                        {
+                            int? tempNumber = (int?)dt.Compute(msg.Content[..i], null);
+                            if (tempNumber != null) lastWorkingIndex = i;
+                            computes.Add(tempNumber);
+                        }
+                        newNumberTemp = computes[lastWorkingIndex];
+                        if (newNumberTemp != null) {
+                            newNumber = (int)newNumberTemp;
+                        }
+                    } */
+                }
+
+                // if (double.IsNaN(newNumberTemp)) return ("", "hmm");
+
+                int newNumber = (int)newNumberTemp;
+
+                // is the new number one more than the last?
+                if (newNumber == count.Current + 1) {
+                    count.Current++;
+                    count.LastCountMsg = msg;
+                    return ("✅", "");
+                } else {
+                    // if the messages are close together, point that out. happens pretty often
+                    var lastMsg = count.LastCountMsg;
+                    long difference = msg.TimeCreated() - (count.LastCountMsg?.TimeCreated() ?? 0);
+                    count.Reset(false);
+                    // currently 800 millseconds; tweak if it's too little or too much
+                    return ("❌", (difference > 800 || lastMsg == null) ?
+                        "aw you're not very good at counting, are you?" : 
+                        "too many cooks in the kitchen!!"
+                    );
+                }
+            } else if (s.Chain != null && msg.Channel.Id == s.Chain.Channel?.Id) { // chain stuff
+                // return null;
+            }
+            return null;
+        }
+
+        private (string, string)? HandleBoardGame(IUserMessage msg)
+        {
+            var u = PersistenceHandler.Instance.GetUserData(msg);
+            var s = PersistenceHandler.Instance.GetGuildData(msg);
+            if (s == null) return null;
+            BoardGame? game = s.CurrentGame;
+            if (game == null || game.Players == null || msg.Channel.Id != game.PlayingChannelId) return null;
+
+            BoardGame.Player player = game.GetWhichPlayer(msg.Author.Id);
+            if (player == BoardGame.Player.None) return null;
+
+            (ulong playerId, ulong otherPlayerId) = game.GetPlayerIds(msg.Author.Id);
+
+            (string move, string columnStr) = msg.Content.SplitByFirstChar(' ');
+            move = move.ToLower();
+            if (move is "forfeit") {
+                game.StartForfeit(playerId);
+            }
+            // forfeit stuff
+            string forfeit = "";
+            if (game.Turns >= game.EndAt) {
+                forfeit = $"wowwww looks like {UserPingFromID(game.ForfeitPlayer)} gives up... and {UserPingFromID(game.ForfeitPlayer == playerId ? otherPlayerId : playerId)} wins!";
+            } else if (game.EndAt < int.MaxValue && game.EndAt > game.EndAt - game.Turns) {
+                forfeit = $" ({(game.EndAt - game.Turns)} turns left.)";
+            }
+
+            switch (s.CurrentGame)
+            {
+                case ConnectFour c4: {
+                    if (game.Turns >= game.EndAt) {
+                        string board = c4.DisplayBoard();
+                        s.CurrentGame = null;
+                        return ("✅", board + forfeit);
+                    }
+                    switch (move)
+                    {
+                        case "go": {
+                            if (playerId != msg.Author.Id) return null;
+                            int column = int.Parse(columnStr[0].ToString()) - 1;
+                            if (!c4.TryAddToColumn(column, player)) {
+                                return ("❌", "");
+                            }
+                            if (c4.CaretakerPlayer == BoardGame.Player.None) {
+                                c4.SwitchPlayers();
+                            }
+                            string board = c4.DisplayBoard(out var win);
+                            if (win.Tie) {
+                                board += $"it's a tie...";
+                                s.CurrentGame = null;
+                            } else {
+                                if (win.WinningPlayer == BoardGame.Player.None) {
+                                    board += $"{c4.GetEmoji(otherPlayerId)}{UserPingFromID(otherPlayerId)}, it's your turn!" + forfeit;
+                                } else {
+                                    u.AddWin(typeof(ConnectFour));
+                                    PersistenceHandler.Instance.GetUserData(otherPlayerId).AddLoss(typeof(ConnectFour));
+                                    board += $"{c4.GetEmoji(player)}{UserPingFromID(playerId)} won!";
+                                    s.CurrentGame = null;
+                                }
+                            }
+                            if (c4.CaretakerPlayer != BoardGame.Player.None) {
+                                c4.DoCaretakerMove(msg.Channel);
+                            }
+                            return ("✅", board);
+                        }
+                        case "refresh": {
+                            return ("✅", c4.DisplayBoard() + $"here you go :) it's {c4.GetEmoji(player)}{UserPingFromID(playerId)}'s turn right now");
+                        }
+                        default: return null;
+                    }
+                }
+                case Checkers checkers: {
+                    return ("", checkers.DisplayBoard());
+                }
+                default: return null;
+            }
+        }
+
         public async Task MessageHandler(IUserMessage msg)
         {
-            var u = GetUserData(msg);
-            var s = GetGuildData(msg);
+            var u = PersistenceHandler.Instance.GetUserData(msg);
+            var s = PersistenceHandler.Instance.GetGuildData(msg);
             string prefix = s?.Prefix ?? DEFAULT_PREFIX;
-
-            // _ = Task.Run(async () => {
-            //     var lowerCont = msg.Content.ToLower();
-            //     (string, int)[] findingStrs = [
-            //         ("it", -1), ("go", -1),
-            //     ];
-            //     for (int x = 0; x < lowerCont.Length; x++) // go through every character in msg content
-            //     {
-            //         for (int y = 0; y < findingStrs.Length; y++) // for every character, go through each string we want to find
-            //         {
-            //             if (findingStrs[y].Item2 > -1) continue;
-            //             string strToFind = findingStrs[y].Item1;
-            //             bool matches = true;
-            //             for (int z = 0; z < strToFind.Length; z++) // go through each character of the string we want to find
-            //             {
-            //                 var contChar = lowerCont.TryGet(x + z);
-            //                 if ((contChar == default(char) ? ' ' : contChar) != strToFind[z]) {
-            //                     matches = false;
-            //                     break;
-            //                 }
-            //             }
-            //             if (matches) findingStrs[y].Item2 = x;
-            //         }
-            //     }
-
-            //     if (
-            //         findingStrs[0].Item2 > -1 && findingStrs[1].Item2 > -1 &&
-            //         findingStrs[0].Item2 < findingStrs[1].Item2
-            //     ) {
-            //         // randomizes from 0 - 10 full seconds
-            //         await Task.Delay((new Random().Next(11)) * 1000);
-            //         _ = msg.React(Emojis.Adofai);
-            //     }
-            // });
 
             if (msg.Content.StartsWith(prefix)) {
                 bool banned = BannedUsers.Contains(msg.Author.Id); // check if user is banned
@@ -423,157 +429,15 @@ namespace CaretakerNET
 
                     // make sure the message is only logged if it's in any of the talking channels, or is the current talking channel.
                     // also don't log it if it's caretaker, i handle that specially.
-                    if ((ConsoleHandler.TalkingChannels.Any(c => c?.Id == cId) || ConsoleHandler.CurrentTalkingChannel?.Id == cId) && msg.Author.Id != CARETAKER_ID) {
+                    if (msg.Author.Id != CARETAKER_ID &&
+                        (CaretakerConsole.Instance.CurrentTalkingChannel?.Id == cId || CaretakerConsole.Instance.IsChannelTalkingChannel(cId)))
+                    {
                         LogMessage(msg);
                     }
 
                     Func<(string, string)?>[] funcs = [
-                        // count/chain stuff
-                        () => {
-                            if (s.Count != null && cId == s.Count?.Channel?.Id) { // count stuff
-                                GuildPersist.CountPersist count = s.Count!;
-                                // duplicate check
-                                if (s.Count.LastCountMsg?.Author.Id == msg.Author.Id) {
-                                    s.Count.Reset(false);
-                                    return ("💀", "you can't count twice in a row! try again");
-                                }
-                                // parse number from message
-                                var math = new Expression(msg.Content);
-                                double newNumberTemp = math.calculate();
-                                if (double.IsNaN(newNumberTemp)){
-                                    math.setExpressionString(msg.Content.Split(' ')[0]);
-                                    newNumberTemp = math.calculate();
-                                }
-
-                                if (double.IsNaN(newNumberTemp)) {
-                                    List<char> numbers = [];
-                                    bool numberStarted = false;
-                                    for (int i = 0; i < msg.Content.Length; i++)
-                                    {
-                                        if (char.IsNumber(msg.Content[i])) {
-                                            numberStarted = true;
-                                            numbers.Add(msg.Content[i]);
-                                        } else {
-                                            if (numberStarted) break;
-                                        }
-                                    }
-                                    if (numbers.Count > 0) {
-                                        newNumberTemp = double.Parse(string.Join("", numbers));
-                                    } /* else { // maybe? would need to be reworked. i probably won't.
-                                        List<int?> computes = [];
-                                        int lastWorkingIndex = 0;
-                                        for (int i = 0; i < msg.Content.Length; i++)
-                                        {
-                                            int? tempNumber = (int?)dt.Compute(msg.Content[..i], null);
-                                            if (tempNumber != null) lastWorkingIndex = i;
-                                            computes.Add(tempNumber);
-                                        }
-                                        newNumberTemp = computes[lastWorkingIndex];
-                                        if (newNumberTemp != null) {
-                                            newNumber = (int)newNumberTemp;
-                                        }
-                                    } */
-                                }
-
-                                // if (double.IsNaN(newNumberTemp)) return ("", "hmm");
-
-                                int newNumber = (int)newNumberTemp;
-
-                                // is the new number one more than the last?
-                                if (newNumber == count.Current + 1) {
-                                    count.Current++;
-                                    count.LastCountMsg = msg;
-                                    return ("✅", "");
-                                } else {
-                                    // if the messages are close together, point that out. happens pretty often
-                                    var lastMsg = count.LastCountMsg;
-                                    long difference = msg.TimeCreated() - (count.LastCountMsg?.TimeCreated() ?? 0);
-                                    count.Reset(false);
-                                    // currently 800 millseconds; tweak if it's too little or too much
-                                    return ("❌", (difference > 800 || lastMsg == null) ?
-                                        "aw you're not very good at counting, are you?" : 
-                                        "too many cooks in the kitchen!!"
-                                    );
-                                }
-                            } else if (s.Chain != null && cId == s.Chain.Channel?.Id) { // chain stuff
-                                // return null;
-                            }
-                            return null;
-                        },
-
-                        // board game stuff
-                        () => {
-                            BoardGame? game = s.CurrentGame;
-                            if (game == null || game.Players == null || cId != game.PlayingChannelId) return null;
-
-                            BoardGame.Player player = game.GetWhichPlayer(msg.Author.Id);
-                            if (player == BoardGame.Player.None) return null;
-
-                            (ulong playerId, ulong otherPlayerId) = game.GetPlayerIds(msg.Author.Id);
-
-                            (string move, string columnStr) = msg.Content.SplitByFirstChar(' ');
-                            move = move.ToLower();
-                            if (move is "forfeit") {
-                                game.StartForfeit(playerId);
-                            }
-                            // forfeit stuff
-                            string forfeit = "";
-                            if (game.Turns >= game.EndAt) {
-                                forfeit = $"wowwww looks like {UserPingFromID(game.ForfeitPlayer)} gives up... and {UserPingFromID(game.ForfeitPlayer == playerId ? otherPlayerId : playerId)} wins!";
-                            } else if (game.EndAt < int.MaxValue && game.EndAt > game.EndAt - game.Turns) {
-                                forfeit = $" ({(game.EndAt - game.Turns)} turns left.)";
-                            }
-
-                            switch (s.CurrentGame)
-                            {
-                                case ConnectFour c4: {
-                                    if (game.Turns >= game.EndAt) {
-                                        string board = c4.DisplayBoard();
-                                        s.CurrentGame = null;
-                                        return ("✅", board + forfeit);
-                                    }
-                                    switch (move)
-                                    {
-                                        case "go": {
-                                            if (playerId != msg.Author.Id) return null;
-                                            int column = int.Parse(columnStr[0].ToString()) - 1;
-                                            if (!c4.TryAddToColumn(column, player)) {
-                                                return ("❌", "");
-                                            }
-                                            if (c4.CaretakerPlayer == BoardGame.Player.None) {
-                                                c4.SwitchPlayers();
-                                            }
-                                            string board = c4.DisplayBoard(out var win);
-                                            if (win.Tie) {
-                                                board += $"it's a tie...";
-                                                s.CurrentGame = null;
-                                            } else {
-                                                if (win.WinningPlayer == BoardGame.Player.None) {
-                                                    board += $"{c4.GetEmoji(otherPlayerId)}{UserPingFromID(otherPlayerId)}, it's your turn!" + forfeit;
-                                                } else {
-                                                    u.AddWin(typeof(ConnectFour));
-                                                    GetUserData(otherPlayerId).AddLoss(typeof(ConnectFour));
-                                                    board += $"{c4.GetEmoji(player)}{UserPingFromID(playerId)} won!";
-                                                    s.CurrentGame = null;
-                                                }
-                                            }
-                                            if (c4.CaretakerPlayer != BoardGame.Player.None) {
-                                                c4.DoCaretakerMove(msg.Channel);
-                                            }
-                                            return ("✅", board);
-                                        }
-                                        case "refresh": {
-                                            return ("✅", c4.DisplayBoard() + $"here you go :) it's {c4.GetEmoji(player)}{UserPingFromID(playerId)}'s turn right now");
-                                        }
-                                        default: return null;
-                                    }
-                                }
-                                case Checkers checkers: {
-                                    return ("", checkers.DisplayBoard());
-                                }
-                                default: return null;
-                            }
-                        } 
+                        () => HandleCountAndChain(msg),
+                        () => HandleBoardGame(msg),
                     ];
                     foreach (var func in funcs)
                     {

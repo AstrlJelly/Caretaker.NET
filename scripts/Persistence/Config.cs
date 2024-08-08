@@ -47,10 +47,10 @@ namespace CaretakerNET.Persistence
     [YamlSerializable]
     public class Config
     {
-        public bool DebugMode = false;
-        public string PrivatesPath = "";
-        public string Token = "";
-        public string CaretakerChatApiToken = "";
-        public string CaretakerChatPrompt = "";
+        public readonly bool DebugMode = false;
+        public readonly string PrivatesPath = "";
+        public readonly string Token = "";
+        public readonly string CaretakerChatApiToken = "";
+        public readonly string CaretakerChatPrompt = "";
     }
 }

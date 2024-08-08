@@ -26,7 +26,7 @@ namespace CaretakerNET.Commands
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("prefix", "set the prefix for the current guild", "commands", async (msg, p) => {
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 s.Prefix = string.IsNullOrEmpty(p["prefix"]) ? ">" : p["prefix"]!;
                 _ = msg.React("✅");
             }, [
@@ -117,7 +117,7 @@ namespace CaretakerNET.Commands
                     return;
                 }
                 _ = msg.React("👍");
-                string response = await MainHook.instance.CaretakerChat.Ask(ask);
+                string response = await MainHook.Instance.CaretakerChat.Ask(ask);
                 await msg.Reply(response);
             }, [ new Param("ask", "the message you'd like to say to caretaker", "") ]),
 
@@ -126,7 +126,7 @@ namespace CaretakerNET.Commands
                 bool empty = string.IsNullOrEmpty(f);
                 
                 if (!empty && Enum.TryParse(f, out UserPersist.Features feature)) {
-                    if (!MainHook.instance.TryGetUserData(msg.Author.Id, out UserPersist u)) return;
+                    if (!PersistenceHandler.Instance.TryGetUserData(msg.Author.Id, out UserPersist u)) return;
 
                     bool optOut = p.Command == "optout";
                     if (optOut && u.OptedOutFeatures.Contains(feature)) {
@@ -149,7 +149,7 @@ namespace CaretakerNET.Commands
 
             new("count", "set the counting channel", "gimmick", async (msg, p) => {
                 (ITextChannel? channel, bool reset) = (p["channel"], p["reset"]);
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 ITextChannel? countChannel = channel ?? (ITextChannel?)msg.Channel; // TryGetGuildData makes sure this is done in a guild, so this is 99.9% not null?
                 if (reset) {
                     s.Count.Reset(true);
@@ -163,7 +163,7 @@ namespace CaretakerNET.Commands
 
             new("countSet", "set the current count", "gimmick", async (msg, p) => {
                 int newCount = p["newCount"];
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s)) return;
                 if (s.Count?.Channel != null) {
                     _ = msg.React("✅");
                     s.Count.Current = newCount;
@@ -184,7 +184,7 @@ namespace CaretakerNET.Commands
             }, [ new Param("fileName", "what the file will be renamed to", "") ]),
 
             new("challenge, game", "challenge another user to a game", "games", async (msg, p) => {
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist? s) || s == null) return;
                 (string game, IUser? victim) = (p["game"] ?? "", (p["victim"] ?? msg.ReferencedMessage?.Author));
                 bool anyone = p.Unparams["victim"] is "any" or "anyone" or "<@&1219981878895968279>";
                 string? thrown = null;
@@ -277,7 +277,8 @@ namespace CaretakerNET.Commands
 
             new("leaderboard, loserboard", "see the top ranking individuals on this bot", "games", async (msg, p) => {
                 (int amount, bool loserboard) = (p["amount"], p.Command == "loserboard");
-                var topUsers = MainHook.instance.UserData.OrderByDescending((x) => !loserboard ? x.Value.Wins.Count : x.Value.Losses.Count).Take(amount);
+                var userData = PersistenceHandler.Instance.UserData;
+                var topUsers = userData.OrderByDescending((x) => !loserboard ? x.Value.Wins.Count : x.Value.Losses.Count).Take(amount);
                 StringBuilder desc = new();
                 int i = 0;
                 foreach ((ulong id, var u) in topUsers)
@@ -304,9 +305,9 @@ namespace CaretakerNET.Commands
 
             new("bet, gamble", "see the top ranking individuals on this bot", "games, economy", async (msg, p) => { // MAKE SURE MONEY IS SOMEHOW KEPT UNTIL THE GAME IS DESTROYED IN ANY WAY
                 (long amount, IUser? user) = (p["amount"], p["user"]);
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s)) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s)) return;
 
-                var u = MainHook.instance.GetUserData(msg);
+                var u = PersistenceHandler.Instance.GetUserData(msg);
                 if (!u.HasStartedEconomy) {
                     u.StartEconomy(msg);
                     return;
@@ -341,7 +342,7 @@ namespace CaretakerNET.Commands
             ]),
 
             new("donate, donut", "give money to another user", "economy, hidden", async (msg, p) => {
-                var u = MainHook.instance.GetUserData(msg);
+                var u = PersistenceHandler.Instance.GetUserData(msg);
 
             }, [
                 new Param("amount", "the amount of money to give", 4.20m),
@@ -459,13 +460,13 @@ namespace CaretakerNET.Commands
                 new Param("wait", "how long to wait until replying", 0),
             ]),
 
-            new("save", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Save()),
-            new("load", "save _s and _u", "internal", async (_, _) => await MainHook.instance.Load()),
+            new("save", "save _s and _u", "internal", async (_, _) => await PersistenceHandler.Instance.Save()),
+            new("load", "save _s and _u", "internal", async (_, _) => await PersistenceHandler.Instance.Load()),
 
             new("game", "controls the current server's game state", "games", async (msg, p) => {
                 string? thing = p["thing"];
                 if (string.IsNullOrEmpty(thing)) return;
-                if (!MainHook.instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
+                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 switch (thing)
                 {
                     case "cancel": {
@@ -510,10 +511,6 @@ namespace CaretakerNET.Commands
 
             new("talkingChannel", "set the channel that Console.ReadLine() will send to", "hidden", async (msg, p) => {
                 (int index, string? channel, SocketGuild? guild) = (p["index"], p["channel"], p["guild"] ?? msg.GetGuild());
-                if (index < 0 && index > MainHook.instance.ConsoleHandler.TalkingChannels.Length - 1) {
-                    _ = msg.Reply("too high. or too low! idk and idc");
-                    return;
-                }
                 if (guild == null) {
                     _ = msg.Reply("mmm... nope.");
                     return;
@@ -523,8 +520,13 @@ namespace CaretakerNET.Commands
                     _ = msg.Reply("mmm... nope!!");
                     return;
                 }
-                MainHook.instance.ConsoleHandler.TalkingChannels[index] = (ITextChannel)talkingChannel;
-                _ = msg.React("✅");
+                if (CaretakerConsole.Instance.TrySetTalkingChannelAtIndex(index, (ITextChannel)talkingChannel)) {
+                    _ = msg.React("✅");
+                } else {
+                    _ = msg.Reply("too high. or too low! idk and idc");
+
+                }
+                
             }, [
                 new("index", "the index to set the channel", 0),
                 new("channel", "the channel to talk in", ""),
@@ -535,7 +537,7 @@ namespace CaretakerNET.Commands
                 string code = p["code"] ?? "null";
                 
                 // i am NOT satisfied with this at all but i can debug a few things which makes me happy
-                _ = msg.Reply(MainHook.instance.CompileContext.Execute(code, MainHook.instance));
+                _ = msg.Reply(MainHook.Instance.CompileContext.Execute(code, MainHook.Instance));
             }, [ new("code", "the code to execute", "") ]),
 
             new("kill", "kills the bot", "hidden", async (msg, p) => {
@@ -552,7 +554,7 @@ namespace CaretakerNET.Commands
                     Emojis.Cride,
                 ];
                 await msg.RandomReply(replies);
-                MainHook.instance.Stop();
+                MainHook.Instance.Stop();
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
@@ -650,7 +652,7 @@ namespace CaretakerNET.Commands
                             if (param != null) {
                                 currentParam = param;
                             } else {
-                                GuildPersist? s = MainHook.instance.GetGuildData(msg);
+                                GuildPersist? s = PersistenceHandler.Instance.GetGuildData(msg);
                                 _ = msg.Reply($"incorrect param name! use \"{s?.Prefix ?? DEFAULT_PREFIX}help {com.Name}\" to get params for {com.Name}.");
                                 stopState = 2;
                             }
@@ -786,7 +788,7 @@ namespace CaretakerNET.Commands
             if (!string.IsNullOrEmpty(singleCom) && !commandDict.ContainsKey(singleCom)) {
                 return null;
             }
-            var s = MainHook.instance.GetGuildData(msg);
+            var s = PersistenceHandler.Instance.GetGuildData(msg);
             string prefix = s?.Prefix ?? DEFAULT_PREFIX;
 
             Dictionary<string, List<Command>> comsSortedByGenre = [];
@@ -855,7 +857,7 @@ namespace CaretakerNET.Commands
         {
             var connectionInfo = new ConnectionInfo(
                 "150.230.169.222", "opc",
-                new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(MainHook.instance.config.PrivatesPath, "ssh.key")))
+                new PrivateKeyAuthenticationMethod("opc", new PrivateKeyFile(Path.Combine(MainHook.Instance.Config.PrivatesPath, "ssh.key")))
             );
             // using (var client = new ScpClient(connectionInfo))
             using var client = new SftpClient(connectionInfo);

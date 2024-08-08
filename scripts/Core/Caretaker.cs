@@ -21,7 +21,7 @@ namespace CaretakerNET.Core
         // public static string PrivatesPath = "C:/Users/AstrlJelly/Documents/GitHub/CaretakerPrivates/";
 
         public static void LogDebug(object? m = null, bool t = false) {
-            if (MainHook.instance.config.DebugMode) InternalLog(m ?? "null", t, CaretakerCore.Core.LogSeverity.Info);
+            if (MainHook.Instance.Config.DebugMode) InternalLog(m ?? "null", t, CaretakerCore.Core.LogSeverity.Info);
         }
     }
 }
