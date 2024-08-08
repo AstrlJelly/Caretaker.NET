@@ -7,12 +7,12 @@ namespace CaretakerNET
 {
     public class CaretakerConsole
     {
-        public static CaretakerConsole Instance {get; private set;}
+        public static CaretakerConsole Instance {get; private set;} = new();
 
-        public static void Init(CaretakerConsole instance)
+        public static void Init(List<ITextChannel?> TalkingChannels)
         {
-            if (Instance != null) return;
-            Instance = instance;
+            Instance.TalkingChannels = [ ..TalkingChannels ];
+            Instance.CurrentTalkingChannel = Instance.TalkingChannels[0];
             Instance.CurrentTitleState.UpdateTitle(); 
             Instance.StartReadingKeys();
         }
@@ -47,7 +47,7 @@ namespace CaretakerNET
         public States CurrentState = States.Typing;
         public IDisposable? TypingState = null;
         public Stopwatch CancelTypingStopwatch = new();
-        private readonly ITextChannel?[] TalkingChannels = [];
+        private ITextChannel?[] TalkingChannels = [];
         public ITextChannel? CurrentTalkingChannel = null;
         public Stopwatch PlayKeyPressStopwatch = new();
         public int CursorPos = 0;
@@ -301,10 +301,10 @@ namespace CaretakerNET
             }
         }
 
-        public CaretakerConsole(List<ITextChannel?> TalkingChannels)
-        {
-            this.TalkingChannels = [ ..TalkingChannels ];
-            this.CurrentTalkingChannel = TalkingChannels[0];
-        }
+        // public CaretakerConsole(List<ITextChannel?> TalkingChannels)
+        // {
+        //     this.TalkingChannels = [ ..TalkingChannels ];
+        //     this.CurrentTalkingChannel = TalkingChannels[0];
+        // }
     }
 }

@@ -23,8 +23,12 @@ namespace CaretakerNET.Persistence
                 try {
                     string yaml = await File.ReadAllTextAsync(CONFIG_PATH);
                     var deserializer = new Deserializer();
-                    var config = deserializer.Deserialize<Config>(yaml) ?? Fail();
-                    Save(config);
+                    var config = deserializer.Deserialize<Config>(yaml);
+                    if (config == null) {
+                        config = Fail();
+                    } else {
+                        Save(config);
+                    }
                     return config;
                 } catch (Exception err) {
                     return Fail(err);
@@ -47,10 +51,10 @@ namespace CaretakerNET.Persistence
     [YamlSerializable]
     public class Config
     {
-        public readonly bool DebugMode = false;
-        public readonly string PrivatesPath = "";
-        public readonly string Token = "";
-        public readonly string CaretakerChatApiToken = "";
-        public readonly string CaretakerChatPrompt = "";
+        public bool DebugMode = false;
+        public string PrivatesPath = "";
+        public string Token = "";
+        public string CaretakerChatApiToken = "";
+        public string CaretakerChatPrompt = "";
     }
 }

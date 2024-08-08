@@ -94,8 +94,6 @@ namespace CaretakerNET
                 Model = "cosmosrp"
             });
 
-            CaretakerConsole.Instance.CurrentTitleState.UpdateTitle();
-
             testingMode = args.Contains("testing") || args.Contains("-t");
             // string name = nameof(CaretakerNET);
 
@@ -156,7 +154,7 @@ namespace CaretakerNET
                         LogError($"channel with id {channelId} in guild with id {guildId} was null!");
                     }
                 }
-                CaretakerConsole.Init(new([ ..tempTalkingChannels ]));
+                CaretakerConsole.Init(tempTalkingChannels);
 
                 await PersistenceHandler.Instance.Load();
 
