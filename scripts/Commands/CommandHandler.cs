@@ -524,9 +524,7 @@ namespace CaretakerNET.Commands
                     _ = msg.React("✅");
                 } else {
                     _ = msg.Reply("too high. or too low! idk and idc");
-
                 }
-                
             }, [
                 new("index", "the index to set the channel", 0),
                 new("channel", "the channel to talk in", ""),

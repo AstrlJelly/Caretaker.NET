@@ -33,7 +33,6 @@ namespace CaretakerNET
         private readonly DiscordSocketClient Client;
         private readonly StringBuilder LogBuilder = new();
         public readonly EvalContext CompileContext = new();
-        // public CaretakerConsole ConsoleHandler { get; private set; }
         public ChatGPT.Net.ChatGpt CaretakerChat { get; private set; } = new("");
         public Config @Config { get; private set; } = new();
 
@@ -112,11 +111,9 @@ namespace CaretakerNET
                     _ = Task.Run(() => File.Delete(filePath));
                 }
             }
-            // PrivatesPath = File.ReadAllText("./privates_path.txt");
-            // login and connect with token (change to config json file?)
+
             await Client.LoginAsync(TokenType.Bot, Config.Token);
             await Client.StartAsync();
-
 
             // keep running until Stop() is called
             while (KeepRunning) await Task.Delay(100);
