@@ -12,6 +12,19 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
+  "872687109218115585": {
+    "IsInServer": true,
+    "UserId": 872687109218115585,
+    "Username": ".sharkguy",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
   "820357014831628309": {
     "IsInServer": true,
     "UserId": 820357014831628309,
@@ -141,10 +154,11 @@
       "ConnectFour",
       "ConnectFour",
       "ConnectFour",
+      "ConnectFour",
       "ConnectFour"
     ],
     "Losses": [],
-    "Timeout": 1723093650543,
+    "Timeout": 1724899409070,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -166,6 +180,19 @@
     "UserId": 543220818407063584,
     "Username": "bizarrotron3000",
     "Balance": 500,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "200013375449726976": {
+    "IsInServer": true,
+    "UserId": 200013375449726976,
+    "Username": "bluekirbvii",
+    "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [],
@@ -214,7 +241,7 @@
     "Losses": [
       "ConnectFour"
     ],
-    "Timeout": 1723093645545,
+    "Timeout": 1724899159537,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
@@ -331,19 +358,6 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
-  "388478358889168909": {
-    "IsInServer": true,
-    "UserId": 388478358889168909,
-    "Username": "doctrluvr",
-    "Balance": 0.00,
-    "HasStartedEconomy": false,
-    "Inventory": [],
-    "Wins": [],
-    "Losses": [],
-    "Timeout": 1722801878706,
-    "OptedOutFeatures": [],
-    "NeedsUpdating": false
-  },
   "366276019344113664": {
     "IsInServer": true,
     "UserId": 366276019344113664,
@@ -438,7 +452,7 @@
   "1155031460814802995": {
     "IsInServer": true,
     "UserId": 1155031460814802995,
-    "Username": "foggytulip",
+    "Username": "foggytulips",
     "Balance": 500,
     "HasStartedEconomy": false,
     "Inventory": [],
@@ -448,10 +462,38 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
+  "388478358889168909": {
+    "IsInServer": true,
+    "UserId": 388478358889168909,
+    "Username": "followersoftheapocalypse",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [
+      "ConnectFour"
+    ],
+    "Timeout": 1724899386466,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
   "903858264243052616": {
     "IsInServer": true,
     "UserId": 903858264243052616,
     "Username": "funsize_idiot",
+    "Balance": 500,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "736835466795679744": {
+    "IsInServer": true,
+    "UserId": 736835466795679744,
+    "Username": "gilbertdafish",
     "Balance": 500,
     "HasStartedEconomy": false,
     "Inventory": [],
@@ -818,19 +860,6 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
-  "736835466795679744": {
-    "IsInServer": true,
-    "UserId": 736835466795679744,
-    "Username": "pretzelgilbert",
-    "Balance": 500,
-    "HasStartedEconomy": false,
-    "Inventory": [],
-    "Wins": [],
-    "Losses": [],
-    "Timeout": 0,
-    "OptedOutFeatures": [],
-    "NeedsUpdating": false
-  },
   "944461715909795841": {
     "IsInServer": true,
     "UserId": 944461715909795841,
@@ -868,6 +897,19 @@
     "Losses": [
       "ConnectFour"
     ],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "886749640974811146": {
+    "IsInServer": true,
+    "UserId": 886749640974811146,
+    "Username": "rhythmtengoku",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
     "Timeout": 0,
     "OptedOutFeatures": [],
     "NeedsUpdating": false
@@ -916,6 +958,19 @@
     "UserId": 297887914501734421,
     "Username": "seanski2",
     "Balance": 500,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "896551676536844288": {
+    "IsInServer": true,
+    "UserId": 896551676536844288,
+    "Username": "sedaxf",
+    "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [],
@@ -1041,6 +1096,19 @@
     "OptedOutFeatures": [],
     "NeedsUpdating": false
   },
+  "518919256210014208": {
+    "IsInServer": true,
+    "UserId": 518919256210014208,
+    "Username": "theziggydance",
+    "Balance": 0.00,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
   "1110883173648310352": {
     "IsInServer": true,
     "UserId": 1110883173648310352,
@@ -1125,6 +1193,19 @@
     "UserId": 339066907242004481,
     "Username": "wookywok",
     "Balance": 500,
+    "HasStartedEconomy": false,
+    "Inventory": [],
+    "Wins": [],
+    "Losses": [],
+    "Timeout": 0,
+    "OptedOutFeatures": [],
+    "NeedsUpdating": false
+  },
+  "341774911532040194": {
+    "IsInServer": true,
+    "UserId": 341774911532040194,
+    "Username": "yamalpaca",
+    "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
     "Wins": [],

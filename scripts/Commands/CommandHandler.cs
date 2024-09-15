@@ -556,8 +556,25 @@ namespace CaretakerNET.Commands
             }, [ new("delay", "the time to wait before the inevitable end", 0) ]),
 
             new("test", "testing code out", "testing", async (msg, p) => {
-                object[]? tempInf = p["params"];
-                string[]? infParams = tempInf?.Select(x => x?.ToString() ?? "").ToArray();
+                SocketGuild? guild = msg.GetGuild();
+                if (guild == null) {
+                    _ = msg.Reply("no dms!!!");
+                    return;
+                }
+                
+                SocketRole trustedRole = guild.Roles.First(r => r.Id == 1230658842879332353);
+                SocketGuildChannel chnl = guild.GetChannel(msg.Channel.Id);
+                var permissionOverwrite = chnl.GetPermissionOverwrite(trustedRole);
+                if (permissionOverwrite == null) {
+                    _ = msg.Reply("\"permissionOverwrite\" was null.");
+                    return;
+                }
+                foreach (var user in guild.Users) {
+                    if (user.Roles.Any(r => r.Id == trustedRole.Id)) { // check if user is trusted
+                        // Log(user.GlobalName);
+                        await chnl.AddPermissionOverwriteAsync(user, (OverwritePermissions)permissionOverwrite);
+                    }
+                }
             }, [ new("test1", "for testing", ""), new("test2", "for testing: electric boogaloo", ""), new("params", "params!!!", "") ]),
         ];
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -695,7 +712,7 @@ namespace CaretakerNET.Commands
                 }
                 if (com.Inf != null) {
                     // set unparams to infParams as string[]
-                    unparams = [.. infParams];
+                    unparams = infParams?.ToArray() ?? [];
                     // add an array to paramDict that is infParams converted to "params"'s type
                     paramDict.Add("params", infParams?.Select(p => (object?)com.Inf.ToType(p, guild)).ToArray() ?? []);
                 }

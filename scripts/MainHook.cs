@@ -105,6 +105,7 @@ namespace CaretakerNET
             // might wanna make this async?
             foreach (var filePath in Directory.GetFiles("./logs"))
             {
+                // delete files above a day old
                 var createTime = new DateTimeOffset(File.GetCreationTime(filePath)).ToUnixTimeMilliseconds();
                 var discardTime = DateNow() - ConvertTime(1, Time.Day);
                 if (createTime < discardTime) {

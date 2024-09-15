@@ -84,7 +84,7 @@ namespace CaretakerNET.Games
             Player player = (Player)pl;
 
             // tie check
-            if (!board[H - 1].Any(x => x == 0)) {
+            if (board[H - 1].All(x => x != 0)) {
                 return new Win(tie: true);
             }
 

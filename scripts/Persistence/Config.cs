@@ -6,12 +6,13 @@ namespace CaretakerNET.Persistence
     public static class ConfigHandler
     {
         private const string CONFIG_PATH = "./config.yaml";
-        public static async void Save(Config config)
+        private const string BACKUP_PATH = "./config_backup.yaml";
+        public static async void Save(Config config, bool backup)
         {
             var serializer = new SerializerBuilder().Build();
 
             var yaml = serializer.Serialize(config);
-            await File.WriteAllTextAsync(CONFIG_PATH, yaml); // creates new file or overwrites existing one
+            await File.WriteAllTextAsync(backup ? BACKUP_PATH : CONFIG_PATH, yaml); // creates new file or overwrites existing one
             Console.WriteLine(yaml);
         }
 
@@ -27,7 +28,7 @@ namespace CaretakerNET.Persistence
                     if (config == null) {
                         config = Fail();
                     } else {
-                        Save(config);
+                        Save(config, false);
                     }
                     return config;
                 } catch (Exception err) {
@@ -42,7 +43,7 @@ namespace CaretakerNET.Persistence
                 if (err != null) log += "\n" + err;
                 LogWarning(log);
                 var config = new Config();
-                Save(config);
+                Save(config, true);
                 return config;
             }
         }
