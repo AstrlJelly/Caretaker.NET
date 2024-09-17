@@ -31,6 +31,7 @@ namespace CaretakerNET
         private bool testingMode;
 
         private readonly DiscordSocketClient Client;
+        private readonly PersistenceHandler persistence = new();
         private readonly StringBuilder LogBuilder = new();
         public readonly EvalContext CompileContext = new();
         public ChatGPT.Net.ChatGpt CaretakerChat { get; private set; } = new("");

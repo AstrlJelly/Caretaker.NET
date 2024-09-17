@@ -450,7 +450,7 @@
     "NeedsUpdating": false
   },
   "1155031460814802995": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 1155031460814802995,
     "Username": "foggytulips",
     "Balance": 500,
@@ -493,7 +493,7 @@
   "736835466795679744": {
     "IsInServer": true,
     "UserId": 736835466795679744,
-    "Username": "gilbertdafish",
+    "Username": "thenikocadoavocado",
     "Balance": 500,
     "HasStartedEconomy": false,
     "Inventory": [],
@@ -681,7 +681,7 @@
     "NeedsUpdating": false
   },
   "339521745692131331": {
-    "IsInServer": true,
+    "IsInServer": false,
     "UserId": 339521745692131331,
     "Username": "metasepia",
     "Balance": 500,
@@ -1099,7 +1099,7 @@
   "518919256210014208": {
     "IsInServer": true,
     "UserId": 518919256210014208,
-    "Username": "theziggydance",
+    "Username": "sackboylvr",
     "Balance": 0.00,
     "HasStartedEconomy": false,
     "Inventory": [],
