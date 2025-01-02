@@ -1,5 +1,5 @@
-﻿global using static CaretakerCore.Core;
-global using static CaretakerCore.Discord;
+﻿global using static CaretakerCoreNET.Core;
+global using static CaretakerCoreNET.Discord;
 global using static CaretakerNET.Core.Caretaker;
 
 using System;

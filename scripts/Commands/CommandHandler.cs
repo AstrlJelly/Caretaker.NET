@@ -26,7 +26,7 @@ namespace CaretakerNET.Commands
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public static readonly Command[] commands = [
             new("prefix", "set the prefix for the current guild", "commands", async (msg, p) => {
-                if (!PersistenceHandler.Instance.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
+                if (!MainHook.Instance.PersistenceHandler.TryGetGuildData(msg, out GuildPersist s) || s == null) return;
                 s.Prefix = string.IsNullOrEmpty(p["prefix"]) ? ">" : p["prefix"]!;
                 _ = msg.React("✅");
             }, [
