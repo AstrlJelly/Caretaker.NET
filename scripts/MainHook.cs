@@ -1,5 +1,5 @@
-﻿global using static CaretakerCoreNET.Core;
-global using static CaretakerCoreNET.Discord;
+﻿global using static CaretakerCoreNET.CaretakerCore;
+global using static CaretakerCoreDiscordNET.Discord;
 global using static CaretakerNET.Core.Caretaker;
 
 using System;
@@ -18,6 +18,7 @@ using Z.Expressions;
 using CaretakerNET.Audio;
 using CaretakerNET.Persistence;
 using CaretakerNET.Core;
+using CaretakerCoreNET;
 
 namespace CaretakerNET
 {
@@ -42,14 +43,21 @@ namespace CaretakerNET
         public bool KeepRunning { get; private set; } = true;
 
         public static readonly HashSet<ulong> TrustedUsers = [
-            CARETAKER_ID,       // should be obvious
-            438296397452935169, // @astrljelly
-            752589264398712834, // @antoutta
+            CARETAKER_ID,        // should be obvious
+            1337930184057290815, // @girlcossett
+            438296397452935169,  // @astrljelly
+            752589264398712834,  // @doomalluppercase
         ];
         public static readonly HashSet<ulong> BannedUsers = [
-            // 391459218034786304, // @untitled.com, https://discord.com/channels/1171893658149191750/1229197791784468550/1229197801301479495
-            // 468933965110312980, // @lifinale, it's been long enough
-            // 476021507420586014, // @vincells, thin ice
+            
+        ];
+        public static readonly (ulong, ulong)[] talkingChannelIds = [
+            (1345994905008476230, 1349937237797900289), // TRANNIES GALORE, bots channel
+            //(CARETAKER_CENTRAL_ID, 1189820692569538641), // caretaker central, caretaker-net
+            // (SPACE_JAMBOREE_ID,   1230684176211251291), // space jamboree,    caretaker-central-lite
+            // (1113913617608355992, 1113944754460315759), // routerheads,       bot-commands
+            // (1077367474447716352, 1077385447870844971), // no icon,           bot-central
+            // (1091542281242279979, 1182368930275274792), // korboy's,          astrl-posting thread
         ];
 
         private MainHook()
@@ -78,7 +86,7 @@ namespace CaretakerNET
 
         private static Task ClientLog(LogMessage message)
         {
-            InternalLog($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, (CaretakerCore.Core.LogSeverity)message.Severity);
+            InternalLog($"{DateTime.Now,-19} [{message.Severity,8}] {message.Source}: {message.Message} {message.Exception}", false, (CaretakerCore.LogSeverity)message.Severity);
             return Task.CompletedTask;
         }
 
@@ -87,7 +95,7 @@ namespace CaretakerNET
             Config = await ConfigHandler.Load();
             SoundDeck.PlayOneShotClip("startup");
             CommandHandler.Init();
-            CaretakerCore.Discord.Init(Client);
+            CaretakerCoreDiscordNET.Discord.Init(Client, new InitSettings());
 
             CaretakerChat = new(Config.CaretakerChatApiToken, new() {
                 BaseUrl = "https://api.pawan.krd/cosmosrp/v1/",
@@ -135,13 +143,6 @@ namespace CaretakerNET
                 // org.mariuszgromada.math.mxparser
                 License.iConfirmNonCommercialUse("hmmmmm");
 
-                (ulong, ulong)[] talkingChannelIds = [
-                   (CARETAKER_CENTRAL_ID, 1189820692569538641), // caretaker central, caretaker-net
-                    (SPACE_JAMBOREE_ID,   1230684176211251291), // space jamboree,    caretaker-central-lite
-                    (1113913617608355992, 1113944754460315759), // routerheads,       bot-commands
-                    (1077367474447716352, 1077385447870844971), // no icon,           bot-central
-                    (1091542281242279979, 1182368930275274792), // korboy's,          astrl-posting thread
-                ];
                 List<ITextChannel?> tempTalkingChannels = [];
                 foreach (var ids in talkingChannelIds)
                 {
